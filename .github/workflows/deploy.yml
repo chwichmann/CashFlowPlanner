@@ -28,17 +28,23 @@ jobs:
       - name: Publish Blazor
         run: dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj -c Release
 
+      - name: Add .nojekyll
+        run: touch src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/.nojekyll
+
       - name: Show publish output
         run: |
           echo "Publish wwwroot:"
           ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
           echo "Framework folder:"
           ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/_framework
+          echo "Blazor bootstrap files:"
+          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/_framework/blazor.webassembly*
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
+          include-hidden-files: true
 
   deploy:
     needs: build
