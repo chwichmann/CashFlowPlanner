@@ -1,0 +1,56 @@
+﻿@using CashFlowPlanner.BlazorWasm.Services
+@implements IDisposable
+
+@inject UiFeedbackService Feedback
+
+@if (Feedback.CurrentNotification is not null)
+{
+    <div class="@GetAlertCssClass(Feedback.CurrentNotification.Kind) mb-0 rounded-0 d-flex justify-content-between align-items-center">
+        <div>
+            @Feedback.CurrentNotification.Message
+        </div>
+
+        <button type="button"
+                class="btn-close"
+                aria-label="Close"
+                @onclick="Feedback.ClearNotification">
+        </button>
+    </div>
+}
+
+@if (Feedback.IsBusy)
+{
+    <div class="alert alert-info mb-0 rounded-0 d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm"
+             role="status"
+             aria-hidden="true">
+        </div>
+
+        <div>
+            @Feedback.BusyMessage
+        </div>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Feedback.Changed += StateHasChanged;
+    }
+
+    private static string GetAlertCssClass(UiNotificationKind kind)
+    {
+        return kind switch
+        {
+            UiNotificationKind.Success => "alert alert-success",
+            UiNotificationKind.Info => "alert alert-info",
+            UiNotificationKind.Error => "alert alert-danger",
+            _ => "alert alert-secondary"
+        };
+    }
+
+    public void Dispose()
+    {
+        Feedback.Changed -= StateHasChanged;
+    }
+}

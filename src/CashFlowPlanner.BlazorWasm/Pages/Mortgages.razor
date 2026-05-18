@@ -1,0 +1,669 @@
+﻿@page "/mortgages"
+@using System.Globalization
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.Core
+@using CashFlowPlanner.BlazorWasm.Models
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.Core.Accounts
+@using CashFlowPlanner.Core.Mortgages
+@using Microsoft.Extensions.Localization
+@inject CashFlowAppState AppState
+@inject IStringLocalizer<SharedResource> L
+@inject EnumLocalizer EnumL
+
+<h3>@L["Mortgages_Title"]</h3>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_infoMessage))
+{
+    <div class="alert alert-info">@_infoMessage</div>
+}
+
+@if (AppState.CurrentPlan is null)
+{
+    <div class="alert alert-warning">
+        @L["Mortgages_NoPlanLoaded"]
+    </div>
+}
+else
+{
+    var plan = AppState.CurrentPlan;
+
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="NewMortgage">
+            @L["Mortgages_AddMortgage"]
+        </button>
+    </div>
+
+    @if (_editModel is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>@(_isNewMortgage ? L["Mortgages_AddMortgage"] : L["Mortgages_EditMortgage"])</strong>
+            </div>
+
+            <div class="card-body">
+                <h6>@L["Mortgages_Basic"]</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">@L["Name"]</label>
+                        <input class="form-control" @bind="_editModel.Name" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Type"]</label>
+                        <select class="form-select" @bind="_editModel.Type">
+                            @foreach (var type in Enum.GetValues<MortgageType>())
+                            {
+                                <option value="@type">@EnumL.Translate(type)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="form-check">
+                            <input id="mortgage-active"
+                                   type="checkbox"
+                                   class="form-check-input"
+                                   @bind="_editModel.IsActive" />
+                            <label class="form-check-label" for="mortgage-active">
+                                @L["Active"]
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr />
+
+                <h6>@L["Mortgages_PaymentAccounts"]</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">@L["Mortgages_PaymentAccount"]</label>
+                        <select class="form-select" @bind="_editModel.PaymentAccountIdText">
+                            <option value="">@L["Mortgages_SelectPaymentAccount"]</option>
+                            @foreach (var account in PaymentAccounts)
+                            {
+                                <option value="@account.Id">@account.Name (@EnumL.Translate(account.Type))</option>
+                            }
+                        </select>
+                        <div class="form-text">
+                            @L["Mortgages_PaymentAccountHint"]
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">@L["Mortgages_IndirectAccount"]</label>
+                        <select class="form-select" @bind="_editModel.IndirectAmortisationAccountIdText">
+                            <option value="">@L["Transaction_NoneOption"]</option>
+                            @foreach (var account in IndirectAmortisationAccounts)
+                            {
+                                <option value="@account.Id">@account.Name (@EnumL.Translate(account.Type))</option>
+                            }
+                        </select>
+                        <div class="form-text">
+                            @L["Mortgages_IndirectAccountHint"]
+                        </div>
+                    </div>
+                </div>
+
+                <hr />
+
+                <h6>@L["Mortgages_Principal"]</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_InitialPrincipal"]</label>
+                        <input type="number" step="0.01" class="form-control" @bind="_editModel.InitialPrincipal" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_InitialDate"]</label>
+                        <input type="date" class="form-control" @bind="_editModel.InitialDate" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_CalculationPrincipal"]</label>
+                        <input type="number" step="0.01" class="form-control" @bind="_editModel.CalculationPrincipal" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_CalculationPrincipalDate"]</label>
+                        <input type="date" class="form-control" @bind="_editModel.CalculationPrincipalDate" />
+                    </div>
+                </div>
+
+                <div class="form-text mt-2">
+                    @L["Mortgages_PrincipalHint"]
+                </div>
+
+                <hr />
+
+                <h6>@L["Mortgages_Interest"]</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_FixedInterestSaronMarginPercent"]</label>
+                        <input type="number" step="0.001" class="form-control" @bind="_editModel.FixedInterestPercent" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_EndDate"]</label>
+                        <input type="date" class="form-control" @bind="_editModel.EndDate" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_PaymentInterval"]</label>
+                        <select class="form-select" @bind="_editModel.PaymentInterval">
+                            @foreach (var interval in Enum.GetValues<MortgagePaymentInterval>())
+                            {
+                                <option value="@interval">@EnumL.Translate(interval)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Mortgages_BillingCalendar"]</label>
+                        <select class="form-select" @bind="_editModel.BillingCalendar">
+                            @foreach (var calendar in Enum.GetValues<MortgageBillingCalendar>())
+                            {
+                                <option value="@calendar">@EnumL.Translate(calendar)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                @if (_editModel.Type == MortgageType.Saron)
+                {
+                    <div class="mt-3">
+                        <h6>@L["Mortgages_SaronRates"]</h6>
+
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Date"]</label>
+                                <input type="date" class="form-control" @bind="_newSaronRate.Date" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Mortgages_RatePercent"]</label>
+                                <input type="number" step="0.001" class="form-control" @bind="_newSaronRate.RatePercent" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-primary" @onclick="AddSaronRatePoint">
+                                    @L["Mortgages_AddOrUpdateRatePoint"]
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (_editModel.SaronRates.Count == 0)
+                        {
+                            <div class="alert alert-warning mt-3">
+                                @L["Mortgages_SaronRateRequired"]
+                            </div>
+                        }
+                        else
+                        {
+                            <table class="table table-striped table-hover align-middle mt-3">
+                                <thead>
+                                    <tr>
+                                        <th>@L["Date"]</th>
+                                        <th class="text-end">@L["Mortgages_RatePercent"]</th>
+                                        <th>@L["Actions"]</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var ratePoint in _editModel.SaronRates.OrderBy(x => x.Date).ToList())
+                                    {
+                                        <tr>
+                                            <td>@FormatDate(ratePoint.Date)</td>
+                                            <td class="text-end">@FormatRate(ratePoint.RatePercent)</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => DeleteSaronRatePoint(ratePoint)">
+                                                    @L["Delete"]
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+
+                        <div class="form-text">
+                            @L["Mortgages_SaronRatesHint"]
+                        </div>
+                    </div>
+                }
+
+                <hr />
+
+                <h6>@L["Mortgages_Amortisation"]</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Mortgages_AmortisationMode"]</label>
+                        <select class="form-select" @bind="_editModel.AmortisationMode">
+                            @foreach (var mode in Enum.GetValues<AmortisationMode>())
+                            {
+                                <option value="@mode">@EnumL.Translate(mode)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Mortgages_AnnualAmortisationAmount"]</label>
+                        <input type="number" step="0.01" class="form-control" @bind="_editModel.AnnualAmortisationAmount" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Notes"]</label>
+                        <input class="form-control" @bind="_editModel.Notes" />
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button class="btn btn-primary" @onclick="SaveMortgage">
+                        @L["Save"]
+                    </button>
+
+                    <button class="btn btn-outline-secondary ms-2" @onclick="CancelEdit">
+                        @L["Cancel"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (plan.Mortgages.Count == 0)
+    {
+        <div class="alert alert-info">
+            @L["Mortgages_NoneConfigured"]
+        </div>
+    }
+    else
+    {
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>@L["Name"]</th>
+                    <th>@L["Type"]</th>
+                    <th>@L["Mortgages_PaymentAccount"]</th>
+                    <th class="text-end">@L["Mortgages_InitialPrincipal"]</th>
+                    <th class="text-end">@L["Mortgages_CalculationPrincipal"]</th>
+                    <th class="text-end">@L["Mortgages_ProjectedPrincipal"]</th>
+                    <th class="text-end">@L["Mortgages_FixedPercent"]</th>
+                    <th>@L["Mortgages_Amortisation"]</th>
+                    <th>@L["Active"]</th>
+                    <th>@L["Actions"]</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var mortgage in plan.Mortgages.OrderBy(x => x.Name))
+                {
+                    <tr>
+                        <td>@mortgage.Name</td>
+                        <td>@EnumL.Translate(mortgage.Type)</td>
+                        <td>@GetAccountName(mortgage.PaymentAccountId)</td>
+                        <td class="text-end">@FormatAmount(mortgage.InitialPrincipal)</td>
+                        <td class="text-end">
+                            @if (mortgage.CalculationPrincipal is null)
+                            {
+                                <span class="text-muted">@L["Mortgages_Initial"]</span>
+                            }
+                            else
+                            {
+                                @FormatAmount(mortgage.CalculationPrincipal.Value)
+                            }
+                        </td>
+                        <td class="text-end">@FormatAmount(GetProjectedPrincipal(mortgage))</td>
+                        <td class="text-end">@FormatRate(mortgage.FixedInterestPercent)</td>
+                        <td>
+                            @EnumL.Translate(mortgage.AmortisationMode)
+                            @if (mortgage.AnnualAmortisationAmount > 0)
+                            {
+                                <span>/ @FormatAmount(mortgage.AnnualAmortisationAmount) @L["Mortgages_PerYearAbbreviation"]</span>
+                            }
+                        </td>
+                        <td>
+                            @if (mortgage.IsActive)
+                            {
+                                <span class="badge bg-success">@L["Active"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@L["Inactive"]</span>
+                            }
+                        </td>
+                        <td style="white-space: nowrap;">
+                            <button class="btn btn-sm btn-primary me-1"
+                                    @onclick="() => EditMortgage(mortgage)">
+                                @L["Edit"]
+                            </button>
+
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => DeleteMortgage(mortgage)">
+                                @L["Delete"]
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private MortgageEditModel? _editModel;
+    private bool _isNewMortgage;
+
+    private MortgageInterestRatePointEditModel _newSaronRate = new()
+    {
+        Date = DateOnly.FromDateTime(DateTime.Today),
+        RatePercent = 0m
+    };
+
+    private string? _errorMessage;
+    private string? _infoMessage;
+
+    private IReadOnlyList<Account> PaymentAccounts =>
+        AppState.CurrentPlan?.Accounts
+            .Where(x => x.Type is AccountType.BankAccount or AccountType.SavingsAccount or AccountType.Cash)
+            .OrderBy(x => x.Name)
+            .ToList()
+        ?? [];
+
+    private IReadOnlyList<Account> IndirectAmortisationAccounts =>
+        AppState.CurrentPlan?.Accounts
+            .Where(x => x.Type is AccountType.SavingsAccount)
+            .OrderBy(x => x.Name)
+            .ToList()
+        ?? [];
+
+    private void NewMortgage()
+    {
+        ClearMessages();
+
+        var plan = AppState.CurrentPlan;
+        var today = plan?.SimulationSettings.StartDate ?? DateOnly.FromDateTime(DateTime.Today);
+
+        _editModel = new MortgageEditModel
+        {
+            Id = Guid.NewGuid(),
+            Name = string.Empty,
+            Type = MortgageType.Saron,
+            PaymentAccountIdText = PaymentAccounts.FirstOrDefault()?.Id.ToString() ?? string.Empty,
+            InitialPrincipal = 0m,
+            InitialDate = today,
+            CalculationPrincipal = null,
+            CalculationPrincipalDate = null,
+            FixedInterestPercent = 0.65m,
+            SaronRates =
+            [
+                new MortgageInterestRatePointEditModel
+                {
+                    Date = today,
+                    RatePercent = 0m
+                }
+            ],
+            AmortisationMode = AmortisationMode.None,
+            AnnualAmortisationAmount = 0m,
+            PaymentInterval = MortgagePaymentInterval.Quarterly,
+            BillingCalendar = MortgageBillingCalendar.BankQuarters,
+            IsActive = true
+        };
+
+        _newSaronRate = new MortgageInterestRatePointEditModel
+        {
+            Date = today,
+            RatePercent = 0m
+        };
+
+        _isNewMortgage = true;
+    }
+
+    private void EditMortgage(MortgageContract mortgage)
+    {
+        ClearMessages();
+
+        _editModel = MortgageEditModel.FromMortgage(mortgage);
+        _newSaronRate = new MortgageInterestRatePointEditModel
+        {
+            Date = DateOnly.FromDateTime(DateTime.Today),
+            RatePercent = 0m
+        };
+
+        _isNewMortgage = false;
+    }
+
+    private void SaveMortgage()
+    {
+        ClearMessages();
+
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            ValidateEditModel();
+
+            var mortgage = _editModel.ToMortgage();
+            AppState.AddOrUpdateMortgage(mortgage);
+
+            _infoMessage = _isNewMortgage
+                ? Text("Mortgages_Added", mortgage.Name)
+                : Text("Mortgages_Updated", mortgage.Name);
+
+            _editModel = null;
+            _isNewMortgage = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void DeleteMortgage(MortgageContract mortgage)
+    {
+        ClearMessages();
+
+        try
+        {
+            AppState.DeleteMortgage(mortgage.Id);
+            _infoMessage = Text("Mortgages_Deleted", mortgage.Name);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ClearMessages();
+        _editModel = null;
+        _isNewMortgage = false;
+    }
+
+    private void AddSaronRatePoint()
+    {
+        ClearMessages();
+
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        var existing = _editModel.SaronRates
+            .SingleOrDefault(x => x.Date == _newSaronRate.Date);
+
+        if (existing is not null)
+        {
+            existing.RatePercent = _newSaronRate.RatePercent;
+        }
+        else
+        {
+            _editModel.SaronRates.Add(new MortgageInterestRatePointEditModel
+            {
+                Date = _newSaronRate.Date,
+                RatePercent = _newSaronRate.RatePercent
+            });
+        }
+
+        _editModel.SaronRates = _editModel.SaronRates
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        _newSaronRate = new MortgageInterestRatePointEditModel
+        {
+            Date = _newSaronRate.Date.AddMonths(3),
+            RatePercent = _newSaronRate.RatePercent
+        };
+    }
+
+    private void DeleteSaronRatePoint(MortgageInterestRatePointEditModel ratePoint)
+    {
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        _editModel.SaronRates.Remove(ratePoint);
+    }
+
+    private void ValidateEditModel()
+    {
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_editModel.Name))
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorNameRequired"));
+        }
+
+        if (string.IsNullOrWhiteSpace(_editModel.PaymentAccountIdText))
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorPaymentAccountRequired"));
+        }
+
+        if (_editModel.InitialPrincipal <= 0)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorInitialPrincipalGreaterThanZero"));
+        }
+
+        if (_editModel.FixedInterestPercent < 0)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorFixedInterestNotNegative"));
+        }
+
+        if (_editModel.AnnualAmortisationAmount < 0)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorAnnualAmortisationNotNegative"));
+        }
+
+        if (_editModel.CalculationPrincipal is not null && _editModel.CalculationPrincipal <= 0)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorCalculationPrincipalGreaterThanZero"));
+        }
+
+        if (_editModel.CalculationPrincipal is not null && _editModel.CalculationPrincipalDate is null)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorCalculationPrincipalDateRequired"));
+        }
+
+        if (_editModel.CalculationPrincipalDate is not null && _editModel.CalculationPrincipal is null)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorCalculationPrincipalRequired"));
+        }
+
+        if (_editModel.CalculationPrincipalDate is not null && _editModel.CalculationPrincipalDate < _editModel.InitialDate)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorCalculationPrincipalDateBeforeInitialDate"));
+        }
+
+        if (_editModel.Type == MortgageType.Saron && _editModel.SaronRates.Count == 0)
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorSaronRateRequired"));
+        }
+
+        if (_editModel.AmortisationMode == AmortisationMode.Indirect
+            && string.IsNullOrWhiteSpace(_editModel.IndirectAmortisationAccountIdText))
+        {
+            throw new InvalidOperationException(Text("Mortgages_ErrorIndirectAmortisationAccountRequired"));
+        }
+    }
+
+    private string GetAccountName(Guid accountId)
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            return "?";
+        }
+
+        return AppState.CurrentPlan.Accounts
+            .SingleOrDefault(x => x.Id == accountId)
+            ?.Name
+            ?? "?";
+    }
+
+    private decimal GetProjectedPrincipal(MortgageContract mortgage)
+    {
+        if (AppState.CurrentSimulationResult is null || AppState.CurrentPlan is null)
+        {
+            return mortgage.CalculationPrincipal ?? mortgage.InitialPrincipal;
+        }
+
+        var projectedPrincipal = AppState.CurrentSimulationResult.GetMortgagePrincipal(
+            mortgage.Id,
+            AppState.CurrentPlan.SimulationSettings.EndDate);
+
+        if (projectedPrincipal == 0m)
+        {
+            return mortgage.CalculationPrincipal ?? mortgage.InitialPrincipal;
+        }
+
+        return projectedPrincipal;
+    }
+
+    private static string FormatAmount(decimal value)
+    {
+        return value.ToString("N2", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatRate(decimal value)
+    {
+        return value.ToString("N3", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private string Text(string key)
+    {
+        return L[key].Value;
+    }
+
+    private string Text(string key, params object[] arguments)
+    {
+        return L[key, arguments].Value;
+    }
+
+    private void ClearMessages()
+    {
+        _errorMessage = null;
+        _infoMessage = null;
+    }
+}
