@@ -30,15 +30,15 @@ jobs:
 
       - name: Show publish output
         run: |
-          echo "Publish folder:"
-          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish
+          echo "Publish wwwroot:"
+          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
           echo "Framework folder:"
-          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/_framework || true
+          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/_framework
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish
+          path: src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
 
   deploy:
     needs: build
