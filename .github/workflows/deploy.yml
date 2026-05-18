@@ -24,7 +24,12 @@ jobs:
         run: dotnet restore
 
       - name: Publish Blazor
-        run: dotnet publish src/CashFlowPlanner.BlazorWasm -c Release -o publish
+        run: dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj -c Release
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: src/CashFlowPlanner.BlazorWasm/bin/Release/net*/publish/wwwroot
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
