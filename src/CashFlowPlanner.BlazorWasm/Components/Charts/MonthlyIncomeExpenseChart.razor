@@ -1,0 +1,465 @@
+﻿@using CashFlowPlanner.BlazorWasm.Models
+
+@if (Summaries.Count == 0)
+{
+    <div class="alert alert-info">
+        No monthly chart data available.
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-header">
+            Monthly income vs expenses
+        </div>
+
+        <div class="card-body">
+            <svg viewBox="0 0 @Width @Height"
+                 role="img"
+                 style="width: 100%; height: auto; max-height: 420px;">
+
+                <title>Monthly income vs expenses</title>
+
+                @foreach (var tick in YTicks)
+                {
+                    <line x1="@LeftPadding"
+                          y1="@tick.Y"
+                          x2="@(Width - RightPadding)"
+                          y2="@tick.Y"
+                          stroke="#e5e5e5"
+                          stroke-width="1" />
+
+                    <SvgText X="@(LeftPadding - 8)"
+                             Y="@(tick.Y + 4)"
+                             TextAnchor="end"
+                             FontSize="11"
+                             Fill="#666">
+                        @tick.Label
+                    </SvgText>
+                }
+
+                <line x1="@LeftPadding"
+                      y1="@ZeroY"
+                      x2="@(Width - RightPadding)"
+                      y2="@ZeroY"
+                      stroke="#999"
+                      stroke-width="1" />
+
+                <line x1="@LeftPadding"
+                      y1="@TopPadding"
+                      x2="@LeftPadding"
+                      y2="@(Height - BottomPadding)"
+                      stroke="#999"
+                      stroke-width="1" />
+
+                @foreach (var bar in Bars)
+                {
+                    <rect x="@bar.X"
+                          y="@bar.Y"
+                          width="@bar.Width"
+                          height="@bar.Height"
+                          fill="@bar.Fill">
+                        <title>@bar.Title</title>
+                    </rect>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(NetPolylinePoints))
+                {
+                    <polyline fill="none"
+                              stroke="#0d6efd"
+                              stroke-width="2.5"
+                              points="@NetPolylinePoints" />
+
+                    @foreach (var point in NetPoints)
+                    {
+                        <circle cx="@point.X"
+                                cy="@point.Y"
+                                r="2.5"
+                                fill="#0d6efd">
+                            <title>@point.Title</title>
+                        </circle>
+                    }
+                }
+
+                @foreach (var label in XLabels)
+                {
+                    <SvgText X="@label.X"
+                             Y="@(Height - 8)"
+                             TextAnchor="middle"
+                             FontSize="11"
+                             Fill="#666">
+                        @label.Label
+                    </SvgText>
+                }
+
+                <rect x="@(LeftPadding)"
+                      y="10"
+                      width="12"
+                      height="12"
+                      fill="#198754" />
+
+                <SvgText X="@(LeftPadding + 18)"
+                         Y="20"
+                         TextAnchor="start"
+                         FontSize="11"
+                         Fill="#666">
+                    Income
+                </SvgText>
+
+                <rect x="@(LeftPadding + 95)"
+                      y="10"
+                      width="12"
+                      height="12"
+                      fill="#dc3545" />
+
+                <SvgText X="@(LeftPadding + 113)"
+                         Y="20"
+                         TextAnchor="start"
+                         FontSize="11"
+                         Fill="#666">
+                    Expenses
+                </SvgText>
+
+                <line x1="@(LeftPadding + 195)"
+                      y1="16"
+                      x2="@(LeftPadding + 215)"
+                      y2="16"
+                      stroke="#0d6efd"
+                      stroke-width="2.5" />
+
+                <SvgText X="@(LeftPadding + 222)"
+                         Y="20"
+                         TextAnchor="start"
+                         FontSize="11"
+                         Fill="#666">
+                    Net
+                </SvgText>
+            </svg>
+
+            <div class="mt-2 small text-muted">
+                Highest expense month:
+                <strong>@HighestExpenseMonthLabel</strong>
+                with
+                <strong>@HighestExpenseAmount.ToString("N2") @Currency</strong>.
+                Lowest net cashflow:
+                <strong>@LowestNetMonthLabel</strong>
+                with
+                <strong>@LowestNetAmount.ToString("N2") @Currency</strong>.
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<MonthlyCashflowSummary> Summaries { get; set; } = [];
+
+    [Parameter]
+    public string Currency { get; set; } = "CHF";
+
+    [Parameter]
+    public int Width { get; set; } = 900;
+
+    [Parameter]
+    public int Height { get; set; } = 340;
+
+    private const int LeftPadding = 80;
+    private const int RightPadding = 24;
+    private const int TopPadding = 34;
+    private const int BottomPadding = 42;
+
+    private IReadOnlyList<MonthlyCashflowSummary> OrderedSummaries =>
+        Summaries
+            .OrderBy(x => x.Year)
+            .ThenBy(x => x.Month)
+            .ToList();
+
+    private decimal MinValue
+    {
+        get
+        {
+            var summaries = OrderedSummaries;
+
+            if (summaries.Count == 0)
+            {
+                return 0m;
+            }
+
+            var minNet = summaries.Min(x => x.NetCashflow);
+
+            return Math.Min(0m, minNet);
+        }
+    }
+
+    private decimal MaxValue
+    {
+        get
+        {
+            var summaries = OrderedSummaries;
+
+            if (summaries.Count == 0)
+            {
+                return 100m;
+            }
+
+            var max = summaries.Max(x => Math.Max(x.Income, Math.Max(x.Expenses, x.NetCashflow)));
+
+            return Math.Max(100m, max);
+        }
+    }
+
+    private double ZeroY => MapY(0m);
+
+    private IReadOnlyList<ChartBar> Bars => BuildBars();
+
+    private IReadOnlyList<ChartPoint> NetPoints => BuildNetPoints();
+
+    private string NetPolylinePoints => string.Join(
+        " ",
+        NetPoints.Select(x => $"{x.X:0.##},{x.Y:0.##}"));
+
+    private IReadOnlyList<AxisLabel> XLabels => BuildXLabels();
+
+    private IReadOnlyList<YAxisTick> YTicks => BuildYTicks();
+
+    private string HighestExpenseMonthLabel
+    {
+        get
+        {
+            var item = OrderedSummaries
+                .OrderByDescending(x => x.Expenses)
+                .FirstOrDefault();
+
+            return item?.Label ?? "-";
+        }
+    }
+
+    private decimal HighestExpenseAmount =>
+        OrderedSummaries.Count == 0
+            ? 0m
+            : OrderedSummaries.Max(x => x.Expenses);
+
+    private string LowestNetMonthLabel
+    {
+        get
+        {
+            var item = OrderedSummaries
+                .OrderBy(x => x.NetCashflow)
+                .FirstOrDefault();
+
+            return item?.Label ?? "-";
+        }
+    }
+
+    private decimal LowestNetAmount =>
+        OrderedSummaries.Count == 0
+            ? 0m
+            : OrderedSummaries.Min(x => x.NetCashflow);
+
+    private IReadOnlyList<ChartBar> BuildBars()
+    {
+        var summaries = OrderedSummaries;
+
+        if (summaries.Count == 0)
+        {
+            return [];
+        }
+
+        var result = new List<ChartBar>();
+
+        var plotWidth = Width - LeftPadding - RightPadding;
+        var categoryWidth = plotWidth / summaries.Count;
+        var barWidth = Math.Min(18d, categoryWidth * 0.28d);
+
+        for (var i = 0; i < summaries.Count; i++)
+        {
+            var month = summaries[i];
+            var centerX = LeftPadding + (categoryWidth * i) + (categoryWidth / 2d);
+
+            result.Add(CreatePositiveBar(
+                x: centerX - barWidth - 1,
+                width: barWidth,
+                value: month.Income,
+                fill: "#198754",
+                title: $"{month.Label} income: {month.Income:N2} {Currency}"));
+
+            result.Add(CreatePositiveBar(
+                x: centerX + 1,
+                width: barWidth,
+                value: month.Expenses,
+                fill: "#dc3545",
+                title: $"{month.Label} expenses: {month.Expenses:N2} {Currency}"));
+        }
+
+        return result;
+    }
+
+    private ChartBar CreatePositiveBar(
+        double x,
+        double width,
+        decimal value,
+        string fill,
+        string title)
+    {
+        var y = MapY(value);
+        var zero = ZeroY;
+
+        return new ChartBar(
+            X: x,
+            Y: Math.Min(y, zero),
+            Width: width,
+            Height: Math.Abs(zero - y),
+            Fill: fill,
+            Title: title);
+    }
+
+    private IReadOnlyList<ChartPoint> BuildNetPoints()
+    {
+        var summaries = OrderedSummaries;
+
+        if (summaries.Count == 0)
+        {
+            return [];
+        }
+
+        var result = new List<ChartPoint>();
+
+        var plotWidth = Width - LeftPadding - RightPadding;
+        var categoryWidth = plotWidth / summaries.Count;
+
+        for (var i = 0; i < summaries.Count; i++)
+        {
+            var month = summaries[i];
+            var centerX = LeftPadding + (categoryWidth * i) + (categoryWidth / 2d);
+            var y = MapY(month.NetCashflow);
+
+            result.Add(new ChartPoint(
+                X: centerX,
+                Y: y,
+                Title: $"{month.Label} net: {month.NetCashflow:N2} {Currency}"));
+        }
+
+        return result;
+    }
+
+    private IReadOnlyList<AxisLabel> BuildXLabels()
+    {
+        var summaries = OrderedSummaries;
+
+        if (summaries.Count == 0)
+        {
+            return [];
+        }
+
+        var labels = new List<AxisLabel>();
+
+        var plotWidth = Width - LeftPadding - RightPadding;
+        var categoryWidth = plotWidth / summaries.Count;
+
+        var labelStep = Math.Max(1, (int)Math.Ceiling(summaries.Count / 12d));
+
+        for (var i = 0; i < summaries.Count; i++)
+        {
+            if (i % labelStep != 0 && i != summaries.Count - 1)
+            {
+                continue;
+            }
+
+            var month = summaries[i];
+            var centerX = LeftPadding + (categoryWidth * i) + (categoryWidth / 2d);
+
+            labels.Add(new AxisLabel(
+                X: centerX,
+                Label: month.Label));
+        }
+
+        return labels;
+    }
+
+    private IReadOnlyList<YAxisTick> BuildYTicks()
+    {
+        const int tickCount = 5;
+
+        var min = MinValue;
+        var max = MaxValue;
+
+        EnsureVisibleRange(ref min, ref max);
+
+        var result = new List<YAxisTick>();
+
+        for (var i = 0; i < tickCount; i++)
+        {
+            var ratio = tickCount == 1
+                ? 0m
+                : (decimal)i / (tickCount - 1);
+
+            var value = max - ((max - min) * ratio);
+            var y = MapY(value);
+
+            result.Add(new YAxisTick(
+                Value: value,
+                Y: y,
+                Label: $"{value:N0}"));
+        }
+
+        return result;
+    }
+
+    private double MapY(decimal value)
+    {
+        var min = MinValue;
+        var max = MaxValue;
+
+        EnsureVisibleRange(ref min, ref max);
+
+        var plotHeight = Height - TopPadding - BottomPadding;
+
+        if (max == min)
+        {
+            return TopPadding + (plotHeight / 2d);
+        }
+
+        var ratio = (double)((value - min) / (max - min));
+
+        return Height - BottomPadding - (ratio * plotHeight);
+    }
+
+    private static void EnsureVisibleRange(ref decimal min, ref decimal max)
+    {
+        if (min == max)
+        {
+            var padding = Math.Max(Math.Abs(min) * 0.1m, 100m);
+            min -= padding;
+            max += padding;
+            return;
+        }
+
+        var range = max - min;
+        var extra = range * 0.08m;
+
+        min -= extra;
+        max += extra;
+    }
+
+    private sealed record ChartBar(
+        double X,
+        double Y,
+        double Width,
+        double Height,
+        string Fill,
+        string Title);
+
+    private sealed record ChartPoint(
+        double X,
+        double Y,
+        string Title);
+
+    private sealed record AxisLabel(
+        double X,
+        string Label);
+
+    private sealed record YAxisTick(
+        decimal Value,
+        double Y,
+        string Label);
+}

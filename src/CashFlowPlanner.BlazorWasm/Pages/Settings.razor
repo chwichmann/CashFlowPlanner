@@ -1,0 +1,465 @@
+﻿@page "/settings"
+
+@using System.Globalization
+@using CashFlowPlanner.BlazorWasm
+@using CashFlowPlanner.BlazorWasm.Models
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.Core
+@using Microsoft.Extensions.Localization
+@using Microsoft.JSInterop
+
+@inject BrowserPlanCacheService BrowserCache
+@inject CashFlowAppState AppState
+@inject IStringLocalizer<SharedResource> L
+@inject BrowserCultureService CultureService
+@inject IJSRuntime JsRuntime
+@inject EnumLocalizer EnumL
+
+<PageTitle>@L["Settings"] - CashFlow Planner</PageTitle>
+
+<h2>@L["Settings"]</h2>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">
+        @_errorMessage
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_infoMessage))
+{
+    <div class="alert alert-success">
+        @_infoMessage
+    </div>
+}
+
+@if (AppState.CurrentPlan is null)
+{
+    <div class="alert alert-warning">
+        @L["Settings_NoPlanLoaded"]
+    </div>
+}
+else if (_editModel is not null)
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>@L["Plan"]</strong>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="planName">@L["PlanTitle"]</label>
+                    <InputText id="planName"
+                               class="form-control"
+                               @bind-Value="_planName" />
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="button"
+                        class="btn btn-primary"
+                        @onclick="SavePlanName">
+                    @L["SavePlanTitle"]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>@L["Settings_SimulationSettings"]</strong>
+        </div>
+
+        <div class="card-body">
+            <p class="text-muted">
+                @L["Settings_SimulationSettingsText"]
+            </p>
+
+            <EditForm Model="_editModel" OnValidSubmit="SaveSettings">
+                <DataAnnotationsValidator />
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label" for="dateMode">@L["Settings_DateMode"]</label>
+                        <InputSelect id="dateMode"
+                                     class="form-select"
+                                     @bind-Value="_editModel.DateMode">
+                            @foreach (var mode in Enum.GetValues<SimulationDateMode>())
+                            {
+                                <option value="@mode">@EnumL.Translate(mode)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    @if (_editModel.DateMode == SimulationDateMode.RollingHorizon)
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label" for="startAnchor">@L["Settings_StartAnchor"]</label>
+                            <InputSelect id="startAnchor"
+                                         class="form-select"
+                                         @bind-Value="_editModel.StartAnchor">
+                                @foreach (var anchor in Enum.GetValues<SimulationStartAnchor>())
+                                {
+                                    <option value="@anchor">@EnumL.Translate(anchor)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label" for="horizonMonths">@L["Settings_HorizonMonths"]</label>
+                            <InputNumber id="horizonMonths"
+                                         class="form-control"
+                                         @bind-Value="_editModel.HorizonMonths" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">@L["Settings_EffectiveRangePreview"]</label>
+                            <div class="form-control-plaintext">
+                                @FormatDate(GetPreviewRange().StartDate)
+                                -
+                                @FormatDate(GetPreviewRange().EndDate)
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label" for="startDate">@L["Settings_StartDate"]</label>
+                            <InputDate id="startDate"
+                                       class="form-control"
+                                       @bind-Value="_editModel.StartDate" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="endDate">@L["Settings_EndDate"]</label>
+                            <InputDate id="endDate"
+                                       class="form-control"
+                                       @bind-Value="_editModel.EndDate" />
+                        </div>
+                    }
+
+                    <div class="col-md-3">
+                        <label class="form-label" for="granularity">@L["Settings_Granularity"]</label>
+                        <InputSelect id="granularity"
+                                     class="form-select"
+                                     @bind-Value="_editModel.Granularity">
+                            @foreach (var granularity in Enum.GetValues<SimulationGranularity>())
+                            {
+                                <option value="@granularity">@EnumL.Translate(granularity)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <InputCheckbox id="includeInactiveAccounts"
+                                           class="form-check-input"
+                                           @bind-Value="_editModel.IncludeInactiveAccounts" />
+                            <label class="form-check-label" for="includeInactiveAccounts">
+                                @L["Settings_IncludeInactiveAccounts"]
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <InputCheckbox id="warnOnNegativeBankBalance"
+                                           class="form-check-input"
+                                           @bind-Value="_editModel.WarnOnNegativeBankBalance" />
+                            <label class="form-check-label" for="warnOnNegativeBankBalance">
+                                @L["Settings_WarnOnNegativeBankBalance"]
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit"
+                            class="btn btn-primary">
+                        @L["Settings_SaveSettings"]
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="ReloadFromPlan">
+                        @L["Reset"]
+                    </button>
+                </div>
+            </EditForm>
+
+            @if (AppState.CurrentSimulationResult is not null)
+            {
+                <div class="alert alert-info mt-3">
+                    @Text(
+                        "Settings_CurrentSimulationResult",
+                        FormatDate(AppState.CurrentSimulationResult.StartDate),
+                        FormatDate(AppState.CurrentSimulationResult.EndDate),
+                        AppState.CurrentSimulationResult.Events.Count,
+                        AppState.CurrentSimulationResult.BalancePoints.Count,
+                        AppState.CurrentSimulationResult.Warnings.Count)
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>@L["BrowserWorkingCopy"]</strong>
+        </div>
+
+        <div class="card-body">
+            <p>
+                @L["Settings_BrowserWorkingCopyText"]
+            </p>
+
+            <button type="button"
+                    class="btn btn-outline-danger"
+                    @onclick="ClearBrowserCacheAsync">
+                @L["ClearBrowserCache"]
+            </button>
+
+            @if (!string.IsNullOrWhiteSpace(_browserCacheMessage))
+            {
+                <div class="alert alert-info mt-3">
+                    @_browserCacheMessage
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>@L["LanguageAndRegion"]</strong>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">@L["Language"]</label>
+                    <InputSelect class="form-select"
+                                 @bind-Value="_cultureEditModel.LanguageCulture">
+                        <option value="en">@L["Language_English"]</option>
+                        <option value="de">@L["Language_German"]</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">@L["Region"]</label>
+                    <InputSelect class="form-select"
+                                 @bind-Value="_cultureEditModel.RegionCulture">
+                        <option value="en-CH">@L["Region_SwitzerlandEnglish"]</option>
+                        <option value="de-CH">@L["Region_SwitzerlandGerman"]</option>
+                        <option value="en-US">@L["Region_UnitedStatesEnglish"]</option>
+                        <option value="de-DE">@L["Region_GermanyGerman"]</option>
+                    </InputSelect>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button type="button"
+                        class="btn btn-primary"
+                        @onclick="SaveCulturePreferencesAsync">
+                    @L["SaveLanguageAndRegion"]
+                </button>
+            </div>
+
+            <div class="form-text mt-2">
+                @L["LanguageChangeReloadHint"]
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private SimulationSettingsEditModel? _editModel;
+    private string? _planName;
+    private Guid? _loadedPlanId;
+
+    private string? _browserCacheMessage;
+    private string? _errorMessage;
+    private string? _infoMessage;
+
+    private CulturePreferenceEditModel _cultureEditModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var preferences = await CultureService.LoadAsync();
+
+        _cultureEditModel = new CulturePreferenceEditModel
+        {
+            LanguageCulture = preferences.LanguageCulture,
+            RegionCulture = preferences.RegionCulture
+        };
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            _editModel = null;
+            _planName = null;
+            _loadedPlanId = null;
+            return;
+        }
+
+        if (_editModel is null || _loadedPlanId != AppState.CurrentPlan.Id)
+        {
+            ReloadFromPlan();
+        }
+    }
+
+    private void ReloadFromPlan()
+    {
+        ClearMessages();
+
+        if (AppState.CurrentPlan is null)
+        {
+            _editModel = null;
+            _planName = null;
+            _loadedPlanId = null;
+            return;
+        }
+
+        _loadedPlanId = AppState.CurrentPlan.Id;
+        _planName = AppState.CurrentPlan.Name;
+
+        _editModel = SimulationSettingsEditModel.FromSettings(
+            AppState.CurrentPlan.SimulationSettings);
+    }
+
+    private void SavePlanName()
+    {
+        ClearMessages();
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_planName))
+            {
+                throw new InvalidOperationException(Text("Settings_ErrorPlanTitleRequired"));
+            }
+
+            AppState.UpdatePlanName(_planName);
+
+            _infoMessage = Text("Settings_PlanTitleSaved");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task ClearBrowserCacheAsync()
+    {
+        ClearMessages();
+
+        try
+        {
+            await BrowserCache.ClearAsync();
+
+            AppState.Clear();
+
+            _browserCacheMessage = Text("Settings_BrowserWorkingCopyCleared");
+        }
+        catch (Exception ex)
+        {
+            _browserCacheMessage = ex.Message;
+        }
+    }
+
+    private void SaveSettings()
+    {
+        ClearMessages();
+
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            ValidateEditModel();
+
+            var settings = _editModel.ToSettings();
+
+            AppState.UpdateSimulationSettings(settings);
+
+            _infoMessage = Text("Settings_SimulationSettingsSaved");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void ValidateEditModel()
+    {
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        var settings = _editModel.ToSettings();
+        settings.Validate();
+    }
+
+    private SimulationDateRange GetPreviewRange()
+    {
+        if (_editModel is null)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            return new SimulationDateRange(today, today);
+        }
+
+        return _editModel
+            .ToSettings()
+            .GetEffectiveDateRange(DateOnly.FromDateTime(DateTime.Today));
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private void ClearMessages()
+    {
+        _errorMessage = null;
+        _infoMessage = null;
+        _browserCacheMessage = null;
+    }
+
+    private async Task SaveCulturePreferencesAsync()
+    {
+        ClearMessages();
+
+        try
+        {
+            var preferences = new CulturePreferences
+            {
+                LanguageCulture = _cultureEditModel.LanguageCulture,
+                RegionCulture = _cultureEditModel.RegionCulture
+            };
+
+            await CultureService.SaveAsync(preferences);
+
+            _infoMessage = Text("LanguageAndRegionSaved");
+
+            await JsRuntime.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private string Text(string key)
+    {
+        return L[key].Value;
+    }
+
+    private string Text(string key, params object[] arguments)
+    {
+        return L[key, arguments].Value;
+    }
+}

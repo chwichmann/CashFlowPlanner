@@ -1,0 +1,47 @@
+﻿@using CashFlowPlanner.Core
+@using CashFlowPlanner.Core.Accounts
+
+<SvgLineChart Title="Liquid balance over time"
+              Points="Series"
+              Currency="@Plan.BaseCurrency"
+              Stroke="#0d6efd"
+              FooterLabel="Lowest liquid balance" />
+
+@code {
+    [Parameter]
+    public required CashFlowPlan Plan { get; set; }
+
+    [Parameter]
+    public required SimulationResult Result { get; set; }
+
+    private IReadOnlyList<TimeSeriesPoint> Series => BuildSeries();
+
+    private IReadOnlyList<TimeSeriesPoint> BuildSeries()
+    {
+        var liquidAccountIds = Plan.Accounts
+            .Where(IsLiquidAccount)
+            .Select(x => x.Id)
+            .ToHashSet();
+
+        if (liquidAccountIds.Count == 0)
+        {
+            return [];
+        }
+
+        return Result.BalancePoints
+            .Where(x => liquidAccountIds.Contains(x.AccountId))
+            .GroupBy(x => x.Date)
+            .Select(group => new TimeSeriesPoint(
+                group.Key,
+                group.Sum(x => x.Balance)))
+            .OrderBy(x => x.Date)
+            .ToList();
+    }
+
+    private static bool IsLiquidAccount(Account account)
+    {
+        return account.Type is AccountType.BankAccount
+            or AccountType.SavingsAccount
+            or AccountType.Cash;
+    }
+}

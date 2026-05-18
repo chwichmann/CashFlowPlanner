@@ -1,0 +1,10 @@
+﻿@page "/not-found"
+@layout MainLayout
+
+@using CashFlowPlanner.BlazorWasm.Resources
+@using Microsoft.Extensions.Localization
+
+@inject IStringLocalizer<SharedResource> L
+
+<h3>@L["NotFound_Title"]</h3>
+<p>@L["NotFound_Text"]</p>

@@ -1,0 +1,81 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+
+@using CashFlowPlanner.BlazorWasm.Components
+
+@inject CashFlowPlanner.BlazorWasm.Services.PlanCacheCoordinator PlanCacheCoordinator
+@inject CashFlowPlanner.BlazorWasm.Services.CashFlowAppState AppState
+
+<div class="app-shell">
+    <NavMenu />
+    <UiFeedbackBanner />
+    <main class="app-main">
+        <div class="content px-4 py-3" @key="_appStateRefreshKey">
+            @if (!_cacheInitialized)
+            {
+                <div class="alert alert-info">
+                    Loading browser working copy...
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_cacheError))
+            {
+                <div class="alert alert-warning">
+                    Could not restore browser working copy: @_cacheError
+                </div>
+
+                @Body
+            }
+            else
+            {
+                @Body
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    private bool _cacheInitialized;
+    private string? _cacheError;
+    private long _appStateRefreshKey;
+
+    protected override void OnInitialized()
+    {
+        AppState.Changed += OnAppStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            await PlanCacheCoordinator.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            _cacheError = ex.Message;
+        }
+        finally
+        {
+            _cacheInitialized = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnAppStateChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            _appStateRefreshKey++;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        AppState.Changed -= OnAppStateChanged;
+    }
+}

@@ -1,0 +1,396 @@
+﻿@if (!HasData)
+{
+    <div class="alert alert-info">
+        No chart data available.
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-header">
+            @Title
+        </div>
+
+        <div class="card-body">
+            <svg viewBox="0 0 @Width @Height"
+                 role="img"
+                 style="width: 100%; height: auto; max-height: 420px;">
+
+                <title>@Title</title>
+
+                @foreach (var tick in YTicks)
+                {
+                    <line x1="@LeftPadding"
+                          y1="@tick.Y"
+                          x2="@(Width - RightPadding)"
+                          y2="@tick.Y"
+                          stroke="#e5e5e5"
+                          stroke-width="1" />
+
+                    <SvgText X="@(LeftPadding - 8)"
+                             Y="@(tick.Y + 4)"
+                             TextAnchor="end"
+                             FontSize="11"
+                             Fill="#666">
+                        @tick.Label
+                    </SvgText>
+                }
+
+                <line x1="@LeftPadding"
+                      y1="@(Height - BottomPadding)"
+                      x2="@(Width - RightPadding)"
+                      y2="@(Height - BottomPadding)"
+                      stroke="#999"
+                      stroke-width="1" />
+
+                <line x1="@LeftPadding"
+                      y1="@TopPadding"
+                      x2="@LeftPadding"
+                      y2="@(Height - BottomPadding)"
+                      stroke="#999"
+                      stroke-width="1" />
+
+                @if (ZeroLineY is not null)
+                {
+                    <line x1="@LeftPadding"
+                          y1="@ZeroLineY"
+                          x2="@(Width - RightPadding)"
+                          y2="@ZeroLineY"
+                          stroke="#cc6666"
+                          stroke-width="1"
+                          stroke-dasharray="4 4" />
+
+                    <SvgText X="@(Width - RightPadding)"
+                             Y="@((double)ZeroLineY - 4)"
+                             TextAnchor="end"
+                             FontSize="11"
+                             Fill="#cc6666">
+                        0
+                    </SvgText>
+                }
+
+                <polyline fill="none"
+                          stroke="@Stroke"
+                          stroke-width="2.5"
+                          points="@PolylinePoints" />
+
+                @foreach (var marker in Markers)
+                {
+                    <circle cx="@marker.X"
+                            cy="@marker.Y"
+                            r="2.5"
+                            fill="@Stroke" />
+                }
+
+                <SvgText X="@LeftPadding"
+                         Y="@(Height - 8)"
+                         TextAnchor="start"
+                         FontSize="11"
+                         Fill="#666">
+                    @StartDateLabel
+                </SvgText>
+
+                <SvgText X="@(Width / 2)"
+                         Y="@(Height - 8)"
+                         TextAnchor="middle"
+                         FontSize="11"
+                         Fill="#666">
+                    @MiddleDateLabel
+                </SvgText>
+
+                <SvgText X="@(Width - RightPadding)"
+                         Y="@(Height - 8)"
+                         TextAnchor="end"
+                         FontSize="11"
+                         Fill="#666">
+                    @EndDateLabel
+                </SvgText>
+            </svg>
+
+            <div class="mt-2 small text-muted">
+                @FooterLabel:
+                <strong>@LowestValue.ToString("N2") @Currency</strong>
+                on
+                <strong>@LowestValueDate</strong>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Chart";
+
+    [Parameter]
+    public IReadOnlyList<TimeSeriesPoint> Points { get; set; } = [];
+
+    [Parameter]
+    public string Currency { get; set; } = "CHF";
+
+    [Parameter]
+    public string Stroke { get; set; } = "#0d6efd";
+
+    [Parameter]
+    public string FooterLabel { get; set; } = "Lowest value";
+
+    [Parameter]
+    public int Width { get; set; } = 900;
+
+    [Parameter]
+    public int Height { get; set; } = 320;
+
+    private const int LeftPadding = 80;
+    private const int RightPadding = 24;
+    private const int TopPadding = 24;
+    private const int BottomPadding = 42;
+
+    private IReadOnlyList<TimeSeriesPoint> OrderedPoints =>
+        Points
+            .OrderBy(x => x.Date)
+            .ToList();
+
+    private bool HasData => OrderedPoints.Count > 0;
+
+    private string PolylinePoints => string.Join(
+        " ",
+        ChartPoints.Select(x => $"{x.X:0.##},{x.Y:0.##}"));
+
+    private IReadOnlyList<ChartPoint> ChartPoints => BuildChartPoints();
+
+    private IReadOnlyList<ChartPoint> Markers
+    {
+        get
+        {
+            var points = ChartPoints;
+
+            if (points.Count <= 24)
+            {
+                return points;
+            }
+
+            var step = Math.Max(1, points.Count / 12);
+
+            return points
+                .Where((_, index) => index % step == 0)
+                .Concat(points.TakeLast(1))
+                .GroupBy(x => x.Date)
+                .Select(x => x.First())
+                .ToList();
+        }
+    }
+
+    private IReadOnlyList<YAxisTick> YTicks => BuildYTicks();
+
+    private double? ZeroLineY
+    {
+        get
+        {
+            var series = OrderedPoints;
+
+            if (series.Count == 0)
+            {
+                return null;
+            }
+
+            var min = series.Min(x => x.Value);
+            var max = series.Max(x => x.Value);
+
+            if (min > 0 || max < 0)
+            {
+                return null;
+            }
+
+            EnsureVisibleRange(ref min, ref max);
+
+            return MapY(0m, min, max);
+        }
+    }
+
+    private decimal LowestValue
+    {
+        get
+        {
+            var series = OrderedPoints;
+            return series.Count == 0 ? 0m : series.Min(x => x.Value);
+        }
+    }
+
+    private DateOnly? LowestValueDate
+    {
+        get
+        {
+            var series = OrderedPoints;
+
+            if (series.Count == 0)
+            {
+                return null;
+            }
+
+            return series
+                .OrderBy(x => x.Value)
+                .ThenBy(x => x.Date)
+                .First()
+                .Date;
+        }
+    }
+
+    private string StartDateLabel =>
+        OrderedPoints.Count == 0
+            ? string.Empty
+            : OrderedPoints.First().Date.ToString("yyyy-MM-dd");
+
+    private string EndDateLabel =>
+        OrderedPoints.Count == 0
+            ? string.Empty
+            : OrderedPoints.Last().Date.ToString("yyyy-MM-dd");
+
+    private string MiddleDateLabel
+    {
+        get
+        {
+            var points = OrderedPoints;
+
+            if (points.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var start = points.First().Date;
+            var end = points.Last().Date;
+
+            var middleDayNumber = start.DayNumber + ((end.DayNumber - start.DayNumber) / 2);
+
+            return DateOnly.FromDayNumber(middleDayNumber).ToString("yyyy-MM-dd");
+        }
+    }
+
+    private IReadOnlyList<ChartPoint> BuildChartPoints()
+    {
+        var series = Downsample(OrderedPoints, maxPoints: 500);
+
+        if (series.Count == 0)
+        {
+            return [];
+        }
+
+        var minDate = series.Min(x => x.Date);
+        var maxDate = series.Max(x => x.Date);
+
+        var minValue = series.Min(x => x.Value);
+        var maxValue = series.Max(x => x.Value);
+
+        EnsureVisibleRange(ref minValue, ref maxValue);
+
+        return series
+            .Select(point => new ChartPoint(
+                point.Date,
+                MapX(point.Date, minDate, maxDate),
+                MapY(point.Value, minValue, maxValue)))
+            .ToList();
+    }
+
+    private IReadOnlyList<YAxisTick> BuildYTicks()
+    {
+        var series = OrderedPoints;
+
+        if (series.Count == 0)
+        {
+            return [];
+        }
+
+        var min = series.Min(x => x.Value);
+        var max = series.Max(x => x.Value);
+
+        EnsureVisibleRange(ref min, ref max);
+
+        const int tickCount = 5;
+        var ticks = new List<YAxisTick>();
+
+        for (var i = 0; i < tickCount; i++)
+        {
+            var ratio = tickCount == 1
+                ? 0
+                : (decimal)i / (tickCount - 1);
+
+            var value = max - ((max - min) * ratio);
+            var y = MapY(value, min, max);
+
+            ticks.Add(new YAxisTick(
+                value,
+                y,
+                $"{value:N0}"));
+        }
+
+        return ticks;
+    }
+
+    private static IReadOnlyList<TimeSeriesPoint> Downsample(
+        IReadOnlyList<TimeSeriesPoint> source,
+        int maxPoints)
+    {
+        if (source.Count <= maxPoints)
+        {
+            return source;
+        }
+
+        var step = Math.Ceiling(source.Count / (double)maxPoints);
+
+        var result = source
+            .Where((_, index) => index % step < 1)
+            .ToList();
+
+        var last = source[^1];
+
+        if (result.Count == 0 || result[^1].Date != last.Date)
+        {
+            result.Add(last);
+        }
+
+        return result;
+    }
+
+    private double MapX(DateOnly date, DateOnly minDate, DateOnly maxDate)
+    {
+        var plotWidth = Width - LeftPadding - RightPadding;
+
+        var totalDays = Math.Max(1, maxDate.DayNumber - minDate.DayNumber);
+        var offsetDays = date.DayNumber - minDate.DayNumber;
+
+        return LeftPadding + ((offsetDays / (double)totalDays) * plotWidth);
+    }
+
+    private double MapY(decimal value, decimal min, decimal max)
+    {
+        var plotHeight = Height - TopPadding - BottomPadding;
+
+        if (max == min)
+        {
+            return TopPadding + (plotHeight / 2.0);
+        }
+
+        var ratio = (double)((value - min) / (max - min));
+
+        return Height - BottomPadding - (ratio * plotHeight);
+    }
+
+    private static void EnsureVisibleRange(ref decimal min, ref decimal max)
+    {
+        if (min == max)
+        {
+            var padding = Math.Max(Math.Abs(min) * 0.1m, 100m);
+            min -= padding;
+            max += padding;
+            return;
+        }
+
+        var range = max - min;
+        var extra = range * 0.08m;
+
+        min -= extra;
+        max += extra;
+    }
+
+    private sealed record ChartPoint(DateOnly Date, double X, double Y);
+
+    private sealed record YAxisTick(decimal Value, double Y, string Label);
+}

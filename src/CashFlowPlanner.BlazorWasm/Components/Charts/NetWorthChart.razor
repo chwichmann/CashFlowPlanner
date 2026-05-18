@@ -1,0 +1,39 @@
+﻿@using CashFlowPlanner.Core
+
+<SvgLineChart Title="Net worth over time"
+              Points="Series"
+              Currency="@Plan.BaseCurrency"
+              Stroke="#198754"
+              FooterLabel="Lowest net worth" />
+
+@code {
+    [Parameter]
+    public required CashFlowPlan Plan { get; set; }
+
+    [Parameter]
+    public required SimulationResult Result { get; set; }
+
+    private IReadOnlyList<TimeSeriesPoint> Series => BuildSeries();
+
+    private IReadOnlyList<TimeSeriesPoint> BuildSeries()
+    {
+        var activeAccountIds = Plan.Accounts
+            .Where(x => x.IsActive)
+            .Select(x => x.Id)
+            .ToHashSet();
+
+        if (activeAccountIds.Count == 0)
+        {
+            return [];
+        }
+
+        return Result.BalancePoints
+            .Where(x => activeAccountIds.Contains(x.AccountId))
+            .GroupBy(x => x.Date)
+            .Select(group => new TimeSeriesPoint(
+                group.Key,
+                group.Sum(x => x.Balance)))
+            .OrderBy(x => x.Date)
+            .ToList();
+    }
+}

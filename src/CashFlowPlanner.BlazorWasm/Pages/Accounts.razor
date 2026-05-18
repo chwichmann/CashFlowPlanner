@@ -1,0 +1,746 @@
+﻿@page "/accounts"
+
+@using System.Globalization
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.Core
+@using CashFlowPlanner.Core.Accounts
+@using CashFlowPlanner.Core.People
+@using CashFlowPlanner.BlazorWasm.Models
+@using CashFlowPlanner.BlazorWasm.Services
+@using Microsoft.Extensions.Localization
+
+@inject CashFlowAppState AppState
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<SharedResource> L
+@inject EnumLocalizer EnumL
+
+<PageTitle>@L["Account_Title"] - CashFlow Planner</PageTitle>
+
+<h2>@L["Account_Title"]</h2>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">
+        @_errorMessage
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_infoMessage))
+{
+    <div class="alert alert-success">
+        @_infoMessage
+    </div>
+}
+
+@if (AppState.CurrentPlan is null)
+{
+    <div class="alert alert-warning">
+        @L["Account_NoPlan"]
+    </div>
+}
+else
+{
+    var plan = AppState.CurrentPlan;
+    var result = AppState.CurrentSimulationResult;
+
+    <div class="mb-3 d-flex gap-2">
+        <button type="button" class="btn btn-primary" @onclick="NewAccount">
+            @L["Account_AddAccount"]
+        </button>
+    </div>
+
+    @if (_editModel is not null)
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>@(_isNewAccount ? L["Account_AddAccount"] : L["Account_EditAccount"])</strong>
+            </div>
+
+            <div class="card-body">
+                <EditForm Model="_editModel" OnValidSubmit="SaveAccount">
+                    <DataAnnotationsValidator />
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label" for="accountName">@L["Account_Name"]</label>
+                            <InputText id="accountName"
+                                       class="form-control"
+                                       @bind-Value="_editModel.Name" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="accountType">@L["Account_Type"]</label>
+                            <InputSelect id="accountType"
+                                         class="form-select"
+                                         @bind-Value="_editModel.Type">
+                                @foreach (var accountType in Enum.GetValues<AccountType>())
+                                {
+                                    <option value="@accountType">@EnumL.Translate(accountType)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label" for="currency">@L["Account_Currency"]</label>
+                            <InputText id="currency"
+                                       class="form-control"
+                                       @bind-Value="_editModel.Currency" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="ownerPersonId">@L["Account_Owner"]</label>
+                            <InputSelect id="ownerPersonId"
+                                         class="form-select"
+                                         @bind-Value="_editModel.OwnerPersonId">
+                                <option value="">@L["Account_NoOwner"]</option>
+
+                                @foreach (var person in PersonList.OrderBy(x => x.DisplayName))
+                                {
+                                    <option value="@person.Id">@person.DisplayName</option>
+                                }
+                            </InputSelect>
+
+                            @if (_editModel.Type == AccountType.Pillar3a)
+                            {
+                                <div class="form-text">
+                                    @L["Account_RequiredForPillar3a"]
+                                </div>
+                            }
+                        </div>
+
+                        @if (_editModel.Type == AccountType.Pillar3a)
+                        {
+                            <div class="col-md-3">
+                                <label class="form-label" for="pillar3aSubtype">@L["Account_Pillar3aSubType"]</label>
+                                <InputSelect id="pillar3aSubtype"
+                                             class="form-select"
+                                             @bind-Value="_editModel.Pillar3aSubtype">
+                                    <option value="">@L["Account_Pillar3aSelectSubType"]</option>
+                                    <option value="@Pillar3aAccountSubtype.BankAccount">@EnumL.Translate(Pillar3aAccountSubtype.BankAccount)</option>
+                                    <option value="@Pillar3aAccountSubtype.FundSolution">@EnumL.Translate(Pillar3aAccountSubtype.FundSolution)</option>
+                                </InputSelect>
+                            </div>
+
+                            @if (PersonList.Count == 0)
+                            {
+                                <div class="col-md-9">
+                                    <div class="alert alert-warning mb-0">
+                                        @L["Account_NoOwners"]
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="bankName">@L["Account_BankName"]</label>
+                            <InputText id="bankName"
+                                       class="form-control"
+                                       @bind-Value="_editModel.BankName" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="openingBalance">@L["Account_OpeningBalance"]</label>
+                            <InputNumber id="openingBalance"
+                                         class="form-control"
+                                         @bind-Value="_editModel.OpeningBalance" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="openingDate">@L["Account_OpeningDate"]</label>
+                            <InputDate id="openingDate"
+                                       class="form-control"
+                                       @bind-Value="_editModel.OpeningDate" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label" for="ibanMasked">@L["Account_IbanMasked"]</label>
+                            <InputText id="ibanMasked"
+                                       class="form-control"
+                                       @bind-Value="_editModel.IbanMasked" />
+                        </div>
+
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <InputCheckbox id="isActive"
+                                               class="form-check-input"
+                                               @bind-Value="_editModel.IsActive" />
+                                <label class="form-check-label" for="isActive">
+                                    @L["Account_Active"]
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label" for="notes">@L["Account_Notes"]</label>
+                            <InputTextArea id="notes"
+                                           class="form-control"
+                                           @bind-Value="_editModel.Notes" />
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <h5>@L["Account_InterestContracts"]</h5>
+
+                    <p class="text-muted">
+                        @L["Account_InterestText"]
+                    </p>
+
+                    <div class="mb-3">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-primary"
+                                @onclick="AddInterestContract">
+                            @L["Account_InterestAdd"]
+                        </button>
+                    </div>
+
+                    @if (_editModel.InterestContracts.Count == 0)
+                    {
+                        <div class="alert alert-info">
+                            @L["Account_NoInterestContracts"]
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var contract in _editModel.InterestContracts)
+                        {
+                            <div class="card mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <strong>@(string.IsNullOrWhiteSpace(contract.Name) ? L["Account_InterestContract"] : contract.Name)</strong>
+
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-danger"
+                                            @onclick="() => RemoveInterestContract(contract)">
+                                        @L["Remove"]
+                                    </button>
+                                </div>
+
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">@L["Account_Name"]</label>
+                                            <InputText class="form-control"
+                                                       @bind-Value="contract.Name" />
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label class="form-label">@L["Account_CalculationMethod"]</label>
+                                            <InputSelect class="form-select"
+                                                         @bind-Value="contract.CalculationMethod">
+                                                @foreach (var method in Enum.GetValues<AccountInterestCalculationMethod>())
+                                                {
+                                                    <option value="@method">@EnumL.Translate(method)</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label class="form-label">@L["Account_PostingFrequency"]</label>
+                                            <InputSelect class="form-select"
+                                                         @bind-Value="contract.PostingFrequency">
+                                                @foreach (var frequency in Enum.GetValues<InterestPostingFrequency>())
+                                                {
+                                                    <option value="@frequency">@EnumL.Translate(frequency)</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <label class="form-label">@L["Account_DayCount"]</label>
+                                            <InputSelect class="form-select"
+                                                         @bind-Value="contract.DayCountConvention">
+                                                @foreach (var convention in Enum.GetValues<InterestDayCountConvention>())
+                                                {
+                                                    <option value="@convention">@EnumL.Translate(convention)</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label class="form-label">@L["Account_StartDate"]</label>
+                                            <InputDate class="form-control"
+                                                       @bind-Value="contract.StartDate" />
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label class="form-label">@L["Account_EndDate"]</label>
+                                            <InputDate class="form-control"
+                                                       @bind-Value="contract.EndDate" />
+                                        </div>
+
+                                        <div class="col-md-3 d-flex align-items-end">
+                                            <div class="form-check">
+                                                <InputCheckbox class="form-check-input"
+                                                               @bind-Value="contract.IsActive" />
+                                                <label class="form-check-label">
+                                                    @L["Account_Active"]
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr />
+
+                                    @if (contract.CalculationMethod == AccountInterestCalculationMethod.FlatBalance)
+                                    {
+                                        <h6>@L["Account_FlatInterestRate"]</h6>
+
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label">@L["Account_AnnualRatePercent"]</label>
+                                                <InputNumber class="form-control"
+                                                             @bind-Value="contract.FlatAnnualRatePercent" />
+                                            </div>
+                                        </div>
+
+                                        <div class="form-text mt-2">
+                                            @L["Account_FlatBalanceModeText"]
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="mb-0">@L["Account_InterestTiers"]</h6>
+
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => AddInterestTier(contract)">
+                                                @L["Account_AddTier"]
+                                            </button>
+                                        </div>
+
+                                        @if (contract.Tiers.Count == 0)
+                                        {
+                                            <div class="alert alert-warning">
+                                                @L["Account_InterestTierRequired"]
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <table class="table table-sm align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th>@L["Account_FromAmount"]</th>
+                                                        <th>@L["Account_ToAmount"]</th>
+                                                        <th>@L["Account_AnnualRatePercent"]</th>
+                                                        <th style="width: 100px;"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var tier in contract.Tiers)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <InputNumber class="form-control form-control-sm"
+                                                                             @bind-Value="tier.FromAmount" />
+                                                            </td>
+                                                            <td>
+                                                                <InputNumber class="form-control form-control-sm"
+                                                                             @bind-Value="tier.ToAmount" />
+                                                            </td>
+                                                            <td>
+                                                                <InputNumber class="form-control form-control-sm"
+                                                                             @bind-Value="tier.AnnualRatePercent" />
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <button type="button"
+                                                                        class="btn btn-sm btn-outline-danger"
+                                                                        @onclick="() => RemoveInterestTier(contract, tier)">
+                                                                    @L["Remove"]
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    <div class="mt-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            @L["Account_Save"]
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-secondary"
+                                @onclick="CancelEdit">
+                            @L["Account_Cancel"]
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    @if (plan.Accounts.Count == 0)
+    {
+        <div class="alert alert-info">
+            @L["Account_NoAccounts"]
+        </div>
+    }
+    else
+    {
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>@L["Account_Name"]</th>
+                    <th>@L["Account_Type"]</th>
+                    <th>@L["Account_Subtype"]</th>
+                    <th>@L["Account_Owner"]</th>
+                    <th>@L["Account_Bank"]</th>
+                    <th>@L["Account_Currency"]</th>
+                    <th class="text-end">@L["Account_OpeningBalance"]</th>
+                    <th>@L["Account_OpeningDate"]</th>
+                    <th class="text-end">@L["Account_EndBalance"]</th>
+                    <th class="text-end">@L["Account_Interest"]</th>
+                    <th>@L["Account_Active"]</th>
+                    <th class="text-end">@L["Account_Actions"]</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var account in plan.Accounts.OrderBy(x => x.Type).ThenBy(x => x.Name))
+                {
+                    var endBalance = result is null
+                        ? (decimal?)null
+                        : result.GetBalance(account.Id, plan.SimulationSettings.EndDate);
+
+                    <tr>
+                        <td>@account.Name</td>
+                        <td>@EnumL.Translate(account.Type)</td>
+                        <td>@FormatPillar3aSubtype(account)</td>
+                        <td>@GetOwnerName(account)</td>
+                        <td>@account.BankName</td>
+                        <td>@account.Currency</td>
+                        <td class="text-end">@account.OpeningBalance.ToString("N2", CultureInfo.CurrentCulture)</td>
+                        <td>@FormatDate(account.OpeningDate)</td>
+                        <td class="text-end">
+                            @if (endBalance is null)
+                            {
+                                <span class="text-muted">@L["Account_NotSimulated"]</span>
+                            }
+                            else
+                            {
+                                @endBalance.Value.ToString("N2", CultureInfo.CurrentCulture)
+                            }
+                        </td>
+                        <td class="text-end">@FormatInterestContracts(account)</td>
+                        <td>
+                            @if (account.IsActive)
+                            {
+                                <span class="badge bg-success">@L["Account_Active"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@L["Inactive"]</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary me-1"
+                                    @onclick="() => OpenStatement(account)">
+                                @L["Account_Statement"]
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-primary me-1"
+                                    @onclick="() => EditAccount(account)">
+                                @L["Edit"]
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => DeleteAccount(account)">
+                                @L["Delete"]
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private AccountEditModel? _editModel;
+    private bool _isNewAccount;
+    private string? _errorMessage;
+    private string? _infoMessage;
+
+    private IReadOnlyList<Person> PersonList =>
+        AppState.CurrentPlan?.Persons ?? new List<Person>();
+
+    private void NewAccount()
+    {
+        ClearMessages();
+
+        var openingDate = AppState.CurrentPlan?.SimulationSettings.StartDate
+            ?? DateOnly.FromDateTime(DateTime.Today);
+
+        _editModel = new AccountEditModel
+        {
+            Id = Guid.NewGuid(),
+            Name = string.Empty,
+            Type = AccountType.BankAccount,
+            Currency = AppState.CurrentPlan?.BaseCurrency ?? "CHF",
+            OpeningDate = openingDate,
+            IsActive = true,
+            OwnerPersonId = PersonList.Count == 1
+                ? PersonList[0].Id
+                : null
+        };
+
+        _isNewAccount = true;
+    }
+
+    private void EditAccount(Account account)
+    {
+        ClearMessages();
+
+        _editModel = AccountEditModel.FromAccount(account);
+        _isNewAccount = false;
+    }
+
+    private void SaveAccount()
+    {
+        ClearMessages();
+
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_editModel.Name))
+            {
+                throw new InvalidOperationException(Text("Account_ErrorNameRequired"));
+            }
+
+            if (string.IsNullOrWhiteSpace(_editModel.Currency))
+            {
+                throw new InvalidOperationException(Text("Account_ErrorCurrencyRequired"));
+            }
+
+            if (_editModel.OwnerPersonId is not null &&
+                !PersonList.Any(x => x.Id == _editModel.OwnerPersonId.Value))
+            {
+                throw new InvalidOperationException(Text("Account_ErrorOwnerDoesNotExist"));
+            }
+
+            if (_editModel.Type == AccountType.Pillar3a)
+            {
+                if (_editModel.OwnerPersonId is null)
+                {
+                    throw new InvalidOperationException(Text("Account_ErrorPillar3aOwnerRequired"));
+                }
+
+                if (_editModel.Pillar3aSubtype is null)
+                {
+                    throw new InvalidOperationException(Text("Account_ErrorPillar3aSubtypeRequired"));
+                }
+            }
+
+            if (_editModel.Type != AccountType.Pillar3a)
+            {
+                _editModel.Pillar3aSubtype = null;
+            }
+
+            foreach (var interestContractEditModel in _editModel.InterestContracts)
+            {
+                var contract = interestContractEditModel.ToContract();
+                contract.Validate();
+            }
+
+            var account = _editModel.ToAccount();
+
+            AppState.AddOrUpdateAccount(account);
+
+            _infoMessage = _isNewAccount
+                ? Text("Account_Added", account.Name)
+                : Text("Account_Updated", account.Name);
+
+            _editModel = null;
+            _isNewAccount = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void DeleteAccount(Account account)
+    {
+        ClearMessages();
+
+        try
+        {
+            AppState.DeleteAccount(account.Id);
+
+            _infoMessage = Text("Account_Deleted", account.Name);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ClearMessages();
+
+        _editModel = null;
+        _isNewAccount = false;
+    }
+
+    private void AddInterestContract()
+    {
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        _editModel.InterestContracts.Add(new AccountInterestContractEditModel
+        {
+            Id = Guid.NewGuid(),
+            Name = string.IsNullOrWhiteSpace(_editModel.Name)
+                ? Text("Account_DefaultInterestContractName")
+                : Text("Account_DefaultNamedInterestContractName", _editModel.Name),
+            CalculationMethod = AccountInterestCalculationMethod.FlatBalance,
+            PostingFrequency = InterestPostingFrequency.Yearly,
+            DayCountConvention = InterestDayCountConvention.Actual360,
+            StartDate = _editModel.OpeningDate,
+            IsActive = true,
+            FlatAnnualRatePercent = 0m,
+            Tiers =
+            [
+                new AccountInterestTierEditModel
+                {
+                    FromAmount = 0m,
+                    ToAmount = null,
+                    AnnualRatePercent = 0m
+                }
+            ]
+        });
+    }
+
+    private void RemoveInterestContract(AccountInterestContractEditModel contract)
+    {
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        _editModel.InterestContracts.Remove(contract);
+    }
+
+    private static void AddInterestTier(AccountInterestContractEditModel contract)
+    {
+        var nextFromAmount = 0m;
+
+        if (contract.Tiers.Count > 0)
+        {
+            var highestToAmount = contract.Tiers
+                .Where(x => x.ToAmount is not null)
+                .Select(x => x.ToAmount!.Value)
+                .DefaultIfEmpty(0m)
+                .Max();
+
+            var highestFromAmount = contract.Tiers
+                .Select(x => x.FromAmount)
+                .DefaultIfEmpty(0m)
+                .Max();
+
+            nextFromAmount = Math.Max(highestToAmount, highestFromAmount);
+        }
+
+        contract.Tiers.Add(new AccountInterestTierEditModel
+        {
+            FromAmount = nextFromAmount,
+            ToAmount = null,
+            AnnualRatePercent = 0m
+        });
+    }
+
+    private static void RemoveInterestTier(
+        AccountInterestContractEditModel contract,
+        AccountInterestTierEditModel tier)
+    {
+        contract.Tiers.Remove(tier);
+    }
+
+    private string GetOwnerName(Account account)
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            return "-";
+        }
+
+        if (account.Owners is null || account.Owners.Count == 0)
+        {
+            return "-";
+        }
+
+        var ownerNames = account.Owners
+            .Select(owner =>
+                AppState.CurrentPlan.Persons
+                    .SingleOrDefault(person => person.Id == owner.PersonId)
+                    ?.DisplayName ?? "?")
+            .ToList();
+
+        return ownerNames.Count == 0
+            ? "-"
+            : string.Join(", ", ownerNames);
+    }
+
+    private string FormatPillar3aSubtype(Account account)
+    {
+        if (account.Type != AccountType.Pillar3a)
+        {
+            return "-";
+        }
+
+        return EnumL.TranslateNullable(account.Pillar3aSubtype);
+    }
+
+    private static string FormatInterestContracts(Account account)
+    {
+        if (account.InterestContracts.Count == 0)
+        {
+            return "-";
+        }
+
+        var activeCount = account.InterestContracts.Count(x => x.IsActive);
+
+        return $"{activeCount}/{account.InterestContracts.Count}";
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private string Text(string key)
+    {
+        return L[key].Value;
+    }
+
+    private string Text(string key, params object[] arguments)
+    {
+        return L[key, arguments].Value;
+    }
+
+    private void ClearMessages()
+    {
+        _errorMessage = null;
+        _infoMessage = null;
+    }
+
+    private void OpenStatement(Account account)
+    {
+        NavigationManager.NavigateTo($"/accounts/{account.Id}/statement");
+    }
+}

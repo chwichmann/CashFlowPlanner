@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "planId": "00000000-0000-0000-0000-000000000001",
+  "name": "Private Cashflow Sample",
+  "baseCurrency": "CHF",
+  "createdAt": "2026-06-01T00:00:00Z",
+  "modifiedAt": "2026-06-01T00:00:00Z",
+  "accounts": [
+    {
+      "id": "10000000-0000-0000-0000-000000000001",
+      "name": "Main Account",
+      "type": "BankAccount",
+      "currency": "CHF",
+      "openingBalance": 25000,
+      "openingDate": "2026-06-01",
+      "isActive": true,
+      "bankName": "Test Bank"
+    },
+    {
+      "id": "10000000-0000-0000-0000-000000000002",
+      "name": "Savings Account",
+      "type": "SavingsAccount",
+      "currency": "CHF",
+      "openingBalance": 80000,
+      "openingDate": "2026-06-01",
+      "isActive": true
+    },
+    {
+      "id": "10000000-0000-0000-0000-000000000003",
+      "name": "Visa",
+      "type": "CreditCard",
+      "currency": "CHF",
+      "openingBalance": -1200,
+      "openingDate": "2026-06-01",
+      "isActive": true
+    }
+  ],
+  "transactions": [
+    {
+      "id": "20000000-0000-0000-0000-000000000001",
+      "name": "Salary",
+      "kind": "ExternalIncome",
+      "fromAccountId": null,
+      "toAccountId": "10000000-0000-0000-0000-000000000001",
+      "amount": 8500,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-06-25",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 25,
+        "dayOfWeek": null,
+        "month": null,
+        "businessDayAdjustment": "PreviousBusinessDay"
+      },
+      "category": "Income",
+      "counterparty": "Employer",
+      "paymentMethod": "BankTransfer",
+      "priority": 10,
+      "isActive": true
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000002",
+      "name": "Car Leasing",
+      "kind": "ExternalExpense",
+      "fromAccountId": "10000000-0000-0000-0000-000000000001",
+      "toAccountId": null,
+      "amount": 450,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-06-05",
+        "endDate": "2029-05-05",
+        "interval": 1,
+        "dayOfMonth": 5,
+        "dayOfWeek": null,
+        "month": null,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Car",
+      "counterparty": "Leasing Company",
+      "paymentMethod": "Lsv",
+      "priority": 100,
+      "isActive": true
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000003",
+      "name": "Savings Transfer",
+      "kind": "InternalTransfer",
+      "fromAccountId": "10000000-0000-0000-0000-000000000001",
+      "toAccountId": "10000000-0000-0000-0000-000000000002",
+      "amount": 1000,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-06-26",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 26,
+        "dayOfWeek": null,
+        "month": null,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Saving",
+      "counterparty": null,
+      "paymentMethod": "InternalTransfer",
+      "priority": 50,
+      "isActive": true
+    },
+    {
+      "id": "20000000-0000-0000-0000-000000000004",
+      "name": "Credit Card LSV",
+      "kind": "DebtPayment",
+      "fromAccountId": "10000000-0000-0000-0000-000000000001",
+      "toAccountId": "10000000-0000-0000-0000-000000000003",
+      "amount": 1200,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Once",
+        "startDate": "2026-06-05",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": null,
+        "dayOfWeek": null,
+        "month": null,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Credit Card",
+      "counterparty": "Visa",
+      "paymentMethod": "Lsv",
+      "priority": 100,
+      "isActive": true
+    }
+  ],
+  "simulationSettings": {
+    "startDate": "2026-06-01",
+    "endDate": "2031-12-31",
+    "granularity": "Daily",
+    "includeInactiveAccounts": false,
+    "warnOnNegativeBankBalance": true
+  },
+  "notes": "Sample file for first Blazor WASM MVP."
+}

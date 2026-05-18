@@ -1,0 +1,191 @@
+﻿@page "/accounts/{AccountId:guid}/statement"
+
+@using System.Globalization
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.Core.Accounts
+@using CashFlowPlanner.BlazorWasm.Services
+@using Microsoft.Extensions.Localization
+
+@inject CashFlowAppState AppState
+@inject IStringLocalizer<SharedResource> L
+@inject EnumLocalizer EnumL
+
+<PageTitle>@L["AccountStatement_Title"] - CashFlow Planner</PageTitle>
+
+<h2>@L["AccountStatement_Title"]</h2>
+
+@if (AppState.CurrentPlan is null)
+{
+    <div class="alert alert-warning">
+        @L["AccountStatement_NoPlanLoaded"]
+    </div>
+}
+else if (Account is null)
+{
+    <div class="alert alert-danger">
+        @L["AccountStatement_AccountNotFound"]
+    </div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>@Account.Name</strong>
+        </div>
+
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-2">@L["Account_Type"]</dt>
+                <dd class="col-sm-10">@EnumL.Translate(Account.Type)</dd>
+
+                <dt class="col-sm-2">@L["Account_Currency"]</dt>
+                <dd class="col-sm-10">@Account.Currency</dd>
+
+                <dt class="col-sm-2">@L["Account_OpeningBalance"]</dt>
+                <dd class="col-sm-10">@Account.OpeningBalance.ToString("N2", CultureInfo.CurrentCulture) @Account.Currency</dd>
+
+                <dt class="col-sm-2">@L["Account_OpeningDate"]</dt>
+                <dd class="col-sm-10">@FormatDate(Account.OpeningDate)</dd>
+            </dl>
+        </div>
+    </div>
+
+    @if (AppState.CurrentSimulationResult is null)
+    {
+        <div class="alert alert-info">
+            @L["AccountStatement_NoSimulationResult"]
+        </div>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>@L["AccountStatement_Range"]</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">@L["AccountStatement_From"]</label>
+                        <InputDate class="form-control" @bind-Value="_fromDate" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["AccountStatement_To"]</label>
+                        <InputDate class="form-control" @bind-Value="_toDate" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        var rows = BuildRows();
+
+        @if (rows.Count == 0)
+        {
+            <div class="alert alert-info">
+                @L["AccountStatement_NoMovementsInRange"]
+            </div>
+        }
+        else
+        {
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>@L["AccountStatement_ValutaDate"]</th>
+                        <th>@L["AccountStatement_TitleColumn"]</th>
+                        <th>@L["Category"]</th>
+                        <th>@L["Transaction_Counterparty"]</th>
+                        <th class="text-end">@L["AccountStatement_Incoming"]</th>
+                        <th class="text-end">@L["AccountStatement_Outgoing"]</th>
+                        <th class="text-end">@L["AccountStatement_Balance"]</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        <tr>
+                            <td>@FormatDate(row.ValutaDate)</td>
+                            <td>
+                                @row.Title
+
+                                @if (!string.IsNullOrWhiteSpace(row.Notes))
+                                {
+                                    <div class="text-muted small">
+                                        @row.Notes
+                                    </div>
+                                }
+                            </td>
+                            <td>@row.Category</td>
+                            <td>@row.Counterparty</td>
+                            <td class="text-end text-success">
+                                @FormatAmount(row.Incoming)
+                            </td>
+                            <td class="text-end text-danger">
+                                @FormatAmount(row.Outgoing)
+                            </td>
+                            <td class="text-end">
+                                @row.Balance.ToString("N2", CultureInfo.CurrentCulture) @row.Currency
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid AccountId { get; set; }
+
+    private DateOnly _fromDate;
+    private DateOnly _toDate;
+    private Guid? _initializedForAccountId;
+
+    private Account? Account =>
+        AppState.CurrentPlan?.Accounts.SingleOrDefault(x => x.Id == AccountId);
+
+    protected override void OnParametersSet()
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            return;
+        }
+
+        if (_initializedForAccountId == AccountId)
+        {
+            return;
+        }
+
+        _initializedForAccountId = AccountId;
+        _fromDate = AppState.CurrentPlan.SimulationSettings.StartDate;
+        _toDate = AppState.CurrentPlan.SimulationSettings.EndDate;
+    }
+
+    private IReadOnlyList<AccountStatementRow> BuildRows()
+    {
+        if (Account is null || AppState.CurrentSimulationResult is null)
+        {
+            return [];
+        }
+
+        return AccountStatementBuilder.Build(
+            Account,
+            AppState.CurrentSimulationResult.Events,
+            _fromDate,
+            _toDate);
+    }
+
+    private static string FormatAmount(decimal? amount)
+    {
+        return amount is null
+            ? string.Empty
+            : amount.Value.ToString("N2", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+}

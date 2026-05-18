@@ -1,0 +1,96 @@
+﻿@using System.Globalization
+
+<input class="@CssClass"
+       value="@DisplayValue"
+       @onchange="HandleChange" />
+
+@code {
+    private static readonly CultureInfo SwissCulture = CultureInfo.GetCultureInfo("de-CH");
+
+    [Parameter]
+    public decimal Value { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal> ValueChanged { get; set; }
+
+    [Parameter]
+    public string CssClass { get; set; } = "number-input";
+
+    [Parameter]
+    public string Prefix { get; set; } = "";
+
+    [Parameter]
+    public string Suffix { get; set; } = "";
+
+    [Parameter]
+    public int Decimals { get; set; }
+
+    private string DisplayValue
+    {
+        get
+        {
+            var format = Decimals <= 0 ? "N0" : $"N{Decimals}";
+            var formatted = Value.ToString(format, SwissCulture);
+
+            if (!string.IsNullOrWhiteSpace(Prefix))
+            {
+                return $"{Prefix} {formatted}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(Suffix))
+            {
+                return $"{formatted}{Suffix}";
+            }
+
+            return formatted;
+        }
+    }
+
+    private async Task HandleChange(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString() ?? "";
+
+        if (TryParseDecimal(raw, out var parsed))
+        {
+            await ValueChanged.InvokeAsync(parsed);
+        }
+    }
+
+    private static bool TryParseDecimal(string raw, out decimal value)
+    {
+        var cleaned = raw
+            .Replace("CHF", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("%", "")
+            .Replace("’", "")
+            .Replace("'", "")
+            .Replace(" ", "")
+            .Trim();
+
+        if (decimal.TryParse(
+                cleaned,
+                NumberStyles.Number,
+                SwissCulture,
+                out value))
+        {
+            return true;
+        }
+
+        if (decimal.TryParse(
+                cleaned,
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out value))
+        {
+            return true;
+        }
+
+        // Allow Swiss/German decimal comma input like "5,25"
+        var commaAsDot = cleaned.Replace(",", ".");
+
+        return decimal.TryParse(
+            commaAsDot,
+            NumberStyles.Number,
+            CultureInfo.InvariantCulture,
+            out value);
+    }
+}

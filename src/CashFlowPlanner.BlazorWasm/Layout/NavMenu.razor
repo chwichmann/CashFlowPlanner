@@ -1,0 +1,374 @@
+﻿@using CashFlowPlanner.Storage.Json
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using CashFlowPlanner.BlazorWasm
+@using Microsoft.Extensions.Localization
+@using CashFlowPlanner.BlazorWasm.Components
+
+@implements IDisposable
+
+@inject CashFlowAppState AppState
+@inject CashFlowPlanJsonSerializer JsonSerializer
+@inject BrowserPlanCacheService BrowserCache
+@inject IJSRuntime JsRuntime
+@inject IStringLocalizer<SharedResource> L
+@inject UiFeedbackService Feedback
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark app-navbar">
+    <div class="container-fluid">
+        <NavLink class="navbar-brand" href="" Match="NavLinkMatch.All">
+            CashFlow Planner
+        </NavLink>
+
+        <button class="navbar-toggler"
+                type="button"
+                @onclick="ToggleNavMenu"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="@NavMenuCssClass navbar-collapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        @L["Nav_Home"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="dashboard">
+                        @L["Nav_Dashboard"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="simulation">
+                        @L["Nav_Simulation"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="accounts">
+                        @L["Nav_Accounts"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="transactions">
+                        @L["Nav_Transactions"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="mortgages">
+                        @L["Nav_Mortgages"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="creditcards">
+                        @L["Nav_CreditCards"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="pillar3a">
+                        @L["Nav_Pillar3a"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="persons">
+                        @L["Nav_Persons"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="house-buy-simulator">
+                        @L["Nav_HouseBuySimulator"]
+                    </NavLink>
+                </li>
+
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="settings">
+                        @L["Nav_Settings"]
+                    </NavLink>
+                </li>
+            </ul>
+
+            <div class="navbar-plan-status">
+                @if (AppState.CurrentPlan is not null)
+                {
+                    <div class="navbar-plan-name" title="@AppState.CurrentPlan.Name">
+                        @AppState.CurrentPlan.Name
+                    </div>
+
+                    <div class="navbar-cache-status">
+                        @GetLoadedSourceText()
+                    </div>
+                }
+                else
+                {
+                    <div class="navbar-cache-status">
+                        No plan loaded
+                    </div>
+                }
+            </div>
+
+            <div class="navbar-actions">
+                <InputFile id="navJsonFileInput"
+                           style="display: none;"
+                           OnChange="LoadFileAsync" />
+
+                <label class="btn btn-sm btn-outline-light nav-icon-button"
+                       for="navJsonFileInput"
+                       title=@L["Nav_OpenJsonFile"]
+                       aria-label=@L["Nav_OpenJsonFile"]>
+                    📂
+                </label>
+
+                <button type="button"
+                        class="btn btn-sm btn-outline-light"
+                        title="Run simulation"
+                        disabled="@(!AppState.HasPlan || Feedback.IsBusy)"
+                        @onclick="RunSimulationAsync">
+                    @if (Feedback.IsBusy)
+                    {
+                        <span class="spinner-border spinner-border-sm"
+                              role="status"
+                              aria-hidden="true">
+                        </span>
+                    }
+                    else
+                    {
+                        <span>▶</span>
+                    }
+                </button>
+
+                <button type="button"
+                        class="btn btn-sm btn-outline-light nav-icon-button"
+                        title=@L["Nav_SaveJsonFile"]
+                        aria-label=@L["Nav_SaveJsonFile"]
+                        disabled="@(!AppState.HasPlan)"
+                        @onclick="ExportPlanAsync">
+                    💾
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <div class="@StatusCssClass">
+        @_statusMessage
+    </div>
+}
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? _statusMessage;
+    private string? _cachedAtText;
+    private string? _loadedSource;
+    private bool _isError;
+
+    private string NavMenuCssClass =>
+        collapseNavMenu ? "collapse" : string.Empty;
+
+    private string StatusCssClass =>
+        _isError
+            ? "nav-status nav-status-error"
+            : "nav-status nav-status-info";
+
+    protected override void OnInitialized()
+    {
+        AppState.Changed += OnAppStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await RefreshCachedAtTextAsync();
+
+        if (AppState.HasPlan && string.IsNullOrWhiteSpace(_loadedSource))
+        {
+            _loadedSource = "cache";
+        }
+
+        StateHasChanged();
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void OnAppStateChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await RefreshCachedAtTextAsync();
+
+            if (AppState.HasPlan && string.IsNullOrWhiteSpace(_loadedSource))
+            {
+                _loadedSource = "cache";
+            }
+
+            if (!AppState.HasPlan)
+            {
+                _loadedSource = null;
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadFileAsync(InputFileChangeEventArgs args)
+    {
+        ClearStatus();
+
+        try
+        {
+            var file = args.File;
+
+            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+
+            var json = await reader.ReadToEndAsync();
+            var document = JsonSerializer.DeserializeDocument(json);
+
+            AppState.LoadDocument(document);
+
+            await BrowserCache.SaveAsync(json);
+            await RefreshCachedAtTextAsync();
+
+            _loadedSource = "file";
+            _statusMessage = $"Loaded '{file.Name}' successfully.";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = ex.Message;
+            _isError = true;
+        }
+    }
+
+    private async Task RunSimulationAsync()
+    {
+        try
+        {
+            Feedback.ClearNotification();
+            Feedback.StartBusy("Simulation is running...");
+
+            await Task.Yield();
+
+            AppState.RunSimulation();
+
+            Feedback.Success("Simulation completed.");
+        }
+        catch (Exception ex)
+        {
+            Feedback.Error(ex.Message);
+        }
+        finally
+        {
+            Feedback.StopBusy();
+        }
+    }
+
+    private async Task ExportPlanAsync()
+    {
+        ClearStatus();
+
+        try
+        {
+            var document = AppState.GetDocumentForSave();
+            var json = JsonSerializer.SerializeDocument(document);
+            var fileName = CreateExportFileName(document.Name);
+
+            await JsRuntime.InvokeVoidAsync(
+                "cashFlowPlanner.downloadTextFile",
+                fileName,
+                json,
+                "application/json");
+
+            await BrowserCache.SaveAsync(json);
+            await RefreshCachedAtTextAsync();
+
+            _statusMessage = $"Exported '{fileName}' and updated browser working copy.";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = ex.Message;
+            _isError = true;
+        }
+    }
+
+    private string GetLoadedSourceText()
+    {
+        var sourceText = _loadedSource switch
+        {
+            "file" => "Loaded from file",
+            "cache" => "Loaded from browser cache",
+            _ => "Loaded"
+        };
+
+        if (string.IsNullOrWhiteSpace(_cachedAtText))
+        {
+            return sourceText;
+        }
+
+        return $"{sourceText} · cached {_cachedAtText}";
+    }
+
+    private async Task RefreshCachedAtTextAsync()
+    {
+        var cachedAt = await BrowserCache.GetCachedAtAsync();
+
+        if (string.IsNullOrWhiteSpace(cachedAt))
+        {
+            _cachedAtText = null;
+            return;
+        }
+
+        if (DateTimeOffset.TryParse(cachedAt, out var timestamp))
+        {
+            _cachedAtText = timestamp.LocalDateTime.ToString("dd.MM.yyyy HH:mm:ss");
+        }
+        else
+        {
+            _cachedAtText = cachedAt;
+        }
+    }
+
+    private static string CreateExportFileName(string planName)
+    {
+        var safeName = string.Join(
+            "-",
+            planName.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+
+        if (string.IsNullOrWhiteSpace(safeName))
+        {
+            safeName = "cashflow-plan";
+        }
+
+        return $"{safeName}-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+    }
+
+    private void ClearStatus()
+    {
+        _statusMessage = null;
+        _isError = false;
+    }
+
+    public void Dispose()
+    {
+        AppState.Changed -= OnAppStateChanged;
+    }
+}

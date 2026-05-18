@@ -1,0 +1,91 @@
+.app-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.nav-link {
+    white-space: nowrap;
+}
+
+.nav-link.active {
+    font-weight: 600;
+    color: #ffffff !important;
+    border-bottom: 2px solid #ffffff;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.nav-icon-button {
+    min-width: 2.25rem;
+    line-height: 1.2;
+    text-align: center;
+}
+
+.navbar-plan-status {
+    color: #ffffff;
+    margin-right: 0.75rem;
+    max-width: 360px;
+    text-align: right;
+    line-height: 1.15;
+    flex-shrink: 1;
+}
+
+.navbar-plan-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.navbar-cache-status {
+    font-size: 0.72rem;
+    opacity: 0.8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-status {
+    position: sticky;
+    top: 56px;
+    z-index: 1020;
+    padding: 0.35rem 1rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.nav-status-info {
+    color: #084298;
+    background-color: #cfe2ff;
+}
+
+.nav-status-error {
+    color: #842029;
+    background-color: #f8d7da;
+}
+
+@media (max-width: 991.98px) {
+    .navbar-plan-status {
+        text-align: left;
+        margin-top: 0.75rem;
+        margin-right: 0;
+        max-width: none;
+    }
+
+    .navbar-actions {
+        margin-top: 0.75rem;
+        padding-bottom: 0.5rem;
+    }
+}

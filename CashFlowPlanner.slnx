@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/CashFlowPlanner.Core.Tests/CashFlowPlanner.Core.Tests.csproj" />
+    <Project Path="tests/CashFlowPlanner.Storage.Json.Tests/CashFlowPlanner.Storage.Json.Tests.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <File Path="samples/private-cashflow.sample.json" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="PROJECT_STATE.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj" />
+    <Project Path="src/CashFlowPlanner.Core/CashFlowPlanner.Core.csproj" />
+    <Project Path="src/CashFlowPlanner.Storage.Json/CashFlowPlanner.Storage.Json.csproj" />
+  </Folder>
+</Solution>

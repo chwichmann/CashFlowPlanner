@@ -1,0 +1,1953 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Account" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="Accounts" xml:space="preserve">
+    <value>Konten</value>
+  </data>
+  <data name="Actions" xml:space="preserve">
+    <value>Aktionen</value>
+  </data>
+  <data name="Active" xml:space="preserve">
+    <value>Aktiv</value>
+  </data>
+  <data name="Amount" xml:space="preserve">
+    <value>Betrag</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Category" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="Code" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="Currency" xml:space="preserve">
+    <value>Währung</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>Datum</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="Duplicate" xml:space="preserve">
+    <value>Duplizieren</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="Inactive" xml:space="preserve">
+    <value>Inaktiv</value>
+  </data>
+  <data name="Kind" xml:space="preserve">
+    <value>Art</value>
+  </data>
+  <data name="Message" xml:space="preserve">
+    <value>Meldung</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="New" xml:space="preserve">
+    <value>Neu</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>Keine</value>
+  </data>
+  <data name="NotApplicable" xml:space="preserve">
+    <value>n/v</value>
+  </data>
+  <data name="Notes" xml:space="preserve">
+    <value>Notizen</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>Besitzer</value>
+  </data>
+  <data name="Person" xml:space="preserve">
+    <value>Person</value>
+  </data>
+  <data name="Persons" xml:space="preserve">
+    <value>Personen</value>
+  </data>
+  <data name="Plan" xml:space="preserve">
+    <value>Plan</value>
+  </data>
+  <data name="PlanTitle" xml:space="preserve">
+    <value>Plantitel</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="Reset" xml:space="preserve">
+    <value>Zurücksetzen</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="SavePlanTitle" xml:space="preserve">
+    <value>Plantitel speichern</value>
+  </data>
+  <data name="Schedule" xml:space="preserve">
+    <value>Zeitplan</value>
+  </data>
+  <data name="Severity" xml:space="preserve">
+    <value>Schweregrad</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="Simulation" xml:space="preserve">
+    <value>Simulation</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Transactions" xml:space="preserve">
+    <value>Bewegungen</value>
+  </data>
+  <data name="Type" xml:space="preserve">
+    <value>Typ</value>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>Warnungen</value>
+  </data>
+  <data name="Nav_Accounts" xml:space="preserve">
+    <value>Konten</value>
+  </data>
+  <data name="Nav_CreditCards" xml:space="preserve">
+    <value>Kreditkarten</value>
+  </data>
+  <data name="Nav_Dashboard" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Nav_Mortgages" xml:space="preserve">
+    <value>Hypotheken</value>
+  </data>
+  <data name="Nav_OpenJsonFile" xml:space="preserve">
+    <value>Datei laden</value>
+  </data>
+  <data name="Nav_Persons" xml:space="preserve">
+    <value>Personen</value>
+  </data>
+  <data name="Nav_Pillar3a" xml:space="preserve">
+    <value>Säule 3a</value>
+  </data>
+  <data name="Nav_RunSimulation" xml:space="preserve">
+    <value>Simulation starten</value>
+  </data>
+  <data name="Nav_SaveJsonFile" xml:space="preserve">
+    <value>Datei speichern</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="Nav_Simulation" xml:space="preserve">
+    <value>Simulation</value>
+  </data>
+  <data name="Nav_Transactions" xml:space="preserve">
+    <value>Bewegungen</value>
+  </data>
+  <data name="Enum.AccountInterestCalculationMethod.FlatBalance" xml:space="preserve">
+    <value>Fixer Kontostand</value>
+  </data>
+  <data name="Enum.AccountInterestCalculationMethod.TieredBalance" xml:space="preserve">
+    <value>Gestaffelter Kontostand</value>
+  </data>
+  <data name="Enum.AccountType.BankAccount" xml:space="preserve">
+    <value>Bankkonto</value>
+  </data>
+  <data name="Enum.AccountType.Cash" xml:space="preserve">
+    <value>Bargeld</value>
+  </data>
+  <data name="Enum.AccountType.Cas" xml:space="preserve">
+    <value>Bargeld</value>
+  </data>
+  <data name="Enum.AccountType.CreditCard" xml:space="preserve">
+    <value>Kreditkarte</value>
+  </data>
+  <data name="Enum.AccountType.Pillar3a" xml:space="preserve">
+    <value>Säule 3a</value>
+  </data>
+  <data name="Enum.AccountType.SavingsAccount" xml:space="preserve">
+    <value>Sparkonto</value>
+  </data>
+  <data name="Enum.BusinessDayAdjustment.None" xml:space="preserve">
+    <value>Keine</value>
+  </data>
+  <data name="Enum.BusinessDayAdjustment.NextBusinessDay" xml:space="preserve">
+    <value>Nächster Arbeitstag</value>
+  </data>
+  <data name="Enum.BusinessDayAdjustment.PreviousBusinessDay" xml:space="preserve">
+    <value>Vorheriger Arbeitstag</value>
+  </data>
+  <data name="Enum.CreditCardPaymentMethod.AutomaticLsv" xml:space="preserve">
+    <value>Automatisches LSV</value>
+  </data>
+  <data name="Enum.CreditCardPaymentMethod.Manual" xml:space="preserve">
+    <value>Manuell</value>
+  </data>
+  <data name="Enum.CreditCardPaymentMethod.BankTransfer" xml:space="preserve">
+    <value>Überweisung</value>
+  </data>
+  <data name="Enum.EquitySourceType.Cash" xml:space="preserve">
+    <value>Bargeld</value>
+  </data>
+  <data name="Enum.EquitySourceType.Pillar2Bvg" xml:space="preserve">
+    <value>Säule 2 / BVG</value>
+  </data>
+  <data name="Enum.InterestDayCountConvention.Actual360" xml:space="preserve">
+    <value>Tage / 360</value>
+  </data>
+  <data name="Enum.InterestDayCountConvention.Actual365" xml:space="preserve">
+    <value>Tage / 365</value>
+  </data>
+  <data name="Enum.InterestDayCountConvention.ActualActual" xml:space="preserve">
+    <value>Tage / Tage</value>
+  </data>
+  <data name="Enum.InterestDayCountConvention.Thirty360" xml:space="preserve">
+    <value>30 / 360</value>
+  </data>
+  <data name="Enum.InterestPostingFrequency.Monthly" xml:space="preserve">
+    <value>Monatlich</value>
+  </data>
+  <data name="Enum.InterestPostingFrequency.Quarterly" xml:space="preserve">
+    <value>Quartalsweise</value>
+  </data>
+  <data name="Enum.InterestPostingFrequency.Yearly" xml:space="preserve">
+    <value>Jährlich</value>
+  </data>
+  <data name="Enum.MortgageAmortisationMode.Direct" xml:space="preserve">
+    <value>Direkt</value>
+  </data>
+  <data name="Enum.MortgageAmortisationMode.Indirect" xml:space="preserve">
+    <value>Indirekt</value>
+  </data>
+  <data name="Enum.MortgageAmortisationMode.None" xml:space="preserve">
+    <value>Keine</value>
+  </data>
+  <data name="Enum.MortgageType.FixedRate" xml:space="preserve">
+    <value>Festhypothek</value>
+  </data>
+  <data name="Enum.MortgageType.Saron" xml:space="preserve">
+    <value>SARON-Hypothek</value>
+  </data>
+  <data name="Enum.PaymentMethod.Unknown" xml:space="preserve">
+    <value>Unbekannt</value>
+  </data>
+  <data name="Enum.PaymentMethod.BankTransfer" xml:space="preserve">
+    <value>Überweisung</value>
+  </data>
+  <data name="Enum.PaymentMethod.Cash" xml:space="preserve">
+    <value>Bargeld</value>
+  </data>
+  <data name="Enum.PaymentMethod.CreditCard" xml:space="preserve">
+    <value>Kreditkarte</value>
+  </data>
+  <data name="Enum.PaymentMethod.InternalTransfer" xml:space="preserve">
+    <value>Kontoübertrag</value>
+  </data>
+  <data name="Enum.PaymentMethod.Lsv" xml:space="preserve">
+    <value>LSV</value>
+  </data>
+  <data name="Enum.Pillar3aAccountSubtype.BankAccount" xml:space="preserve">
+    <value>Bankkonto</value>
+  </data>
+  <data name="Enum.Pillar3aAccountSubtype.FundSolution" xml:space="preserve">
+    <value>Fondslösung</value>
+  </data>
+  <data name="Enum.Pillar3aContractType.BankAccount" xml:space="preserve">
+    <value>Bankkonto</value>
+  </data>
+  <data name="Enum.Pillar3aContractType.Investment" xml:space="preserve">
+    <value>Anlage</value>
+  </data>
+  <data name="Enum.Pillar3aContractType.Insurance" xml:space="preserve">
+    <value>Versicherung</value>
+  </data>
+  <data name="Enum.Pillar3aEligibilityType.NotEligible" xml:space="preserve">
+    <value>Nicht berechtigt</value>
+  </data>
+  <data name="Enum.Pillar3aEligibilityType.WithPensionFund" xml:space="preserve">
+    <value>Mit Pensionskasse</value>
+  </data>
+  <data name="Enum.Pillar3aEligibilityType.WithoutPensionFund" xml:space="preserve">
+    <value>Ohne Pensionskasse</value>
+  </data>
+  <data name="Enum.Pillar3aProjectionMethod.None" xml:space="preserve">
+    <value>Keine</value>
+  </data>
+  <data name="Enum.Pillar3aProjectionMethod.FixedInterest" xml:space="preserve">
+    <value>Fester Zins</value>
+  </data>
+  <data name="Enum.Pillar3aProjectionMethod.ExpectedReturn" xml:space="preserve">
+    <value>Erwartete Rendite</value>
+  </data>
+  <data name="Enum.Pillar3aProjectionMethod.InsuranceGuaranteedPayout" xml:space="preserve">
+    <value>Garantierte Versicherungsleistung</value>
+  </data>
+  <data name="Enum.Pillar3aWithdrawalReason.Retirement" xml:space="preserve">
+    <value>Pensionierung</value>
+  </data>
+  <data name="Enum.Pillar3aWithdrawalReason.OwnerOccupiedHome" xml:space="preserve">
+    <value>Selbstbewohntes Wohneigentum</value>
+  </data>
+  <data name="Enum.Pillar3aWithdrawalReason.LeavingSwitzerland" xml:space="preserve">
+    <value>Wegzug aus der Schweiz</value>
+  </data>
+  <data name="Enum.Pillar3aWithdrawalReason.SelfEmployment" xml:space="preserve">
+    <value>Selbständigkeit</value>
+  </data>
+  <data name="Enum.Pillar3aWithdrawalReason.PensionFundBuyIn" xml:space="preserve">
+    <value>Einkauf in die Pensionskasse</value>
+  </data>
+  <data name="Enum.Pillar3aWithdrawalReason.Disability" xml:space="preserve">
+    <value>Invalidität</value>
+  </data>
+  <data name="Enum.Pillar3aWithdrawalReason.Other" xml:space="preserve">
+    <value>Andere</value>
+  </data>
+  <data name="Enum.ScheduleFrequency.Once" xml:space="preserve">
+    <value>Einmalig</value>
+  </data>
+  <data name="Enum.ScheduleFrequency.Daily" xml:space="preserve">
+    <value>Täglich</value>
+  </data>
+  <data name="Enum.ScheduleFrequency.Weekly" xml:space="preserve">
+    <value>Wöchentlich</value>
+  </data>
+  <data name="Enum.ScheduleFrequency.Monthly" xml:space="preserve">
+    <value>Monatlich</value>
+  </data>
+  <data name="Enum.ScheduleFrequency.Quarterly" xml:space="preserve">
+    <value>Quartalsweise</value>
+  </data>
+  <data name="Enum.ScheduleFrequency.SemiYearly" xml:space="preserve">
+    <value>Halbjährlich</value>
+  </data>
+  <data name="Enum.ScheduleFrequency.Yearly" xml:space="preserve">
+    <value>Jährlich</value>
+  </data>
+  <data name="Enum.SimulationDateMode.FixedRange" xml:space="preserve">
+    <value>Fixer Zeitraum</value>
+  </data>
+  <data name="Enum.SimulationDateMode.RollingHorizon" xml:space="preserve">
+    <value>Rollierender Horizont</value>
+  </data>
+  <data name="Enum.SimulationGranularity.Daily" xml:space="preserve">
+    <value>Täglich</value>
+  </data>
+  <data name="Enum.SimulationGranularity.Monthly" xml:space="preserve">
+    <value>Monatlich</value>
+  </data>
+  <data name="Enum.SimulationStartAnchor.Today" xml:space="preserve">
+    <value>Heute</value>
+  </data>
+  <data name="Enum.SimulationStartAnchor.StartOfCurrentMonth" xml:space="preserve">
+    <value>Anfang aktueller Monat</value>
+  </data>
+  <data name="Enum.SimulationStartAnchor.StartOfNextMonth" xml:space="preserve">
+    <value>Anfang nächster Monat</value>
+  </data>
+  <data name="Enum.TransactionKind.DebtIncrease" xml:space="preserve">
+    <value>Schuldenerhöhung</value>
+  </data>
+  <data name="Enum.TransactionKind.DebtPayment" xml:space="preserve">
+    <value>Schuldenrückzahlung</value>
+  </data>
+  <data name="Enum.TransactionKind.DebtPaymen" xml:space="preserve">
+    <value>Schuldenrückzahlung</value>
+  </data>
+  <data name="Enum.TransactionKind.ExternalExpense" xml:space="preserve">
+    <value>Externe Ausgabe</value>
+  </data>
+  <data name="Enum.TransactionKind.ExternalIncome" xml:space="preserve">
+    <value>Externes Einkommen</value>
+  </data>
+  <data name="Enum.TransactionKind.InternalTransfer" xml:space="preserve">
+    <value>Kontoübertrag</value>
+  </data>
+  <data name="Home_Text" xml:space="preserve">
+    <value>Lade, speichere und simuliere Kontoentwicklungen oben rechts im Menü.</value>
+  </data>
+  <data name="Home_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen. Verwende das Ordnersymbol in der Navigation, um eine Cashflow-JSON-Datei zu öffnen.</value>
+  </data>
+  <data name="Home_LoadedPlan" xml:space="preserve">
+    <value>Geladener Plan</value>
+  </data>
+  <data name="Home_BaseCurrency" xml:space="preserve">
+    <value>Basiswährung</value>
+  </data>
+  <data name="Home_Accounts" xml:space="preserve">
+    <value>Konten</value>
+  </data>
+  <data name="Home_Transactions" xml:space="preserve">
+    <value>Bewegungen</value>
+  </data>
+  <data name="Home_Morgages" xml:space="preserve">
+    <value>Hypotheken</value>
+  </data>
+  <data name="Home_Mortgages" xml:space="preserve">
+    <value>Hypotheken</value>
+  </data>
+  <data name="Home_CreditCards" xml:space="preserve">
+    <value>Kreditkarten</value>
+  </data>
+  <data name="Home_Persons" xml:space="preserve">
+    <value>Personen</value>
+  </data>
+  <data name="Home_Simulation" xml:space="preserve">
+    <value>Simulation</value>
+  </data>
+  <data name="Home_SimulationDateRange" xml:space="preserve">
+    <value>{0} bis {1}</value>
+  </data>
+  <data name="Home_SimulationResult" xml:space="preserve">
+    <value>Simulationsergebnis</value>
+  </data>
+  <data name="Home_SimulationEvents" xml:space="preserve">
+    <value>Ereignisse</value>
+  </data>
+  <data name="Home_SimulationBalancePoints" xml:space="preserve">
+    <value>Kontostandspunkte</value>
+  </data>
+  <data name="Home_SimulationWarnings" xml:space="preserve">
+    <value>Warnungen</value>
+  </data>
+  <data name="Home_EndBalances" xml:space="preserve">
+    <value>Endkontostände</value>
+  </data>
+  <data name="Home_EndBalancesAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="Home_EndBalancesType" xml:space="preserve">
+    <value>Typ</value>
+  </data>
+  <data name="Home_EndBalancesEndBalance" xml:space="preserve">
+    <value>Endkontostand</value>
+  </data>
+  <data name="Home_EndBalancesCurrency" xml:space="preserve">
+    <value>Währung</value>
+  </data>
+  <data name="Home_EndBalancesWarnings" xml:space="preserve">
+    <value>Warnungen</value>
+  </data>
+  <data name="Home_EndBalancesWarningsDate" xml:space="preserve">
+    <value>Datum</value>
+  </data>
+  <data name="Home_EndBalancesWarningsSeverity" xml:space="preserve">
+    <value>Schweregrad</value>
+  </data>
+  <data name="Home_EndBalancesWarningsCode" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="Home_EndBalancesWarningsMessage" xml:space="preserve">
+    <value>Meldung</value>
+  </data>
+  <data name="Home_EndBalancesWarningsInfo" xml:space="preserve">
+    <value>Es werden nur die ersten 50 Warnungen angezeigt.</value>
+  </data>
+  <data name="Home_UpcomingEvents" xml:space="preserve">
+    <value>Kommende Ereignisse</value>
+  </data>
+  <data name="Home_UpcomingEventsDate" xml:space="preserve">
+    <value>Datum</value>
+  </data>
+  <data name="Home_UpcomingEventsName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Home_UpcomingEventsKind" xml:space="preserve">
+    <value>Art</value>
+  </data>
+  <data name="Home_UpcomingEventsAmount" xml:space="preserve">
+    <value>Betrag</value>
+  </data>
+  <data name="Home_UpcomingEventsCurrency" xml:space="preserve">
+    <value>Währung</value>
+  </data>
+  <data name="Home_UpcomingEventsInfo" xml:space="preserve">
+    <value>Es werden nur die ersten 100 Ereignisse angezeigt.</value>
+  </data>
+  <data name="Account_Title" xml:space="preserve">
+    <value>Konten</value>
+  </data>
+  <data name="Account_NoPlan" xml:space="preserve">
+    <value>Es ist noch kein Plan geladen.</value>
+  </data>
+  <data name="Account_AddAccount" xml:space="preserve">
+    <value>Konto hinzufügen</value>
+  </data>
+  <data name="Account_EditAccount" xml:space="preserve">
+    <value>Konto bearbeiten</value>
+  </data>
+  <data name="Account_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Account_Type" xml:space="preserve">
+    <value>Typ</value>
+  </data>
+  <data name="Account_Currency" xml:space="preserve">
+    <value>Währung</value>
+  </data>
+  <data name="Account_Owner" xml:space="preserve">
+    <value>Besitzer</value>
+  </data>
+  <data name="Account_NoOwner" xml:space="preserve">
+    <value>--- Kein Besitzer ---</value>
+  </data>
+  <data name="Account_RequiredForPillar3a" xml:space="preserve">
+    <value>Pflicht für Säule-3a-Konten.</value>
+  </data>
+  <data name="Account_Pillar3aSubType" xml:space="preserve">
+    <value>Säule-3a-Typ</value>
+  </data>
+  <data name="Account_Pillar3aSelectSubType" xml:space="preserve">
+    <value>--- Säule-3a-Typ auswählen ---</value>
+  </data>
+  <data name="Account_NoOwners" xml:space="preserve">
+    <value>Es gibt noch keine Personen. Erstelle zuerst eine Person, bevor du ein Säule-3a-Konto speicherst.</value>
+  </data>
+  <data name="Account_BankName" xml:space="preserve">
+    <value>Bankname</value>
+  </data>
+  <data name="Account_OpeningBalance" xml:space="preserve">
+    <value>Anfangskontostand</value>
+  </data>
+  <data name="Account_OpeningDate" xml:space="preserve">
+    <value>Anfangsdatum</value>
+  </data>
+  <data name="Account_IbanMasked" xml:space="preserve">
+    <value>IBAN</value>
+  </data>
+  <data name="Account_Active" xml:space="preserve">
+    <value>Aktiv</value>
+  </data>
+  <data name="Account_Notes" xml:space="preserve">
+    <value>Notizen</value>
+  </data>
+  <data name="Account_InterestContracts" xml:space="preserve">
+    <value>Zinsverträge</value>
+  </data>
+  <data name="Account_InterestText" xml:space="preserve">
+    <value>Konfiguriere den Kontozins. Die typische Schweizer Berechnungsmethode ist Tage / 360.</value>
+  </data>
+  <data name="Account_InterestAdd" xml:space="preserve">
+    <value>Zinsvertrag hinzufügen</value>
+  </data>
+  <data name="Account_NoInterestContracts" xml:space="preserve">
+    <value>Für dieses Konto ist kein Zinsvertrag konfiguriert.</value>
+  </data>
+  <data name="Account_InterestContract" xml:space="preserve">
+    <value>Zinsvertrag</value>
+  </data>
+  <data name="Account_CalculationMethod" xml:space="preserve">
+    <value>Berechnungsmethode</value>
+  </data>
+  <data name="Account_PostingFrequency" xml:space="preserve">
+    <value>Buchungsfrequenz</value>
+  </data>
+  <data name="Account_DayCount" xml:space="preserve">
+    <value>Zinstage-Methode</value>
+  </data>
+  <data name="Account_StartDate" xml:space="preserve">
+    <value>Startdatum</value>
+  </data>
+  <data name="Account_EndDate" xml:space="preserve">
+    <value>Enddatum</value>
+  </data>
+  <data name="Account_FlatInterestRate" xml:space="preserve">
+    <value>Fixer Zinssatz</value>
+  </data>
+  <data name="Account_AnnualRatePercent" xml:space="preserve">
+    <value>Jahreszins %</value>
+  </data>
+  <data name="Account_FlatBalanceModeText" xml:space="preserve">
+    <value>Der fixe Kontostand-Modus wendet diesen jährlichen Prozentsatz auf den gesamten positiven Kontostand an.</value>
+  </data>
+  <data name="Account_InterestTiers" xml:space="preserve">
+    <value>Zinsstufen</value>
+  </data>
+  <data name="Account_AddTier" xml:space="preserve">
+    <value>Stufe hinzufügen</value>
+  </data>
+  <data name="Account_InterestTierRequired" xml:space="preserve">
+    <value>Mindestens eine Zinsstufe ist erforderlich.</value>
+  </data>
+  <data name="Account_FromAmount" xml:space="preserve">
+    <value>Betrag von</value>
+  </data>
+  <data name="Account_ToAmount" xml:space="preserve">
+    <value>Betrag bis</value>
+  </data>
+  <data name="Account_Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Account_Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Account_NoAccounts" xml:space="preserve">
+    <value>Keine Konten erfasst.</value>
+  </data>
+  <data name="Account_Subtype" xml:space="preserve">
+    <value>Untertyp</value>
+  </data>
+  <data name="Account_Bank" xml:space="preserve">
+    <value>Bank</value>
+  </data>
+  <data name="Account_EndBalance" xml:space="preserve">
+    <value>Endkontostand</value>
+  </data>
+  <data name="Account_Interest" xml:space="preserve">
+    <value>Zinsen</value>
+  </data>
+  <data name="Account_Actions" xml:space="preserve">
+    <value>Aktionen</value>
+  </data>
+  <data name="Account_NotSimulated" xml:space="preserve">
+    <value>nicht simuliert</value>
+  </data>
+  <data name="Account_Statement" xml:space="preserve">
+    <value>Kontoauszug</value>
+  </data>
+  <data name="Account_ErrorNameRequired" xml:space="preserve">
+    <value>Kontoname ist erforderlich.</value>
+  </data>
+  <data name="Account_ErrorCurrencyRequired" xml:space="preserve">
+    <value>Währung ist erforderlich.</value>
+  </data>
+  <data name="Account_ErrorOwnerDoesNotExist" xml:space="preserve">
+    <value>Der ausgewählte Besitzer existiert nicht.</value>
+  </data>
+  <data name="Account_ErrorPillar3aOwnerRequired" xml:space="preserve">
+    <value>Ein Säule-3a-Konto muss genau einen Besitzer haben.</value>
+  </data>
+  <data name="Account_ErrorPillar3aSubtypeRequired" xml:space="preserve">
+    <value>Bitte wähle, ob das Säule-3a-Konto ein Bankkonto oder eine Fondslösung ist.</value>
+  </data>
+  <data name="Account_Added" xml:space="preserve">
+    <value>Konto '{0}' hinzugefügt.</value>
+  </data>
+  <data name="Account_Updated" xml:space="preserve">
+    <value>Konto '{0}' aktualisiert.</value>
+  </data>
+  <data name="Account_Deleted" xml:space="preserve">
+    <value>Konto '{0}' gelöscht.</value>
+  </data>
+  <data name="Account_DefaultInterestContractName" xml:space="preserve">
+    <value>Kontozins</value>
+  </data>
+  <data name="Account_DefaultNamedInterestContractName" xml:space="preserve">
+    <value>{0} Zins</value>
+  </data>
+  <data name="AccountStatement_Title" xml:space="preserve">
+    <value>Kontoauszug</value>
+  </data>
+  <data name="AccountStatement_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen.</value>
+  </data>
+  <data name="AccountStatement_AccountNotFound" xml:space="preserve">
+    <value>Konto nicht gefunden.</value>
+  </data>
+  <data name="AccountStatement_NoSimulationResult" xml:space="preserve">
+    <value>Kein Simulationsergebnis verfügbar. Verwende den Play-Button in der Navigation, um die Simulation zu starten.</value>
+  </data>
+  <data name="AccountStatement_Range" xml:space="preserve">
+    <value>Zeitraum des Kontoauszugs</value>
+  </data>
+  <data name="AccountStatement_From" xml:space="preserve">
+    <value>Von</value>
+  </data>
+  <data name="AccountStatement_To" xml:space="preserve">
+    <value>Bis</value>
+  </data>
+  <data name="AccountStatement_NoMovementsInRange" xml:space="preserve">
+    <value>Keine Kontobewegungen im ausgewählten Zeitraum.</value>
+  </data>
+  <data name="AccountStatement_ValutaDate" xml:space="preserve">
+    <value>Valutadatum</value>
+  </data>
+  <data name="AccountStatement_TitleColumn" xml:space="preserve">
+    <value>Titel</value>
+  </data>
+  <data name="AccountStatement_Incoming" xml:space="preserve">
+    <value>Eingang</value>
+  </data>
+  <data name="AccountStatement_Outgoing" xml:space="preserve">
+    <value>Ausgang</value>
+  </data>
+  <data name="AccountStatement_Balance" xml:space="preserve">
+    <value>Kontostand</value>
+  </data>
+  <data name="Transaction_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen. Gehe zu Home und importiere eine Cashflow-JSON-Datei.</value>
+  </data>
+  <data name="Transaction_AddTransaction" xml:space="preserve">
+    <value>Bewegung hinzufügen</value>
+  </data>
+  <data name="Transaction_EditTransaction" xml:space="preserve">
+    <value>Bewegung bearbeiten</value>
+  </data>
+  <data name="Transaction_Priority" xml:space="preserve">
+    <value>Priorität</value>
+  </data>
+  <data name="Transaction_FromAccount" xml:space="preserve">
+    <value>Von Konto</value>
+  </data>
+  <data name="Transaction_ToAccount" xml:space="preserve">
+    <value>Auf Konto</value>
+  </data>
+  <data name="Transaction_NoneOption" xml:space="preserve">
+    <value>-- keine --</value>
+  </data>
+  <data name="Transaction_NoneLower" xml:space="preserve">
+    <value>-- keine --</value>
+  </data>
+  <data name="Transaction_IncomePerson" xml:space="preserve">
+    <value>Einkommensperson</value>
+  </data>
+  <data name="Transaction_NotAssigned" xml:space="preserve">
+    <value>-- nicht zugewiesen --</value>
+  </data>
+  <data name="Transaction_NotAssignedOption" xml:space="preserve">
+    <value>-- nicht zugewiesen --</value>
+  </data>
+  <data name="Transaction_IncomePersonHint" xml:space="preserve">
+    <value>Optional. Wird verwendet, um Einkommen einer Person zuzuweisen.</value>
+  </data>
+  <data name="Transaction_PaymentMethod" xml:space="preserve">
+    <value>Zahlungsmethode</value>
+  </data>
+  <data name="Transaction_Counterparty" xml:space="preserve">
+    <value>Gegenpartei</value>
+  </data>
+  <data name="Transaction_Frequency" xml:space="preserve">
+    <value>Frequenz</value>
+  </data>
+  <data name="Transaction_StartDate" xml:space="preserve">
+    <value>Startdatum</value>
+  </data>
+  <data name="Transaction_EndDate" xml:space="preserve">
+    <value>Enddatum</value>
+  </data>
+  <data name="Transaction_Interval" xml:space="preserve">
+    <value>Intervall</value>
+  </data>
+  <data name="Transaction_DayOfMonth" xml:space="preserve">
+    <value>Tag des Monats</value>
+  </data>
+  <data name="Transaction_DayOfWeek" xml:space="preserve">
+    <value>Wochentag</value>
+  </data>
+  <data name="Transaction_Month" xml:space="preserve">
+    <value>Monat</value>
+  </data>
+  <data name="Transaction_BusinessDayAdjustment" xml:space="preserve">
+    <value>Arbeitstagsanpassung</value>
+  </data>
+  <data name="Transaction_Filter" xml:space="preserve">
+    <value>Filter</value>
+  </data>
+  <data name="Transaction_Search" xml:space="preserve">
+    <value>Suche</value>
+  </data>
+  <data name="Transaction_SearchPlaceholder" xml:space="preserve">
+    <value>Name, Kategorie, Konto, Person, Gegenpartei...</value>
+  </data>
+  <data name="Transaction_AllCategories" xml:space="preserve">
+    <value>Alle Kategorien</value>
+  </data>
+  <data name="Transaction_AllKinds" xml:space="preserve">
+    <value>Alle Arten</value>
+  </data>
+  <data name="Transaction_ActiveOnly" xml:space="preserve">
+    <value>Nur aktive</value>
+  </data>
+  <data name="Transaction_ShowingTransactions" xml:space="preserve">
+    <value>Zeige {0} von {1} Bewegungen.</value>
+  </data>
+  <data name="Transaction_ClearFilter" xml:space="preserve">
+    <value>Filter zurücksetzen</value>
+  </data>
+  <data name="Transaction_NoTransactionsMatchFilter" xml:space="preserve">
+    <value>Keine Bewegungen entsprechen dem aktuellen Filter.</value>
+  </data>
+  <data name="Transaction_From" xml:space="preserve">
+    <value>Von</value>
+  </data>
+  <data name="Transaction_To" xml:space="preserve">
+    <value>Nach</value>
+  </data>
+  <data name="Transaction_YearlyAmount" xml:space="preserve">
+    <value>Jahresbetrag</value>
+  </data>
+  <data name="Transaction_SumYearlyAmountFilter" xml:space="preserve">
+    <value>Jahresbetrag für aktuellen Filter</value>
+  </data>
+  <data name="Transaction_ErrorNameRequired" xml:space="preserve">
+    <value>Name der Bewegung ist erforderlich.</value>
+  </data>
+  <data name="Transaction_ErrorAmountGreaterThanZero" xml:space="preserve">
+    <value>Betrag muss grösser als null sein.</value>
+  </data>
+  <data name="Transaction_ErrorIntervalGreaterOrEqualOne" xml:space="preserve">
+    <value>Intervall muss grösser oder gleich 1 sein.</value>
+  </data>
+  <data name="Transaction_Added" xml:space="preserve">
+    <value>Bewegung '{0}' hinzugefügt.</value>
+  </data>
+  <data name="Transaction_Updated" xml:space="preserve">
+    <value>Bewegung '{0}' aktualisiert.</value>
+  </data>
+  <data name="Transaction_DeleteTitle" xml:space="preserve">
+    <value>Bewegung löschen</value>
+  </data>
+  <data name="Transaction_DeleteConfirm" xml:space="preserve">
+    <value>Bewegung '{0}' löschen?</value>
+  </data>
+  <data name="Transaction_Deleted" xml:space="preserve">
+    <value>Bewegung '{0}' gelöscht.</value>
+  </data>
+  <data name="Transaction_ScheduleOnceOn" xml:space="preserve">
+    <value>Einmalig am {0}</value>
+  </data>
+  <data name="Transaction_ScheduleEveryWeeksOn" xml:space="preserve">
+    <value>Alle {0} Woche(n) am {1}</value>
+  </data>
+  <data name="Transaction_ScheduleEveryMonthsOnDay" xml:space="preserve">
+    <value>Alle {0} Monat(e) am Tag {1}</value>
+  </data>
+  <data name="Transaction_ScheduleEveryQuartersOnDay" xml:space="preserve">
+    <value>Alle {0} Quartal(e) am Tag {1}</value>
+  </data>
+  <data name="Transaction_ScheduleEveryHalfYearsOnDay" xml:space="preserve">
+    <value>Alle {0} Halbjahr(e) am Tag {1}</value>
+  </data>
+  <data name="Transaction_ScheduleEveryYearsOn" xml:space="preserve">
+    <value>Alle {0} Jahr(e) am {2}.{1}.</value>
+  </data>
+  <data name="Transaction_ScheduleEveryDays" xml:space="preserve">
+    <value>Alle {0} Tag(e)</value>
+  </data>
+  <data name="CreditCard_Title" xml:space="preserve">
+    <value>Kreditkarten</value>
+  </data>
+  <data name="CreditCard_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen. Gehe zu Home und importiere eine Cashflow-JSON-Datei.</value>
+  </data>
+  <data name="CreditCard_InfoTitle" xml:space="preserve">
+    <value>Kreditkartenkonten sind weiterhin Konten.</value>
+  </data>
+  <data name="CreditCard_InfoText" xml:space="preserve">
+    <value>Das Kreditkartenkonto speichert den aktuellen Kartensaldo bzw. die Schuld. Der Kreditkartenvertrag definiert nur, wie die Monatsrechnung automatisch bezahlt wird.</value>
+  </data>
+  <data name="CreditCard_AddContract" xml:space="preserve">
+    <value>Kreditkartenvertrag hinzufügen</value>
+  </data>
+  <data name="CreditCard_EditContract" xml:space="preserve">
+    <value>Kreditkartenvertrag bearbeiten</value>
+  </data>
+  <data name="CreditCard_CreditCardAccount" xml:space="preserve">
+    <value>Kreditkartenkonto</value>
+  </data>
+  <data name="CreditCard_SelectCreditCardAccount" xml:space="preserve">
+    <value>-- Kreditkartenkonto auswählen --</value>
+  </data>
+  <data name="CreditCard_CreditCardAccountHint" xml:space="preserve">
+    <value>Dieses Konto führt den Kreditkartensaldo.</value>
+  </data>
+  <data name="CreditCard_PaymentAccount" xml:space="preserve">
+    <value>Zahlungskonto</value>
+  </data>
+  <data name="CreditCard_SelectPaymentAccount" xml:space="preserve">
+    <value>-- Zahlungskonto auswählen --</value>
+  </data>
+  <data name="CreditCard_PaymentAccountHint" xml:space="preserve">
+    <value>Die Rechnungszahlung wird diesem Konto belastet.</value>
+  </data>
+  <data name="CreditCard_ClosingDay" xml:space="preserve">
+    <value>Abrechnungstag</value>
+  </data>
+  <data name="CreditCard_PaymentDay" xml:space="preserve">
+    <value>Zahlungstag</value>
+  </data>
+  <data name="CreditCard_PaymentMethod" xml:space="preserve">
+    <value>Zahlungsmethode</value>
+  </data>
+  <data name="CreditCard_BusinessDayAdjustment" xml:space="preserve">
+    <value>Arbeitstagsanpassung</value>
+  </data>
+  <data name="CreditCard_StartDate" xml:space="preserve">
+    <value>Startdatum</value>
+  </data>
+  <data name="CreditCard_EndDate" xml:space="preserve">
+    <value>Enddatum</value>
+  </data>
+  <data name="CreditCard_Method" xml:space="preserve">
+    <value>Methode</value>
+  </data>
+  <data name="CreditCard_Adjustment" xml:space="preserve">
+    <value>Anpassung</value>
+  </data>
+  <data name="CreditCard_CurrentBalance" xml:space="preserve">
+    <value>Aktueller Kontostand</value>
+  </data>
+  <data name="CreditCard_NoContractsDefined" xml:space="preserve">
+    <value>Noch keine Kreditkartenverträge definiert.</value>
+  </data>
+  <data name="CreditCard_Added" xml:space="preserve">
+    <value>Kreditkartenvertrag '{0}' hinzugefügt.</value>
+  </data>
+  <data name="CreditCard_Updated" xml:space="preserve">
+    <value>Kreditkartenvertrag '{0}' aktualisiert.</value>
+  </data>
+  <data name="CreditCard_Deleted" xml:space="preserve">
+    <value>Kreditkartenvertrag '{0}' gelöscht.</value>
+  </data>
+  <data name="CreditCard_ErrorNameRequired" xml:space="preserve">
+    <value>Name ist erforderlich.</value>
+  </data>
+  <data name="CreditCard_ErrorCreditCardAccountRequired" xml:space="preserve">
+    <value>Kreditkartenkonto ist erforderlich.</value>
+  </data>
+  <data name="CreditCard_ErrorPaymentAccountRequired" xml:space="preserve">
+    <value>Zahlungskonto ist erforderlich.</value>
+  </data>
+  <data name="CreditCard_ErrorAccountsMustBeDifferent" xml:space="preserve">
+    <value>Kreditkartenkonto und Zahlungskonto müssen unterschiedlich sein.</value>
+  </data>
+  <data name="CreditCard_ErrorClosingDayRange" xml:space="preserve">
+    <value>Abrechnungstag muss zwischen 1 und 31 liegen.</value>
+  </data>
+  <data name="CreditCard_ErrorPaymentDayRange" xml:space="preserve">
+    <value>Zahlungstag muss zwischen 1 und 31 liegen.</value>
+  </data>
+  <data name="CreditCard_ErrorEndDateBeforeStartDate" xml:space="preserve">
+    <value>Enddatum darf nicht vor dem Startdatum liegen.</value>
+  </data>
+  <data name="Dashboard_Title" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Dashboard_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen. Gehe zu Home und importiere eine Cashflow-JSON-Datei.</value>
+  </data>
+  <data name="Dashboard_NoSimulationRun" xml:space="preserve">
+    <value>Ein Plan ist geladen, aber es wurde noch keine Simulation ausgeführt.</value>
+  </data>
+  <data name="Dashboard_LiquidAssets" xml:space="preserve">
+    <value>Liquide Mittel</value>
+  </data>
+  <data name="Dashboard_TotalLiabilities" xml:space="preserve">
+    <value>Gesamtverbindlichkeiten</value>
+  </data>
+  <data name="Dashboard_Mortgages" xml:space="preserve">
+    <value>Hypotheken</value>
+  </data>
+  <data name="Dashboard_Other" xml:space="preserve">
+    <value>Andere</value>
+  </data>
+  <data name="Dashboard_NetWorth" xml:space="preserve">
+    <value>Nettovermögen</value>
+  </data>
+  <data name="Dashboard_Warnings" xml:space="preserve">
+    <value>Warnungen</value>
+  </data>
+  <data name="Dashboard_CriticalWarnings" xml:space="preserve">
+    <value>{0} kritisch</value>
+  </data>
+  <data name="Dashboard_LiquidityRisk" xml:space="preserve">
+    <value>Liquiditätsrisiko</value>
+  </data>
+  <data name="Dashboard_LowestTotalLiquidBalance" xml:space="preserve">
+    <value>Tiefster gesamter liquider Kontostand</value>
+  </data>
+  <data name="Dashboard_On" xml:space="preserve">
+    <value>am</value>
+  </data>
+  <data name="Dashboard_EndBalances" xml:space="preserve">
+    <value>Endkontostände</value>
+  </data>
+  <data name="Dashboard_Balance" xml:space="preserve">
+    <value>Kontostand</value>
+  </data>
+  <data name="Dashboard_MortgagePrincipals" xml:space="preserve">
+    <value>Hypothekarbeträge</value>
+  </data>
+  <data name="Dashboard_Mortgage" xml:space="preserve">
+    <value>Hypothek</value>
+  </data>
+  <data name="Dashboard_Amortisation" xml:space="preserve">
+    <value>Amortisation</value>
+  </data>
+  <data name="Dashboard_ProjectedPrincipal" xml:space="preserve">
+    <value>Prognostizierter Hypothekarbetrag</value>
+  </data>
+  <data name="Person_Text" xml:space="preserve">
+    <value>Verwalte Personen für Kontobesitz, zugewiesene Einkommenstransaktionen und Säule-3a-Projektionen.</value>
+  </data>
+  <data name="Person_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen. Bitte erstelle oder importiere zuerst einen Plan.</value>
+  </data>
+  <data name="Person_EditPerson" xml:space="preserve">
+    <value>Person bearbeiten</value>
+  </data>
+  <data name="Person_AddPerson" xml:space="preserve">
+    <value>Person hinzufügen</value>
+  </data>
+  <data name="Person_DisplayName" xml:space="preserve">
+    <value>Anzeigename</value>
+  </data>
+  <data name="Person_DateOfBirth" xml:space="preserve">
+    <value>Geburtsdatum</value>
+  </data>
+  <data name="Person_RetirementDate" xml:space="preserve">
+    <value>Pensionierungsdatum</value>
+  </data>
+  <data name="Person_RetirementDateHint" xml:space="preserve">
+    <value>Wird als Projektions-Enddatum für Säule-3a-Verträge verwendet.</value>
+  </data>
+  <data name="Person_Pillar3aEligibility" xml:space="preserve">
+    <value>Säule-3a-Berechtigung</value>
+  </data>
+  <data name="Person_AnnualEarnedIncome" xml:space="preserve">
+    <value>Jährliches Erwerbseinkommen</value>
+  </data>
+  <data name="Person_AnnualEarnedIncomeHint" xml:space="preserve">
+    <value>Erwerbseinkommen kann später für die Berechnung der 20%-Säule-3a-Grenze verwendet werden.</value>
+  </data>
+  <data name="Person_Add" xml:space="preserve">
+    <value>Hinzufügen</value>
+  </data>
+  <data name="Person_NoPersonsDefined" xml:space="preserve">
+    <value>Noch keine Personen definiert.</value>
+  </data>
+  <data name="Person_ManualEarnedIncome" xml:space="preserve">
+    <value>Manuelles Erwerbseinkommen</value>
+  </data>
+  <data name="Person_IncomeTransactions" xml:space="preserve">
+    <value>Einkommensbewegungen</value>
+  </data>
+  <data name="Person_SimulatedIncome" xml:space="preserve">
+    <value>Simuliertes Einkommen</value>
+  </data>
+  <data name="Person_Pillar3aContracts" xml:space="preserve">
+    <value>Säule-3a-Verträge</value>
+  </data>
+  <data name="Person_ErrorDisplayNameRequired" xml:space="preserve">
+    <value>Anzeigename ist erforderlich.</value>
+  </data>
+  <data name="Person_Updated" xml:space="preserve">
+    <value>Person '{0}' aktualisiert.</value>
+  </data>
+  <data name="Person_Added" xml:space="preserve">
+    <value>Person '{0}' hinzugefügt.</value>
+  </data>
+  <data name="Person_Deleted" xml:space="preserve">
+    <value>Person '{0}' gelöscht.</value>
+  </data>
+  <data name="Person_DeleteBlockedByAccounts" xml:space="preserve">
+    <value>Person wird von einem oder mehreren Konten verwendet.</value>
+  </data>
+  <data name="Person_DeleteBlockedByIncomeTransactions" xml:space="preserve">
+    <value>Person wird von einer oder mehreren Einkommensbewegungen verwendet.</value>
+  </data>
+  <data name="Person_DeleteBlockedByPillar3aContracts" xml:space="preserve">
+    <value>Person wird von einem oder mehreren Säule-3a-Verträgen verwendet.</value>
+  </data>
+  <data name="Person_DeletePerson" xml:space="preserve">
+    <value>Person löschen</value>
+  </data>
+  <data name="Settings_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen. Verwende das Ordnersymbol in der Navigation, um eine Cashflow-JSON-Datei zu öffnen.</value>
+  </data>
+  <data name="Settings_SimulationSettings" xml:space="preserve">
+    <value>Simulationseinstellungen</value>
+  </data>
+  <data name="Settings_SimulationSettingsText" xml:space="preserve">
+    <value>Simulationszeitraum und Optionen.</value>
+  </data>
+  <data name="Settings_DateMode" xml:space="preserve">
+    <value>Datumsmodus</value>
+  </data>
+  <data name="Settings_StartAnchor" xml:space="preserve">
+    <value>Startanker</value>
+  </data>
+  <data name="Settings_HorizonMonths" xml:space="preserve">
+    <value>Horizont in Monaten</value>
+  </data>
+  <data name="Settings_EffectiveRangePreview" xml:space="preserve">
+    <value>Vorschau effektiver Zeitraum</value>
+  </data>
+  <data name="Settings_StartDate" xml:space="preserve">
+    <value>Startdatum</value>
+  </data>
+  <data name="Settings_EndDate" xml:space="preserve">
+    <value>Enddatum</value>
+  </data>
+  <data name="Settings_Granularity" xml:space="preserve">
+    <value>Granularität</value>
+  </data>
+  <data name="Settings_IncludeInactiveAccounts" xml:space="preserve">
+    <value>Inaktive Konten einschliessen</value>
+  </data>
+  <data name="Settings_WarnOnNegativeBankBalance" xml:space="preserve">
+    <value>Bei negativem Bankkontostand warnen</value>
+  </data>
+  <data name="Settings_SaveSettings" xml:space="preserve">
+    <value>Einstellungen speichern</value>
+  </data>
+  <data name="Settings_CurrentSimulationResult" xml:space="preserve">
+    <value>Aktuelles Simulationsergebnis: {0} - {1}, {2} Ereignisse, {3} Kontostandspunkte, {4} Warnungen.</value>
+  </data>
+  <data name="BrowserWorkingCopy" xml:space="preserve">
+    <value>Browser-Arbeitskopie</value>
+  </data>
+  <data name="Settings_BrowserWorkingCopyText" xml:space="preserve">
+    <value>Die Browser-Arbeitskopie wird im lokalen Browser-Speicher abgelegt und hilft, den zuletzt geladenen Plan nach einem Refresh wiederherzustellen. Die exportierte JSON-Datei bleibt die Source of Truth.</value>
+  </data>
+  <data name="ClearBrowserCache" xml:space="preserve">
+    <value>Browser-Cache leeren</value>
+  </data>
+  <data name="LanguageAndRegion" xml:space="preserve">
+    <value>Sprache und Region</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Sprache</value>
+  </data>
+  <data name="Region" xml:space="preserve">
+    <value>Region</value>
+  </data>
+  <data name="Language_English" xml:space="preserve">
+    <value>Englisch</value>
+  </data>
+  <data name="Language_German" xml:space="preserve">
+    <value>Deutsch</value>
+  </data>
+  <data name="Region_SwitzerlandEnglish" xml:space="preserve">
+    <value>Schweiz Englisch</value>
+  </data>
+  <data name="Region_SwitzerlandGerman" xml:space="preserve">
+    <value>Schweiz Deutsch</value>
+  </data>
+  <data name="Region_UnitedStatesEnglish" xml:space="preserve">
+    <value>USA Englisch</value>
+  </data>
+  <data name="Region_GermanyGerman" xml:space="preserve">
+    <value>Deutschland Deutsch</value>
+  </data>
+  <data name="SaveLanguageAndRegion" xml:space="preserve">
+    <value>Sprache und Region speichern</value>
+  </data>
+  <data name="LanguageChangeReloadHint" xml:space="preserve">
+    <value>Die Seite wird nach dem Speichern der Sprach- und Regionseinstellungen neu geladen.</value>
+  </data>
+  <data name="LanguageAndRegionSaved" xml:space="preserve">
+    <value>Sprache und Region gespeichert.</value>
+  </data>
+  <data name="Settings_ErrorPlanTitleRequired" xml:space="preserve">
+    <value>Plantitel ist erforderlich.</value>
+  </data>
+  <data name="Settings_PlanTitleSaved" xml:space="preserve">
+    <value>Plantitel gespeichert.</value>
+  </data>
+  <data name="Settings_BrowserWorkingCopyCleared" xml:space="preserve">
+    <value>Browser-Arbeitskopie gelöscht.</value>
+  </data>
+  <data name="Settings_SimulationSettingsSaved" xml:space="preserve">
+    <value>Simulationseinstellungen gespeichert.</value>
+  </data>
+  <data name="NotFound_Title" xml:space="preserve">
+    <value>Nicht gefunden</value>
+  </data>
+  <data name="NotFound_Text" xml:space="preserve">
+    <value>Der gesuchte Inhalt existiert nicht.</value>
+  </data>
+  <data name="Simulation_NoPlanLoaded" xml:space="preserve">
+    <value>Noch kein Plan geladen.</value>
+  </data>
+  <data name="Simulation_NoSimulationResult" xml:space="preserve">
+    <value>Noch kein Simulationsergebnis verfügbar. Verwende den Play-Button in der Navigation, um die Simulation zu starten.</value>
+  </data>
+  <data name="Simulation_Result" xml:space="preserve">
+    <value>Simulationsergebnis</value>
+  </data>
+  <data name="Simulation_Range" xml:space="preserve">
+    <value>Simulationszeitraum</value>
+  </data>
+  <data name="Simulation_Events" xml:space="preserve">
+    <value>Ereignisse</value>
+  </data>
+  <data name="Simulation_BalancePoints" xml:space="preserve">
+    <value>Kontostandspunkte</value>
+  </data>
+  <data name="Simulation_MortgagePrincipalPoints" xml:space="preserve">
+    <value>Hypothekarbetragspunkte</value>
+  </data>
+  <data name="Simulation_Warnings" xml:space="preserve">
+    <value>Warnungen</value>
+  </data>
+  <data name="Simulation_MonthlyCashflowSummary" xml:space="preserve">
+    <value>Monatliche Cashflow-Zusammenfassung</value>
+  </data>
+  <data name="Simulation_NoCompleteMonthCovered" xml:space="preserve">
+    <value>Kein vollständiger Kalendermonat ist komplett durch den aktuellen Simulationszeitraum abgedeckt.</value>
+  </data>
+  <data name="Simulation_Month" xml:space="preserve">
+    <value>Monat</value>
+  </data>
+  <data name="Simulation_Income" xml:space="preserve">
+    <value>Einnahmen</value>
+  </data>
+  <data name="Simulation_Expenses" xml:space="preserve">
+    <value>Ausgaben</value>
+  </data>
+  <data name="Simulation_InternalOut" xml:space="preserve">
+    <value>Intern ausgehend</value>
+  </data>
+  <data name="Simulation_InternalIn" xml:space="preserve">
+    <value>Intern eingehend</value>
+  </data>
+  <data name="Simulation_MortgagePayments" xml:space="preserve">
+    <value>Hypothekarzahlungen</value>
+  </data>
+  <data name="Simulation_NetCashflow" xml:space="preserve">
+    <value>Netto-Cashflow</value>
+  </data>
+  <data name="Simulation_EndLiquidBalance" xml:space="preserve">
+    <value>Liquider Endkontostand</value>
+  </data>
+  <data name="Simulation_MortgageSummary" xml:space="preserve">
+    <value>Hypothekenübersicht</value>
+  </data>
+  <data name="Simulation_Mortgage" xml:space="preserve">
+    <value>Hypothek</value>
+  </data>
+  <data name="Simulation_Amortisation" xml:space="preserve">
+    <value>Amortisation</value>
+  </data>
+  <data name="Simulation_StartPrincipal" xml:space="preserve">
+    <value>Startbetrag</value>
+  </data>
+  <data name="Simulation_ProjectedEndPrincipal" xml:space="preserve">
+    <value>Prognostizierter Endbetrag</value>
+  </data>
+  <data name="Simulation_PrincipalChange" xml:space="preserve">
+    <value>Betragsänderung</value>
+  </data>
+  <data name="Simulation_MortgageProjection" xml:space="preserve">
+    <value>Hypothekenprojektion</value>
+  </data>
+  <data name="Simulation_NoMortgagePrincipalProjection" xml:space="preserve">
+    <value>Keine Hypothekarbetragsprojektion für den ausgewählten Simulationszeitraum verfügbar.</value>
+  </data>
+  <data name="Simulation_Principal" xml:space="preserve">
+    <value>Hypothekarbetrag</value>
+  </data>
+  <data name="Simulation_MortgageEvents" xml:space="preserve">
+    <value>Hypothekenereignisse</value>
+  </data>
+  <data name="Simulation_NoMortgageEvents" xml:space="preserve">
+    <value>Keine Hypothekenereignisse für den ausgewählten Simulationszeitraum verfügbar.</value>
+  </data>
+  <data name="Simulation_CreditCardPaymentEvents" xml:space="preserve">
+    <value>Kreditkarten-Zahlungsereignisse</value>
+  </data>
+  <data name="Simulation_NoCreditCardPaymentEvents" xml:space="preserve">
+    <value>Keine generierten Kreditkarten-Zahlungsereignisse für den ausgewählten Simulationszeitraum verfügbar.</value>
+  </data>
+  <data name="Simulation_EventsAndWarnings" xml:space="preserve">
+    <value>Ereignisse und Warnungen</value>
+  </data>
+  <data name="Simulation_NoEventsOrWarnings" xml:space="preserve">
+    <value>Keine Ereignisse oder Warnungen für den ausgewählten Simulationszeitraum verfügbar.</value>
+  </data>
+  <data name="Simulation_NameOrCode" xml:space="preserve">
+    <value>Name / Code</value>
+  </data>
+  <data name="Simulation_KindOrSeverity" xml:space="preserve">
+    <value>Art / Schweregrad</value>
+  </data>
+  <data name="Simulation_CategoryOrMessage" xml:space="preserve">
+    <value>Kategorie / Meldung</value>
+  </data>
+  <data name="Simulation_Warning" xml:space="preserve">
+    <value>Warnung</value>
+  </data>
+  <data name="Simulation_Event" xml:space="preserve">
+    <value>Ereignis</value>
+  </data>
+  <data name="Simulation_ShowingFirstCombinedRowsOnly" xml:space="preserve">
+    <value>Es werden nur die ersten {0} kombinierten Ereignisse und Warnungen angezeigt.</value>
+  </data>
+  <data name="Pillar3a_Title" xml:space="preserve">
+    <value>Säule 3a</value>
+  </data>
+  <data name="Pillar3a_NoPlanLoaded" xml:space="preserve">
+    <value>Noch kein Plan geladen.</value>
+  </data>
+  <data name="Pillar3a_AddContract" xml:space="preserve">
+    <value>Säule-3a-Vertrag hinzufügen</value>
+  </data>
+  <data name="Pillar3a_EditContract" xml:space="preserve">
+    <value>Säule-3a-Vertrag bearbeiten</value>
+  </data>
+  <data name="Pillar3a_SelectOwner" xml:space="preserve">
+    <value>-- Besitzer auswählen --</value>
+  </data>
+  <data name="Pillar3a_OwnerHint" xml:space="preserve">
+    <value>Nur Personen mit Pensionskasse sind verfügbar.</value>
+  </data>
+  <data name="Pillar3a_Provider" xml:space="preserve">
+    <value>Anbieter</value>
+  </data>
+  <data name="Pillar3a_ContractNumberMasked" xml:space="preserve">
+    <value>Maskierte Vertragsnummer</value>
+  </data>
+  <data name="Pillar3a_OpeningValue" xml:space="preserve">
+    <value>Anfangswert</value>
+  </data>
+  <data name="Pillar3a_OpeningDate" xml:space="preserve">
+    <value>Anfangsdatum</value>
+  </data>
+  <data name="Pillar3a_ProjectionAssumptions" xml:space="preserve">
+    <value>Projektionsannahmen</value>
+  </data>
+  <data name="Pillar3a_ProjectionMethod" xml:space="preserve">
+    <value>Projektionsmethode</value>
+  </data>
+  <data name="Pillar3a_ExpectedAnnualReturnPercent" xml:space="preserve">
+    <value>Erwartete Jahresrendite %</value>
+  </data>
+  <data name="Pillar3a_AnnualFeePercent" xml:space="preserve">
+    <value>Jahresgebühr %</value>
+  </data>
+  <data name="Pillar3a_ExpectedSurplusPercent" xml:space="preserve">
+    <value>Erwarteter Überschuss %</value>
+  </data>
+  <data name="Pillar3a_ContributionSchedules" xml:space="preserve">
+    <value>Einzahlungspläne</value>
+  </data>
+  <data name="Pillar3a_AddSchedule" xml:space="preserve">
+    <value>Zeitplan hinzufügen</value>
+  </data>
+  <data name="Pillar3a_NoContributionSchedulesConfigured" xml:space="preserve">
+    <value>Keine Einzahlungspläne konfiguriert.</value>
+  </data>
+  <data name="Pillar3a_ContributionSchedule" xml:space="preserve">
+    <value>Einzahlungsplan</value>
+  </data>
+  <data name="Pillar3a_PaymentAccount" xml:space="preserve">
+    <value>Zahlungskonto</value>
+  </data>
+  <data name="Pillar3a_SelectAccount" xml:space="preserve">
+    <value>-- Konto auswählen --</value>
+  </data>
+  <data name="Pillar3a_StartDate" xml:space="preserve">
+    <value>Startdatum</value>
+  </data>
+  <data name="Pillar3a_EndDate" xml:space="preserve">
+    <value>Enddatum</value>
+  </data>
+  <data name="Pillar3a_Frequency" xml:space="preserve">
+    <value>Frequenz</value>
+  </data>
+  <data name="Pillar3a_Interval" xml:space="preserve">
+    <value>Intervall</value>
+  </data>
+  <data name="Pillar3a_DayOfMonth" xml:space="preserve">
+    <value>Tag des Monats</value>
+  </data>
+  <data name="Pillar3a_BusinessDayAdjustment" xml:space="preserve">
+    <value>Arbeitstagsanpassung</value>
+  </data>
+  <data name="Pillar3a_TaxYearSimulator" xml:space="preserve">
+    <value>Steuerjahr-Simulator</value>
+  </data>
+  <data name="Pillar3a_TaxYearSimulatorText" xml:space="preserve">
+    <value>Simuliert geplante Säule-3a-Einzahlungen für ein Steuerjahr. Angezeigt werden nur Personen mit Pensionskasse und aktiven geplanten Säule-3a-Einzahlungen. Die Jahreslimite wird manuell erfasst und für alle Jahre wiederverwendet, da zukünftige offizielle Limiten unbekannt sind.</value>
+  </data>
+  <data name="Pillar3a_TaxYear" xml:space="preserve">
+    <value>Steuerjahr</value>
+  </data>
+  <data name="Pillar3a_AnnualLimitPerPerson" xml:space="preserve">
+    <value>Jahreslimite pro Person</value>
+  </data>
+  <data name="Pillar3a_NoEligiblePersonsWithSchedules" xml:space="preserve">
+    <value>Keine berechtigten Personen mit aktiven Säule-3a-Einzahlungsplänen gefunden.</value>
+  </data>
+  <data name="Pillar3a_Contracts" xml:space="preserve">
+    <value>Verträge</value>
+  </data>
+  <data name="Pillar3a_ActiveSchedules" xml:space="preserve">
+    <value>Aktive Zeitpläne</value>
+  </data>
+  <data name="Pillar3a_AnnualLimit" xml:space="preserve">
+    <value>Jahreslimite</value>
+  </data>
+  <data name="Pillar3a_ScheduledContributions" xml:space="preserve">
+    <value>Geplante Einzahlungen</value>
+  </data>
+  <data name="Pillar3a_Remaining" xml:space="preserve">
+    <value>Verbleibend</value>
+  </data>
+  <data name="Pillar3a_Excess" xml:space="preserve">
+    <value>Überschuss</value>
+  </data>
+  <data name="Pillar3a_Exceeded" xml:space="preserve">
+    <value>Überschritten</value>
+  </data>
+  <data name="Pillar3a_LimitReached" xml:space="preserve">
+    <value>Limite erreicht</value>
+  </data>
+  <data name="Pillar3a_BelowLimit" xml:space="preserve">
+    <value>Unter Limite</value>
+  </data>
+  <data name="Pillar3a_ProjectionSummaryPerPerson" xml:space="preserve">
+    <value>Projektionsübersicht pro Person</value>
+  </data>
+  <data name="Pillar3a_NoPerPersonProjectionAvailable" xml:space="preserve">
+    <value>Keine Projektion pro Person verfügbar.</value>
+  </data>
+  <data name="Pillar3a_TotalContributions" xml:space="preserve">
+    <value>Einzahlungen total</value>
+  </data>
+  <data name="Pillar3a_TotalGrowth" xml:space="preserve">
+    <value>Wachstum total</value>
+  </data>
+  <data name="Pillar3a_TotalWithdrawals" xml:space="preserve">
+    <value>Bezüge total</value>
+  </data>
+  <data name="Pillar3a_ProjectedValue" xml:space="preserve">
+    <value>Prognostizierter Wert</value>
+  </data>
+  <data name="Pillar3a_LatestProjectionDate" xml:space="preserve">
+    <value>Letztes Projektionsdatum</value>
+  </data>
+  <data name="Pillar3a_NoContractsConfigured" xml:space="preserve">
+    <value>Noch keine Säule-3a-Verträge konfiguriert.</value>
+  </data>
+  <data name="Pillar3a_RetirementDate" xml:space="preserve">
+    <value>Pensionierungsdatum</value>
+  </data>
+  <data name="Pillar3a_Fallback30Years" xml:space="preserve">
+    <value>Fallback +30 Jahre</value>
+  </data>
+  <data name="Pillar3a_ProjectionSummaryByContract" xml:space="preserve">
+    <value>Projektionsübersicht nach Vertrag</value>
+  </data>
+  <data name="Pillar3a_Contract" xml:space="preserve">
+    <value>Vertrag</value>
+  </data>
+  <data name="Pillar3a_Performance" xml:space="preserve">
+    <value>Performance</value>
+  </data>
+  <data name="Pillar3a_ProjectionEnd" xml:space="preserve">
+    <value>Projektionsende</value>
+  </data>
+  <data name="Pillar3a_YearlyProjectionByPerson" xml:space="preserve">
+    <value>Jahresprojektion nach Person</value>
+  </data>
+  <data name="Pillar3a_NoYearlyProjectionAvailable" xml:space="preserve">
+    <value>Keine Jahresprojektion verfügbar.</value>
+  </data>
+  <data name="Pillar3a_Year" xml:space="preserve">
+    <value>Jahr</value>
+  </data>
+  <data name="Pillar3a_Total" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Pillar3a_Contributions" xml:space="preserve">
+    <value>Einzahlungen</value>
+  </data>
+  <data name="Pillar3a_Growth" xml:space="preserve">
+    <value>Wachstum</value>
+  </data>
+  <data name="Pillar3a_Withdrawals" xml:space="preserve">
+    <value>Bezüge</value>
+  </data>
+  <data name="Pillar3a_EndValue" xml:space="preserve">
+    <value>Endwert</value>
+  </data>
+  <data name="Pillar3a_SimulatedContributionEvents" xml:space="preserve">
+    <value>Simulierte Säule-3a-Einzahlungsereignisse</value>
+  </data>
+  <data name="Pillar3a_NoSimulationResultForContributionEvents" xml:space="preserve">
+    <value>Noch kein Simulationsergebnis verfügbar. Verwende den Play-Button in der Navigation, um generierte Säule-3a-Einzahlungsereignisse in der normalen Cashflow-Simulation zu sehen.</value>
+  </data>
+  <data name="Pillar3a_NoContributionEventsInRange" xml:space="preserve">
+    <value>Keine Säule-3a-Einzahlungsereignisse im aktuellen Simulationszeitraum gefunden.</value>
+  </data>
+  <data name="Pillar3a_ContractAdded" xml:space="preserve">
+    <value>Säule-3a-Vertrag '{0}' hinzugefügt.</value>
+  </data>
+  <data name="Pillar3a_ContractUpdated" xml:space="preserve">
+    <value>Säule-3a-Vertrag '{0}' aktualisiert.</value>
+  </data>
+  <data name="Pillar3a_ContractDeleted" xml:space="preserve">
+    <value>Säule-3a-Vertrag '{0}' gelöscht.</value>
+  </data>
+  <data name="Mortgages_Title" xml:space="preserve">
+    <value>Hypotheken</value>
+  </data>
+  <data name="Mortgages_NoPlanLoaded" xml:space="preserve">
+    <value>Noch kein Plan geladen. Gehe zu Home und importiere eine Cashflow-JSON-Datei.</value>
+  </data>
+  <data name="Mortgages_AddMortgage" xml:space="preserve">
+    <value>Hypothek hinzufügen</value>
+  </data>
+  <data name="Mortgages_EditMortgage" xml:space="preserve">
+    <value>Hypothek bearbeiten</value>
+  </data>
+  <data name="Mortgages_Basic" xml:space="preserve">
+    <value>Basis</value>
+  </data>
+  <data name="Mortgages_PaymentAccounts" xml:space="preserve">
+    <value>Zahlungskonten</value>
+  </data>
+  <data name="Mortgages_PaymentAccount" xml:space="preserve">
+    <value>Zahlungskonto</value>
+  </data>
+  <data name="Mortgages_SelectPaymentAccount" xml:space="preserve">
+    <value>-- Zahlungskonto auswählen --</value>
+  </data>
+  <data name="Mortgages_PaymentAccountHint" xml:space="preserve">
+    <value>Die Bank belastet Zinsen und Amortisation von diesem Konto.</value>
+  </data>
+  <data name="Mortgages_IndirectAccount" xml:space="preserve">
+    <value>Indirektes Amortisationskonto</value>
+  </data>
+  <data name="Mortgages_IndirectAccountHint" xml:space="preserve">
+    <value>Nur für indirekte Amortisation erforderlich, z. B. Säule 3a.</value>
+  </data>
+  <data name="Mortgages_Principal" xml:space="preserve">
+    <value>Hypothekarbetrag</value>
+  </data>
+  <data name="Mortgages_PrincipalHint" xml:space="preserve">
+    <value>Der Hypothekarbetrag wird intern verfolgt und ist kein separates Konto.</value>
+  </data>
+  <data name="Mortgages_Interest" xml:space="preserve">
+    <value>Zinsen</value>
+  </data>
+  <data name="Mortgages_SaronRates" xml:space="preserve">
+    <value>SARON-Zinssatzpunkte</value>
+  </data>
+  <data name="Mortgages_Amortisation" xml:space="preserve">
+    <value>Amortisation</value>
+  </data>
+  <data name="Mortgages_NoneConfigured" xml:space="preserve">
+    <value>Noch keine Hypotheken konfiguriert.</value>
+  </data>
+  <data name="Mortgages_InitialPrincipal" xml:space="preserve">
+    <value>Anfangsbetrag</value>
+  </data>
+  <data name="Mortgages_CalculationPrincipal" xml:space="preserve">
+    <value>Berechnungsbetrag</value>
+  </data>
+  <data name="Mortgages_ProjectedPrincipal" xml:space="preserve">
+    <value>Prognostizierter Betrag</value>
+  </data>
+  <data name="Mortgages_FixedPercent" xml:space="preserve">
+    <value>Fixzins %</value>
+  </data>
+  <data name="Mortgages_Initial" xml:space="preserve">
+    <value>initial</value>
+  </data>
+  <data name="HouseBuy_Title" xml:space="preserve">
+    <value>Hauskauf-Simulator</value>
+  </data>
+  <data name="HouseBuy_Subtitle" xml:space="preserve">
+    <value>Simulation der Schweizer Hypothekarfinanzierung und Tragbarkeit.</value>
+  </data>
+  <data name="HouseBuy_LoadPlanFirst" xml:space="preserve">
+    <value>Bitte zuerst einen Plan laden.</value>
+  </data>
+  <data name="HouseBuy_Scenarios" xml:space="preserve">
+    <value>Szenarien</value>
+  </data>
+  <data name="HouseBuy_ScenariosText" xml:space="preserve">
+    <value>Verwalte mehrere unabhängige Hauskauf-Simulationen. Konten, Bewegungen und Hypotheken werden nicht geändert.</value>
+  </data>
+  <data name="HouseBuy_Saved" xml:space="preserve">
+    <value>Gespeichert</value>
+  </data>
+  <data name="HouseBuy_Unsaved" xml:space="preserve">
+    <value>Nicht gespeichert</value>
+  </data>
+  <data name="HouseBuy_SelectedScenario" xml:space="preserve">
+    <value>Ausgewähltes Szenario</value>
+  </data>
+  <data name="HouseBuy_CurrentUnsavedScenario" xml:space="preserve">
+    <value>Aktuelles ungespeichertes Szenario</value>
+  </data>
+  <data name="HouseBuy_ScenarioName" xml:space="preserve">
+    <value>Szenarioname</value>
+  </data>
+  <data name="HouseBuy_CurrentRealEstateSale" xml:space="preserve">
+    <value>Verkauf aktuelle Immobilie</value>
+  </data>
+  <data name="HouseBuy_ExpectedSalePrice" xml:space="preserve">
+    <value>Erwarteter Verkaufspreis</value>
+  </data>
+  <data name="HouseBuy_RemainingMortgagePrincipal" xml:space="preserve">
+    <value>Verbleibender Hypothekarbetrag</value>
+  </data>
+  <data name="HouseBuy_SellingCosts" xml:space="preserve">
+    <value>Verkaufskosten</value>
+  </data>
+  <data name="HouseBuy_Pillar2BoundAmount" xml:space="preserve">
+    <value>Zweckgebundener Säule-2-/BVG-Betrag</value>
+  </data>
+  <data name="HouseBuy_NetProceeds" xml:space="preserve">
+    <value>Nettoerlös</value>
+  </data>
+  <data name="HouseBuy_FreeCash" xml:space="preserve">
+    <value>Freies Cash</value>
+  </data>
+  <data name="HouseBuy_PurposeBoundPillar2" xml:space="preserve">
+    <value>Zweckgebundene Säule 2</value>
+  </data>
+  <data name="HouseBuy_TotalUsableForNextPurchase" xml:space="preserve">
+    <value>Total für nächsten Kauf nutzbar</value>
+  </data>
+  <data name="HouseBuy_UseSaleProceedsAsEquity" xml:space="preserve">
+    <value>Verkaufserlös als Eigenmittel verwenden</value>
+  </data>
+  <data name="HouseBuy_NewRealEstate" xml:space="preserve">
+    <value>Neue Immobilie</value>
+  </data>
+  <data name="HouseBuy_BuyPrice" xml:space="preserve">
+    <value>Kaufpreis</value>
+  </data>
+  <data name="HouseBuy_RenovationPrice" xml:space="preserve">
+    <value>Renovationskosten</value>
+  </data>
+  <data name="HouseBuy_DesiredMortgage" xml:space="preserve">
+    <value>Gewünschte Hypothek</value>
+  </data>
+  <data name="HouseBuy_TotalFinancingBasis" xml:space="preserve">
+    <value>Total Finanzierungsbasis</value>
+  </data>
+  <data name="HouseBuy_SetMortgageToMax80" xml:space="preserve">
+    <value>Hypothek auf max. 80% setzen</value>
+  </data>
+  <data name="HouseBuy_SetMortgageFromCurrentEquity" xml:space="preserve">
+    <value>Hypothek aus aktuellen Eigenmitteln setzen</value>
+  </data>
+  <data name="HouseBuy_PersonsAndIncome" xml:space="preserve">
+    <value>Personen und Einkommen</value>
+  </data>
+  <data name="HouseBuy_PersonsAndIncomeText" xml:space="preserve">
+    <value>Füge alle Personen hinzu, deren Einkommen in die Tragbarkeitsrechnung einfliessen soll.</value>
+  </data>
+  <data name="HouseBuy_GrossSalaryYear" xml:space="preserve">
+    <value>Bruttolohn / Jahr</value>
+  </data>
+  <data name="HouseBuy_AddPerson" xml:space="preserve">
+    <value>Person hinzufügen</value>
+  </data>
+  <data name="HouseBuy_TotalGrossIncomeYear" xml:space="preserve">
+    <value>Total Bruttoeinkommen / Jahr</value>
+  </data>
+  <data name="HouseBuy_MaxYearlyHousingCost" xml:space="preserve">
+    <value>Max. Wohnkosten / Jahr</value>
+  </data>
+  <data name="HouseBuy_MaxMonthlyHousingCost" xml:space="preserve">
+    <value>Max. Wohnkosten / Monat</value>
+  </data>
+  <data name="HouseBuy_EquitySources" xml:space="preserve">
+    <value>Eigenmittelquellen</value>
+  </data>
+  <data name="HouseBuy_EquitySourcesText" xml:space="preserve">
+    <value>Eigenmittel können einer Person zugewiesen und als Cash oder Säule 2 / BVG klassifiziert werden.</value>
+  </data>
+  <data name="HouseBuy_Person" xml:space="preserve">
+    <value>Person</value>
+  </data>
+  <data name="HouseBuy_HouseholdUnassigned" xml:space="preserve">
+    <value>Haushalt / nicht zugewiesen</value>
+  </data>
+  <data name="HouseBuy_Cash" xml:space="preserve">
+    <value>Cash</value>
+  </data>
+  <data name="HouseBuy_Pillar2Bvg" xml:space="preserve">
+    <value>Säule 2 / BVG</value>
+  </data>
+  <data name="HouseBuy_AddEquitySource" xml:space="preserve">
+    <value>Eigenmittelquelle hinzufügen</value>
+  </data>
+  <data name="HouseBuy_CashEquity" xml:space="preserve">
+    <value>Cash-Eigenmittel</value>
+  </data>
+  <data name="HouseBuy_Pillar2BvgEquity" xml:space="preserve">
+    <value>Säule-2-/BVG-Eigenmittel</value>
+  </data>
+  <data name="HouseBuy_TotalEquity" xml:space="preserve">
+    <value>Eigenmittel total</value>
+  </data>
+  <data name="HouseBuy_RequiredTotalEquity" xml:space="preserve">
+    <value>Erforderliche Eigenmittel total</value>
+  </data>
+  <data name="HouseBuy_RequiredHardEquity" xml:space="preserve">
+    <value>Erforderliche harte Eigenmittel</value>
+  </data>
+  <data name="HouseBuy_MaxPillar2Bvg" xml:space="preserve">
+    <value>Max. Säule 2 / BVG</value>
+  </data>
+  <data name="HouseBuy_BankAssumptions" xml:space="preserve">
+    <value>Bankannahmen</value>
+  </data>
+  <data name="HouseBuy_ImputedInterestRatePercent" xml:space="preserve">
+    <value>Kalkulatorischer Zinssatz (%)</value>
+  </data>
+  <data name="HouseBuy_MaintenancePercent" xml:space="preserve">
+    <value>Unterhalt (%)</value>
+  </data>
+  <data name="HouseBuy_AffordabilityLimitPercent" xml:space="preserve">
+    <value>Tragbarkeitslimite (%)</value>
+  </data>
+  <data name="HouseBuy_FirstMortgageThresholdPercent" xml:space="preserve">
+    <value>Schwelle 1. Hypothek (%)</value>
+  </data>
+  <data name="HouseBuy_AmortisationYears" xml:space="preserve">
+    <value>Amortisationsjahre</value>
+  </data>
+  <data name="HouseBuy_Viable" xml:space="preserve">
+    <value>Tragbar</value>
+  </data>
+  <data name="HouseBuy_NotViable" xml:space="preserve">
+    <value>Nicht tragbar</value>
+  </data>
+  <data name="HouseBuy_SummaryAndRuleChecks" xml:space="preserve">
+    <value>Zusammenfassung und Regelprüfung</value>
+  </data>
+  <data name="HouseBuy_SummaryAndRuleChecksText" xml:space="preserve">
+    <value>Effektive Eingabeübersicht und Schweizer Finanzierungsvalidierung.</value>
+  </data>
+  <data name="HouseBuy_Summary" xml:space="preserve">
+    <value>Zusammenfassung</value>
+  </data>
+  <data name="HouseBuy_TotalPrice" xml:space="preserve">
+    <value>Gesamtpreis</value>
+  </data>
+  <data name="HouseBuy_Mortgage" xml:space="preserve">
+    <value>Hypothek</value>
+  </data>
+  <data name="HouseBuy_LoanToValue" xml:space="preserve">
+    <value>Belehnung</value>
+  </data>
+  <data name="HouseBuy_GrossIncomeYear" xml:space="preserve">
+    <value>Bruttoeinkommen / Jahr</value>
+  </data>
+  <data name="HouseBuy_MaxAllowedYearlyCost" xml:space="preserve">
+    <value>Max. erlaubte Jahreskosten</value>
+  </data>
+  <data name="HouseBuy_TheoreticalYearlyCost" xml:space="preserve">
+    <value>Theoretische Jahreskosten</value>
+  </data>
+  <data name="HouseBuy_TheoreticalMonthlyCost" xml:space="preserve">
+    <value>Theoretische Monatskosten</value>
+  </data>
+  <data name="HouseBuy_AffordabilityRatio" xml:space="preserve">
+    <value>Tragbarkeitsquote</value>
+  </data>
+  <data name="HouseBuy_RequiredIncomeForAffordabilityTarget" xml:space="preserve">
+    <value>Erforderliches Einkommen für Tragbarkeitsziel</value>
+  </data>
+  <data name="HouseBuy_PerYearAmount" xml:space="preserve">
+    <value>{0} / Jahr</value>
+  </data>
+  <data name="HouseBuy_MissingIncomePerYear" xml:space="preserve">
+    <value>Fehlendes Einkommen: {0} / Jahr</value>
+  </data>
+  <data name="HouseBuy_RuleChecks" xml:space="preserve">
+    <value>Regelprüfungen</value>
+  </data>
+  <data name="HouseBuy_Passed" xml:space="preserve">
+    <value>Bestanden</value>
+  </data>
+  <data name="HouseBuy_Failed" xml:space="preserve">
+    <value>Nicht bestanden</value>
+  </data>
+  <data name="HouseBuy_Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="HouseBuy_Actual" xml:space="preserve">
+    <value>Ist</value>
+  </data>
+  <data name="HouseBuy_Limit" xml:space="preserve">
+    <value>Limite</value>
+  </data>
+  <data name="HouseBuy_DefaultScenarioName" xml:space="preserve">
+    <value>Hauskauf-Szenario</value>
+  </data>
+  <data name="HouseBuy_SaleProceedsFreeCash" xml:space="preserve">
+    <value>Verkaufserlös - freies Cash</value>
+  </data>
+  <data name="HouseBuy_SaleProceedsPillar2Bvg" xml:space="preserve">
+    <value>Verkaufserlös - Säule 2 / BVG</value>
+  </data>
+  <data name="HouseBuy_DefaultPersonName" xml:space="preserve">
+    <value>Person {0}</value>
+  </data>
+  <data name="HouseBuy_DefaultEquityName" xml:space="preserve">
+    <value>Eigenmittel {0}</value>
+  </data>
+  <data name="HouseBuy_RuleTitleMinimumTotalEquity" xml:space="preserve">
+    <value>Minimale Eigenmittel total</value>
+  </data>
+  <data name="HouseBuy_RuleTitleMinimumHardEquity" xml:space="preserve">
+    <value>Minimale harte Eigenmittel</value>
+  </data>
+  <data name="HouseBuy_RuleTitleMaximumPillar2Bvg" xml:space="preserve">
+    <value>Maximale Säule 2 / BVG</value>
+  </data>
+  <data name="HouseBuy_RuleTitleMaximumMortgage" xml:space="preserve">
+    <value>Maximale Hypothek</value>
+  </data>
+  <data name="HouseBuy_RuleTitleAffordability" xml:space="preserve">
+    <value>Tragbarkeit</value>
+  </data>
+  <data name="HouseBuy_RuleDescriptionMinimumTotalEquity" xml:space="preserve">
+    <value>Die gesamten Eigenmittel müssen die Mindestanforderung der Bank erfüllen.</value>
+  </data>
+  <data name="HouseBuy_RuleDescriptionMinimumHardEquity" xml:space="preserve">
+    <value>Die harten Eigenmittel müssen die Mindestanforderung der Bank erfüllen.</value>
+  </data>
+  <data name="HouseBuy_RuleDescriptionMaximumPillar2Bvg" xml:space="preserve">
+    <value>Der Einsatz von Säule 2 / BVG darf den zulässigen Anteil nicht überschreiten.</value>
+  </data>
+  <data name="HouseBuy_RuleDescriptionMaximumMortgage" xml:space="preserve">
+    <value>Die Hypothek darf die maximale Belehnung nicht überschreiten.</value>
+  </data>
+  <data name="HouseBuy_RuleDescriptionAffordability" xml:space="preserve">
+    <value>Die theoretischen Wohnkosten müssen innerhalb der Tragbarkeitslimite liegen.</value>
+  </data>
+  <data name="Nav_HouseBuySimulator" xml:space="preserve">
+    <value>Hauskauf Simulator</value>
+  </data>
+  <data name="Mortgages_PerYearAbbreviation" xml:space="preserve">
+    <value>pro Jahr</value>
+  </data>
+</root>

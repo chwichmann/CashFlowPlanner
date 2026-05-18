@@ -1,0 +1,202 @@
+﻿@page "/dashboard"
+
+@using System.Globalization
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.Core
+@using CashFlowPlanner.Core.Mortgages
+@using Microsoft.Extensions.Localization
+
+@inject CashFlowAppState AppState
+@inject DashboardSummaryService SummaryService
+@inject IStringLocalizer<SharedResource> L
+@inject EnumLocalizer EnumL
+
+<PageTitle>@L["Dashboard_Title"] - CashFlow Planner</PageTitle>
+
+<h1>@L["Dashboard_Title"]</h1>
+
+@if (AppState.CurrentPlan is null)
+{
+    <div class="alert alert-info">
+        @L["Dashboard_NoPlanLoaded"]
+    </div>
+}
+else if (AppState.CurrentSimulationResult is null)
+{
+    <div class="alert alert-warning">
+        @L["Dashboard_NoSimulationRun"]
+    </div>
+}
+else
+{
+    var plan = AppState.CurrentPlan;
+    var result = AppState.CurrentSimulationResult;
+    var summary = SummaryService.CreateSummary(plan, result);
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">@L["Dashboard_LiquidAssets"]</div>
+                    <div class="fs-4">@FormatAmount(summary.LiquidAssets) @summary.Currency</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">@L["Dashboard_TotalLiabilities"]</div>
+                    <div class="fs-4">@FormatAmount(summary.TotalLiabilities) @summary.Currency</div>
+                    <div class="small text-muted">
+                        @L["Dashboard_Mortgages"]: @FormatAmount(summary.MortgageLiabilities)<br />
+                        @L["Dashboard_Other"]: @FormatAmount(summary.AccountLiabilities)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">@L["Dashboard_NetWorth"]</div>
+                    <div class="fs-4">@FormatAmount(summary.NetWorth) @summary.Currency</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">@L["Dashboard_Warnings"]</div>
+                    <div class="fs-4">@summary.WarningCount</div>
+                    @if (summary.CriticalWarningCount > 0)
+                    {
+                        <div class="text-danger">
+                            @Text("Dashboard_CriticalWarnings", summary.CriticalWarningCount)
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            @L["Dashboard_LiquidityRisk"]
+        </div>
+        <div class="card-body">
+            <p>
+                @L["Dashboard_LowestTotalLiquidBalance"]:
+                <strong>@FormatAmount(summary.LowestLiquidBalance) @summary.Currency</strong>
+
+                @if (summary.LowestLiquidBalanceDate is not null)
+                {
+                    <span>
+                        @L["Dashboard_On"] <strong>@FormatDate(summary.LowestLiquidBalanceDate.Value)</strong>
+                    </span>
+                }
+            </p>
+        </div>
+    </div>
+
+    <LiquidBalanceChart Plan="plan" Result="result" />
+
+    <NetWorthChart Plan="plan" Result="result" />
+
+    <h3>@L["Dashboard_EndBalances"]</h3>
+
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>@L["Account"]</th>
+                <th>@L["Type"]</th>
+                <th class="text-end">@L["Dashboard_Balance"]</th>
+                <th>@L["Currency"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var account in plan.Accounts.OrderBy(x => x.Type).ThenBy(x => x.Name))
+            {
+                var balance = result.GetBalance(account.Id, plan.SimulationSettings.EndDate);
+
+                <tr>
+                    <td>@account.Name</td>
+                    <td>@EnumL.Translate(account.Type)</td>
+                    <td class="text-end">@FormatAmount(balance)</td>
+                    <td>@account.Currency</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (plan.Mortgages.Count > 0)
+    {
+        <h3>@L["Dashboard_MortgagePrincipals"]</h3>
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>@L["Dashboard_Mortgage"]</th>
+                    <th>@L["Type"]</th>
+                    <th>@L["Dashboard_Amortisation"]</th>
+                    <th class="text-end">@L["Dashboard_ProjectedPrincipal"]</th>
+                    <th>@L["Currency"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var mortgage in plan.Mortgages.OrderBy(x => x.Name))
+                {
+                    var projectedPrincipal = GetProjectedMortgagePrincipal(
+                        mortgage,
+                        result,
+                        plan.SimulationSettings.EndDate);
+
+                    <tr>
+                        <td>@mortgage.Name</td>
+                        <td>@EnumL.Translate(mortgage.Type)</td>
+                        <td>@EnumL.Translate(mortgage.AmortisationMode)</td>
+                        <td class="text-end">@FormatAmount(projectedPrincipal)</td>
+                        <td>@plan.BaseCurrency</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+
+    private static decimal GetProjectedMortgagePrincipal(
+        MortgageContract mortgage,
+        SimulationResult result,
+        DateOnly date)
+    {
+        var projectedPrincipal = result.GetMortgagePrincipal(
+            mortgage.Id,
+            date);
+
+        if (projectedPrincipal > 0)
+        {
+            return projectedPrincipal;
+        }
+
+        return mortgage.CalculationPrincipal ?? mortgage.InitialPrincipal;
+    }
+
+    private static string FormatAmount(decimal amount)
+    {
+        return amount.ToString("N2", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private string Text(string key, params object[] arguments)
+    {
+        return L[key, arguments].Value;
+    }
+}

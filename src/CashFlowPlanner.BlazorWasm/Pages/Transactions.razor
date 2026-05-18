@@ -1,0 +1,794 @@
+﻿@page "/transactions"
+@using System.Globalization
+@using Microsoft.Extensions.Localization
+@using CashFlowPlanner.Core
+@using CashFlowPlanner.Core.People
+@using CashFlowPlanner.BlazorWasm.Models
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.BlazorWasm.Components
+@using CashFlowPlanner.BlazorWasm.Resources
+@inject UiFeedbackService Feedback
+@inject CashFlowAppState AppState
+@inject EnumLocalizer EnumL
+@inject IStringLocalizer<SharedResource> L
+
+<PageTitle>@L["Transactions"] - CashFlow Planner</PageTitle>
+
+<h3>@L["Transactions"]</h3>
+
+<ConfirmDialog @ref="_confirmDialog" />
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_infoMessage))
+{
+    <div class="alert alert-info">@_infoMessage</div>
+}
+
+@if (AppState.CurrentPlan is null)
+{
+    <div class="alert alert-warning">
+        @L["Transaction_NoPlanLoaded"]
+    </div>
+}
+else
+{
+    var plan = AppState.CurrentPlan;
+    var filteredTransactions = GetFilteredTransactions();
+    var filteredYearlyAmount = filteredTransactions.Sum(CalculateYearlyAmount);
+
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="NewTransaction">
+            @L["Transaction_AddTransaction"]
+        </button>
+    </div>
+
+    @if (_editModel is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>@(_isNewTransaction ? L["Transaction_AddTransaction"] : L["Transaction_EditTransaction"])</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Name"]</label>
+                        <input class="form-control" @bind="_editModel.Name" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Kind"]</label>
+                        <select class="form-select" @bind="_editModel.Kind">
+                            @foreach (var kind in Enum.GetValues<TransactionKind>())
+                            {
+                                <option value="@kind">@EnumL.Translate(kind)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">@L["Amount"]</label>
+                        <input type="number"
+                               step="0.01"
+                               class="form-control"
+                               @bind="_editModel.Amount" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">@L["Currency"]</label>
+                        <input class="form-control" @bind="_editModel.Currency" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">@L["Transaction_Priority"]</label>
+                        <input type="number"
+                               class="form-control"
+                               @bind="_editModel.Priority" />
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label">@L["Transaction_FromAccount"]</label>
+                        <select class="form-select" @bind="_editModel.FromAccountId">
+                            <option value="">@L["Transaction_NoneOption"]</option>
+                            @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
+                            {
+                                <option value="@account.Id">
+                                    @account.Name (@EnumL.Translate(account.Type))
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label">@L["Transaction_ToAccount"]</label>
+                        <select class="form-select" @bind="_editModel.ToAccountId">
+                            <option value="">@L["Transaction_NoneOption"]</option>
+                            @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
+                            {
+                                <option value="@account.Id">
+                                    @account.Name (@EnumL.Translate(account.Type))
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Transaction_IncomePerson"]</label>
+                        <select class="form-select" @bind="_editModel.IncomePersonId">
+                            <option value="">@L["Transaction_NotAssignedOption"]</option>
+                            @foreach (var person in PersonList.OrderBy(x => x.DisplayName))
+                            {
+                                <option value="@person.Id">@person.DisplayName</option>
+                            }
+                        </select>
+                        <div class="form-text">
+                            @L["Transaction_IncomePersonHint"]
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Transaction_PaymentMethod"]</label>
+                        <select class="form-select" @bind="_editModel.PaymentMethod">
+                            @foreach (var paymentMethod in Enum.GetValues<PaymentMethod>())
+                            {
+                                <option value="@paymentMethod">@EnumL.Translate(paymentMethod)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Category"]</label>
+                        <input class="form-control" @bind="_editModel.Category" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">@L["Transaction_Counterparty"]</label>
+                        <input class="form-control" @bind="_editModel.Counterparty" />
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="form-check">
+                            <input id="transaction-active"
+                                   type="checkbox"
+                                   class="form-check-input"
+                                   @bind="_editModel.IsActive" />
+                            <label class="form-check-label" for="transaction-active">
+                                @L["Active"]
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr />
+
+                <h6>@L["Schedule"]</h6>
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_Frequency"]</label>
+                        <select class="form-select" @bind="_editModel.Frequency">
+                            @foreach (var frequency in Enum.GetValues<ScheduleFrequency>())
+                            {
+                                <option value="@frequency">@EnumL.Translate(frequency)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_StartDate"]</label>
+                        <input type="date"
+                               class="form-control"
+                               @bind="_editModel.StartDate" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_EndDate"]</label>
+                        <input type="date"
+                               class="form-control"
+                               @bind="_editModel.EndDate" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_Interval"]</label>
+                        <input type="number"
+                               class="form-control"
+                               @bind="_editModel.Interval" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_DayOfMonth"]</label>
+                        <input type="number"
+                               class="form-control"
+                               @bind="_editModel.DayOfMonth" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_DayOfWeek"]</label>
+                        <select class="form-select" @bind="_editModel.DayOfWeek">
+                            <option value="">@L["Transaction_NoneOption"]</option>
+                            @foreach (var day in Enum.GetValues<DayOfWeek>())
+                            {
+                                <option value="@day">@FormatDayOfWeek(day)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_Month"]</label>
+                        <input type="number"
+                               min="1"
+                               max="12"
+                               class="form-control"
+                               @bind="_editModel.Month" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">@L["Transaction_BusinessDayAdjustment"]</label>
+                        <select class="form-select" @bind="_editModel.BusinessDayAdjustment">
+                            @foreach (var adjustment in Enum.GetValues<BusinessDayAdjustment>())
+                            {
+                                <option value="@adjustment">@EnumL.Translate(adjustment)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label">@L["Notes"]</label>
+                        <textarea class="form-control"
+                                  rows="2"
+                                  @bind="_editModel.Notes">
+                        </textarea>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button class="btn btn-primary" @onclick="SaveTransaction">
+                        @L["Save"]
+                    </button>
+
+                    <button class="btn btn-outline-secondary ms-2" @onclick="CancelEdit">
+                        @L["Cancel"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>@L["Transaction_Filter"]</strong>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">@L["Transaction_Search"]</label>
+                    <input class="form-control"
+                           placeholder="@L["Transaction_SearchPlaceholder"]"
+                           value="@_transactionFilterText"
+                           @oninput="OnTransactionFilterInput" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">@L["Category"]</label>
+                    <select class="form-select"
+                            value="@_categoryFilter"
+                            @onchange="OnCategoryFilterChanged">
+                        <option value="">@L["Transaction_AllCategories"]</option>
+                        @foreach (var category in GetCategories())
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">@L["Kind"]</label>
+                    <select class="form-select"
+                            value="@_kindFilter"
+                            @onchange="OnKindFilterChanged">
+                        <option value="">@L["Transaction_AllKinds"]</option>
+                        @foreach (var kind in Enum.GetValues<TransactionKind>())
+                        {
+                            <option value="@kind">@EnumL.Translate(kind)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input id="active-only"
+                               type="checkbox"
+                               class="form-check-input"
+                               @bind="_showOnlyActive" />
+                        <label class="form-check-label" for="active-only">
+                            @L["Transaction_ActiveOnly"]
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+                <div class="text-muted">
+                    @Text("Transaction_ShowingTransactions", filteredTransactions.Count, plan.Transactions.Count)
+                </div>
+
+                <button class="btn btn-outline-secondary btn-sm"
+                        @onclick="ClearTransactionFilters">
+                    @L["Transaction_ClearFilter"]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (filteredTransactions.Count == 0)
+    {
+        <div class="alert alert-info">
+            @L["Transaction_NoTransactionsMatchFilter"]
+        </div>
+    }
+    else
+    {
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>@L["Name"]</th>
+                    <th>@L["Kind"]</th>
+                    <th>@L["Transaction_From"]</th>
+                    <th>@L["Transaction_To"]</th>
+                    <th>@L["Transaction_IncomePerson"]</th>
+                    <th class="text-end">@L["Amount"]</th>
+                    <th>@L["Schedule"]</th>
+                    <th>@L["Category"]</th>
+                    <th class="text-end">@L["Transaction_YearlyAmount"]</th>
+                    <th>@L["Active"]</th>
+                    <th>@L["Actions"]</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var transaction in filteredTransactions)
+                {
+                    var yearlyAmount = CalculateYearlyAmount(transaction);
+
+                    <tr>
+                        <td>
+                            <div>@transaction.Name</div>
+                            @if (!string.IsNullOrWhiteSpace(transaction.Notes))
+                            {
+                                <small class="text-muted">@transaction.Notes</small>
+                            }
+                        </td>
+
+                        <td>@EnumL.Translate(transaction.Kind)</td>
+                        <td>@GetAccountName(transaction.FromAccountId)</td>
+                        <td>@GetAccountName(transaction.ToAccountId)</td>
+                        <td>@GetPersonName(transaction.IncomePersonId)</td>
+
+                        <td class="text-end" style="white-space: nowrap;">
+                            @transaction.Amount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
+                        </td>
+
+                        <td>
+                            @FormatSchedule(transaction.Schedule)
+                        </td>
+
+                        <td>@transaction.Category</td>
+
+                        <td class="text-end" style="white-space: nowrap;">
+                            @yearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
+                        </td>
+
+                        <td>
+                            @if (transaction.IsActive)
+                            {
+                                <span class="badge bg-success">@L["Active"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@L["Inactive"]</span>
+                            }
+                        </td>
+
+                        <td style="white-space: nowrap;">
+                            <button class="btn btn-sm btn-primary me-1"
+                                    @onclick="() => EditTransaction(transaction)">
+                                @L["Edit"]
+                            </button>
+
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => DeleteTransaction(transaction)">
+                                @L["Delete"]
+                            </button>
+                        </td>
+                    </tr>
+                }
+
+                <tr class="fw-bold">
+                    <td colspan="8">
+                        @L["Transaction_SumYearlyAmountFilter"]
+                    </td>
+
+                    <td class="text-end" style="white-space: nowrap;">
+                        @filteredYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency
+                    </td>
+
+                    <td colspan="2"></td>
+                </tr>
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private TransactionEditModel? _editModel;
+    private bool _isNewTransaction;
+    private string? _errorMessage;
+    private string? _infoMessage;
+    private ConfirmDialog? _confirmDialog;
+
+    private string? _transactionFilterText;
+    private string? _categoryFilter;
+    private TransactionKind? _kindFilter;
+    private bool _showOnlyActive = false;
+
+    private IReadOnlyList<Person> PersonList =>
+        AppState.CurrentPlan?.Persons ?? [];
+
+    private void NewTransaction()
+    {
+        ClearMessages();
+
+        var plan = AppState.CurrentPlan;
+        var startDate = plan?.SimulationSettings.StartDate ?? DateOnly.FromDateTime(DateTime.Today);
+
+        _editModel = new TransactionEditModel
+        {
+            Id = Guid.NewGuid(),
+            Name = string.Empty,
+            Kind = TransactionKind.ExternalExpense,
+            Currency = plan?.BaseCurrency ?? "CHF",
+            StartDate = startDate,
+            DayOfMonth = startDate.Day,
+            Interval = 1,
+            Frequency = ScheduleFrequency.Monthly,
+            Priority = 100,
+            IsActive = true
+        };
+
+        _isNewTransaction = true;
+    }
+
+    private void EditTransaction(TransactionDefinition transaction)
+    {
+        ClearMessages();
+
+        _editModel = TransactionEditModel.FromTransaction(transaction);
+        _isNewTransaction = false;
+    }
+
+    private void SaveTransaction()
+    {
+        ClearMessages();
+
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_editModel.Name))
+            {
+                throw new InvalidOperationException(Text("Transaction_ErrorNameRequired"));
+            }
+
+            if (_editModel.Amount <= 0)
+            {
+                throw new InvalidOperationException(Text("Transaction_ErrorAmountGreaterThanZero"));
+            }
+
+            if (_editModel.Interval < 1)
+            {
+                throw new InvalidOperationException(Text("Transaction_ErrorIntervalGreaterOrEqualOne"));
+            }
+
+            var transaction = _editModel.ToTransaction();
+            AppState.AddOrUpdateTransaction(transaction);
+
+            Feedback.Success(
+                _isNewTransaction
+                    ? Text("Transaction_Added", transaction.Name)
+                    : Text("Transaction_Updated", transaction.Name));
+
+            _editModel = null;
+            _isNewTransaction = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task DeleteTransaction(TransactionDefinition transaction)
+    {
+        ClearMessages();
+
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("Transaction_DeleteTitle"),
+            Text("Transaction_DeleteConfirm", transaction.Name));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            AppState.DeleteTransaction(transaction.Id);
+            Feedback.Success(Text("Transaction_Deleted", transaction.Name));
+        }
+        catch (Exception ex)
+        {
+            Feedback.Error(ex.Message);
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ClearMessages();
+
+        _editModel = null;
+        _isNewTransaction = false;
+    }
+
+    private IReadOnlyList<TransactionDefinition> GetFilteredTransactions()
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            return [];
+        }
+
+        var query = AppState.CurrentPlan.Transactions.AsEnumerable();
+
+        if (_showOnlyActive)
+        {
+            query = query.Where(x => x.IsActive);
+        }
+
+        if (_kindFilter is not null)
+        {
+            query = query.Where(x => x.Kind == _kindFilter.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_categoryFilter))
+        {
+            query = query.Where(x =>
+                string.Equals(
+                    x.Category,
+                    _categoryFilter,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_transactionFilterText))
+        {
+            var filter = _transactionFilterText.Trim();
+
+            query = query.Where(x =>
+                ContainsIgnoreCase(x.Name, filter)
+                || ContainsIgnoreCase(x.Category, filter)
+                || ContainsIgnoreCase(x.Counterparty, filter)
+                || ContainsIgnoreCase(x.Notes, filter)
+                || ContainsIgnoreCase(GetAccountName(x.FromAccountId), filter)
+                || ContainsIgnoreCase(GetAccountName(x.ToAccountId), filter)
+                || ContainsIgnoreCase(GetPersonName(x.IncomePersonId), filter)
+                || ContainsIgnoreCase(EnumL.Translate(x.Kind), filter)
+                || ContainsIgnoreCase(x.Kind.ToString(), filter)
+                || ContainsIgnoreCase(x.Amount.ToString("N2", CultureInfo.CurrentCulture), filter)
+                || ContainsIgnoreCase(CalculateYearlyAmount(x).ToString("N2", CultureInfo.CurrentCulture), filter));
+        }
+
+        return query
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Amount)
+            .ToList();
+    }
+
+    private IReadOnlyList<string> GetCategories()
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            return [];
+        }
+
+        return AppState.CurrentPlan.Transactions
+            .Select(x => x.Category)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x)
+            .Select(x => x!)
+            .ToList();
+    }
+
+    private void ClearTransactionFilters()
+    {
+        _transactionFilterText = null;
+        _categoryFilter = null;
+        _kindFilter = null;
+        _showOnlyActive = false;
+    }
+
+    private void OnTransactionFilterInput(ChangeEventArgs args)
+    {
+        _transactionFilterText = args.Value?.ToString();
+    }
+
+    private void OnCategoryFilterChanged(ChangeEventArgs args)
+    {
+        _categoryFilter = args.Value?.ToString();
+
+        if (string.IsNullOrWhiteSpace(_categoryFilter))
+        {
+            _categoryFilter = null;
+        }
+    }
+
+    private void OnKindFilterChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _kindFilter = null;
+            return;
+        }
+
+        if (Enum.TryParse<TransactionKind>(value, out var kind))
+        {
+            _kindFilter = kind;
+        }
+        else
+        {
+            _kindFilter = null;
+        }
+    }
+
+    private string GetAccountName(Guid? accountId)
+    {
+        if (accountId is null || AppState.CurrentPlan is null)
+        {
+            return "-";
+        }
+
+        return AppState.CurrentPlan.Accounts
+            .SingleOrDefault(x => x.Id == accountId.Value)
+            ?.Name
+            ?? "?";
+    }
+
+    private string GetPersonName(Guid? personId)
+    {
+        if (personId is null || AppState.CurrentPlan is null)
+        {
+            return "-";
+        }
+
+        return AppState.CurrentPlan.Persons
+            .SingleOrDefault(x => x.Id == personId.Value)
+            ?.DisplayName
+            ?? "?";
+    }
+
+    private static bool ContainsIgnoreCase(
+        string? value,
+        string filter)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && value.Contains(filter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static decimal CalculateYearlyAmount(TransactionDefinition transaction)
+    {
+        var interval = transaction.Schedule.Interval < 1
+            ? 1
+            : transaction.Schedule.Interval;
+
+        var multiplier = transaction.Schedule.Frequency switch
+        {
+            ScheduleFrequency.Once => 1m,
+            ScheduleFrequency.Daily => 365m / interval,
+            ScheduleFrequency.Weekly => 52m / interval,
+            ScheduleFrequency.Monthly => 12m / interval,
+            ScheduleFrequency.Quarterly => 4m / interval,
+            ScheduleFrequency.SemiYearly => 2m / interval,
+            ScheduleFrequency.Yearly => 1m / interval,
+            _ => 0m
+        };
+
+        return transaction.Amount * multiplier;
+    }
+
+    private string FormatSchedule(Schedule schedule)
+    {
+        var interval = schedule.Interval < 1
+            ? 1
+            : schedule.Interval;
+
+        return schedule.Frequency switch
+        {
+            ScheduleFrequency.Once =>
+                Text("Transaction_ScheduleOnceOn", FormatDate(schedule.StartDate)),
+
+            ScheduleFrequency.Weekly =>
+                Text(
+                    "Transaction_ScheduleEveryWeeksOn",
+                    interval,
+                    FormatDayOfWeek(schedule.DayOfWeek ?? schedule.StartDate.DayOfWeek)),
+
+            ScheduleFrequency.Monthly =>
+                Text(
+                    "Transaction_ScheduleEveryMonthsOnDay",
+                    interval,
+                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+
+            ScheduleFrequency.Quarterly =>
+                Text(
+                    "Transaction_ScheduleEveryQuartersOnDay",
+                    interval,
+                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+
+            ScheduleFrequency.SemiYearly =>
+                Text(
+                    "Transaction_ScheduleEveryHalfYearsOnDay",
+                    interval,
+                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+
+            ScheduleFrequency.Yearly =>
+                Text(
+                    "Transaction_ScheduleEveryYearsOn",
+                    interval,
+                    schedule.Month ?? schedule.StartDate.Month,
+                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+
+            ScheduleFrequency.Daily =>
+                Text("Transaction_ScheduleEveryDays", interval),
+
+            _ => EnumL.Translate(schedule.Frequency)
+        };
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatDayOfWeek(DayOfWeek dayOfWeek)
+    {
+        return CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(dayOfWeek);
+    }
+
+    private string Text(string key)
+    {
+        return L[key].Value;
+    }
+
+    private string Text(string key, params object[] arguments)
+    {
+        return L[key, arguments].Value;
+    }
+
+    private void ClearMessages()
+    {
+        _errorMessage = null;
+        _infoMessage = null;
+    }
+}
