@@ -5,10 +5,12 @@ on:
     branches: [ master ]
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,14 +27,21 @@ jobs:
 
       - name: Publish Blazor
         run: dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj -c Release
-      
-      - name: Upload artifact
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: src/CashFlowPlanner.BlazorWasm/bin/Release/net*/publish/wwwroot
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: gh-pages
-          folder: publish/wwwroot
+        id: deployment
+        uses: actions/deploy-pages@v4
