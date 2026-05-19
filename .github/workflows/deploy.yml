@@ -30,7 +30,7 @@ jobs:
 
       - name: Set GitHub Pages base href
         run: |
-          INDEX_FILE="publish/wwwroot/index.html"
+          INDEX_FILE="src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/index.html"
       
           if [ ! -f "$INDEX_FILE" ]; then
             echo "index.html not found at $INDEX_FILE"
@@ -46,7 +46,7 @@ jobs:
       
       - name: Create GitHub Pages SPA fallback
         run: |
-          cp publish/wwwroot/index.html publish/wwwroot/404.html
+          cp src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/index.html src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/404.html
 
       - name: Add .nojekyll
         run: touch src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/.nojekyll
