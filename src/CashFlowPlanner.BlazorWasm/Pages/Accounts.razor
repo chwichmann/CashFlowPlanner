@@ -16,7 +16,7 @@
 
 <PageTitle>@L["Account_Title"] - CashFlow Planner</PageTitle>
 
-<h2>@L["Account_Title"]</h2>
+<h1>@L["Account_Title"]</h1>
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
@@ -389,7 +389,6 @@ else
                 <tr>
                     <th>@L["Account_Name"]</th>
                     <th>@L["Account_Type"]</th>
-                    <th>@L["Account_Subtype"]</th>
                     <th>@L["Account_Owner"]</th>
                     <th>@L["Account_Bank"]</th>
                     <th>@L["Account_Currency"]</th>
@@ -412,7 +411,6 @@ else
                     <tr>
                         <td>@account.Name</td>
                         <td>@EnumL.Translate(account.Type)</td>
-                        <td>@FormatPillar3aSubtype(account)</td>
                         <td>@GetOwnerName(account)</td>
                         <td>@account.BankName</td>
                         <td>@account.Currency</td>
@@ -741,6 +739,6 @@ else
 
     private void OpenStatement(Account account)
     {
-        NavigationManager.NavigateTo($"/accounts/{account.Id}/statement");
+        NavigationManager.NavigateTo($"accounts/{account.Id}/statement");
     }
 }
