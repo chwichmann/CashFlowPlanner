@@ -168,6 +168,7 @@ else
         <thead>
             <tr>
                 <th>@L["Name"]</th>
+                <th>@L["Active"]</th>
                 <th>@L["CreditCard_CreditCardAccount"]</th>
                 <th>@L["CreditCard_PaymentAccount"]</th>
                 <th>@L["CreditCard_ClosingDay"]</th>
@@ -175,7 +176,7 @@ else
                 <th>@L["CreditCard_Method"]</th>
                 <th>@L["CreditCard_Adjustment"]</th>
                 <th class="text-end">@L["CreditCard_CurrentBalance"]</th>
-                <th>@L["Active"]</th>
+                
                 <th class="text-end">@L["Actions"]</th>
             </tr>
         </thead>
@@ -186,13 +187,6 @@ else
 
                 <tr>
                     <td>@creditCard.Name</td>
-                    <td>@GetAccountName(creditCard.CreditCardAccountId)</td>
-                    <td>@GetAccountName(creditCard.PaymentAccountId)</td>
-                    <td>@creditCard.ClosingDayOfMonth</td>
-                    <td>@creditCard.PaymentDayOfMonth</td>
-                    <td>@EnumL.Translate(creditCard.PaymentMethod)</td>
-                    <td>@EnumL.Translate(creditCard.PaymentBusinessDayAdjustment)</td>
-                    <td class="text-end">@currentBalance.ToString("N2", CultureInfo.CurrentCulture)</td>
                     <td>
                         @if (creditCard.IsActive)
                         {
@@ -203,12 +197,20 @@ else
                             <span class="badge bg-secondary">@L["Inactive"]</span>
                         }
                     </td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditCreditCard(creditCard)">
+                    <td>@GetAccountName(creditCard.CreditCardAccountId)</td>
+                    <td>@GetAccountName(creditCard.PaymentAccountId)</td>
+                    <td>@creditCard.ClosingDayOfMonth</td>
+                    <td>@creditCard.PaymentDayOfMonth</td>
+                    <td>@EnumL.Translate(creditCard.PaymentMethod)</td>
+                    <td>@EnumL.Translate(creditCard.PaymentBusinessDayAdjustment)</td>
+                    <td class="text-end">@currentBalance.ToString("N2", CultureInfo.CurrentCulture)</td>
+                    
+                    <td class="text-end" style="white-space: nowrap;">
+                        <button class="btn btn-sm btn-primary me-1" @onclick="() => EditCreditCard(creditCard)">
                             @L["Edit"]
                         </button>
 
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCreditCard(creditCard)">
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteCreditCard(creditCard)">
                             @L["Delete"]
                         </button>
                     </td>

@@ -350,13 +350,13 @@ else
                     <thead>
                         <tr>
                             <th>@L["Person"]</th>
-                            <th class="text-end">@L["Pillar3a_Contracts"]</th>
-                            <th class="text-end">@L["Pillar3a_ActiveSchedules"]</th>
+                            <th class="text-center">@L["Pillar3a_Contracts"]</th>
+                            <th class="text-center">@L["Pillar3a_ActiveSchedules"]</th>
                             <th class="text-end">@L["Pillar3a_AnnualLimit"]</th>
                             <th class="text-end">@L["Pillar3a_ScheduledContributions"]</th>
                             <th class="text-end">@L["Pillar3a_Remaining"]</th>
                             <th class="text-end">@L["Pillar3a_Excess"]</th>
-                            <th>@L["Status"]</th>
+                            <th class="text-end">@L["Status"]</th>
                         </tr>
                     </thead>
 
@@ -365,24 +365,24 @@ else
                         {
                             <tr>
                                 <td>@row.PersonName</td>
-                                <td class="text-end">@row.ContractCount</td>
-                                <td class="text-end">@row.ActiveScheduleCount</td>
+                                <td class="text-center">@row.ContractCount</td>
+                                <td class="text-center">@row.ActiveScheduleCount</td>
                                 <td class="text-end">@FormatMoney(row.AnnualLimit, plan.BaseCurrency)</td>
                                 <td class="text-end">@FormatMoney(row.ScheduledContributions, plan.BaseCurrency)</td>
                                 <td class="text-end">@FormatMoney(row.Remaining, plan.BaseCurrency)</td>
                                 <td class="text-end">@FormatMoney(row.Excess, plan.BaseCurrency)</td>
-                                <td>
+                                <td class="text-end">
                                     @if (row.IsExceeded)
                                     {
                                         <span class="badge bg-danger">@L["Pillar3a_Exceeded"]</span>
                                     }
                                     else if (row.IsLimitReached)
                                     {
-                                        <span class="badge bg-warning text-dark">@L["Pillar3a_LimitReached"]</span>
+                                        <span class="badge bg-success ">@L["Pillar3a_LimitReached"]</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-success">@L["Pillar3a_BelowLimit"]</span>
+                                        <span class="badge bg-warning text-dark">@L["Pillar3a_BelowLimit"]</span>
                                     }
                                 </td>
                             </tr>
@@ -407,13 +407,13 @@ else
             <thead>
                 <tr>
                     <th>@L["Person"]</th>
-                    <th class="text-end">@L["Pillar3a_Contracts"]</th>
+                    <th class="text-center">@L["Pillar3a_Contracts"]</th>
                     <th class="text-end">@L["Pillar3a_OpeningValue"]</th>
                     <th class="text-end">@L["Pillar3a_TotalContributions"]</th>
                     <th class="text-end">@L["Pillar3a_TotalGrowth"]</th>
                     <th class="text-end">@L["Pillar3a_TotalWithdrawals"]</th>
                     <th class="text-end">@L["Pillar3a_ProjectedValue"]</th>
-                    <th>@L["Pillar3a_LatestProjectionDate"]</th>
+                    <th class="text-end">@L["Pillar3a_LatestProjectionDate"]</th>
                 </tr>
             </thead>
 
@@ -422,13 +422,13 @@ else
                 {
                     <tr>
                         <td>@row.PersonName</td>
-                        <td class="text-end">@row.ContractCount</td>
+                        <td class="text-center">@row.ContractCount</td>
                         <td class="text-end">@FormatMoney(row.OpeningValue, row.Currency)</td>
                         <td class="text-end">@FormatMoney(row.Contributions, row.Currency)</td>
                         <td class="text-end">@FormatMoney(row.Growth, row.Currency)</td>
                         <td class="text-end">@FormatMoney(row.Withdrawals, row.Currency)</td>
                         <td class="text-end">@FormatMoney(row.ProjectedValue, row.Currency)</td>
-                        <td>@FormatNullableDate(row.LatestProjectionDate)</td>
+                        <td class="text-end">@FormatNullableDate(row.LatestProjectionDate)</td>
                     </tr>
                 }
             </tbody>
@@ -449,15 +449,16 @@ else
             <thead>
                 <tr>
                     <th>@L["Name"]</th>
+                    <th>@L["Status"]</th>
                     <th>@L["Owner"]</th>
                     <th>@L["Type"]</th>
                     <th>@L["Pillar3a_Provider"]</th>
                     <th class="text-end">@L["Pillar3a_OpeningValue"]</th>
-                    <th>@L["Pillar3a_OpeningDate"]</th>
-                    <th>@L["Pillar3a_RetirementDate"]</th>
+                    <th class="text-center">@L["Pillar3a_OpeningDate"]</th>
+                    <th class="text-center">@L["Pillar3a_RetirementDate"]</th>
+                    <th class="text-center">@L["Pillar3a_RemainingYears"]</th>
                     <th class="text-end">@L["Pillar3a_ProjectedValue"]</th>
-                    <th>@L["Status"]</th>
-                    <th>@L["Actions"]</th>
+                    <th class="text-end">@L["Actions"]</th>
                 </tr>
             </thead>
 
@@ -476,12 +477,22 @@ else
                                 <small class="text-muted">@contract.ContractNumberMasked</small>
                             }
                         </td>
+                        <td>
+                            @if (contract.IsActive)
+                            {
+                                <span class="badge bg-success">@L["Active"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@L["Inactive"]</span>
+                            }
+                        </td>
                         <td>@GetPersonName(contract.OwnerPersonId)</td>
                         <td>@EnumL.Translate(contract.Type)</td>
                         <td>@contract.ProviderName</td>
                         <td class="text-end">@FormatMoney(contract.OpeningValue, contract.Currency)</td>
-                        <td>@FormatDate(contract.OpeningDate)</td>
-                        <td>
+                        <td class="text-center">@FormatDate(contract.OpeningDate)</td>
+                        <td class="text-center">
                             @if (owner?.RetirementDate is null)
                             {
                                 <span class="text-muted">@L["Pillar3a_Fallback30Years"]</span>
@@ -490,6 +501,9 @@ else
                             {
                                 @FormatDate(owner.RetirementDate.Value)
                             }
+                        </td>
+                        <td class="text-center">
+                            @FormatRemainingYears(owner?.RetirementDate)
                         </td>
                         <td class="text-end">
                             @if (finalPoint is null)
@@ -501,23 +515,13 @@ else
                                 @FormatMoney(finalPoint.Value, finalPoint.Currency)
                             }
                         </td>
-                        <td>
-                            @if (contract.IsActive)
-                            {
-                                <span class="badge bg-success">@L["Active"]</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">@L["Inactive"]</span>
-                            }
-                        </td>
-                        <td style="white-space: nowrap;">
+                        <td class="text-end" style="white-space: nowrap;">
                             <button class="btn btn-sm btn-primary me-1"
                                     @onclick="() => EditContract(contract)">
                                 @L["Edit"]
                             </button>
 
-                            <button class="btn btn-sm btn-outline-danger"
+                            <button class="btn btn-sm btn-danger"
                                     @onclick="() => DeleteContract(contract)">
                                 @L["Delete"]
                             </button>
@@ -1122,6 +1126,34 @@ else
     {
         _errorMessage = null;
         _infoMessage = null;
+    }
+
+    private string FormatRemainingYears(DateOnly? retirementDate)
+    {
+        var effectiveRetirementDate = retirementDate
+            ?? DateOnly.FromDateTime(DateTime.Today).AddYears(30);
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        if (effectiveRetirementDate <= today)
+        {
+            return "0";
+        }
+
+        var totalYears = (effectiveRetirementDate.Year - today.Year);
+
+        // Adjust if the retirement date has not yet been reached this year
+        var hasFullYearPassed =
+            effectiveRetirementDate.Month > today.Month ||
+            (effectiveRetirementDate.Month == today.Month &&
+             effectiveRetirementDate.Day >= today.Day);
+
+        if (!hasFullYearPassed)
+        {
+            totalYears--;
+        }
+
+        return totalYears.ToString(CultureInfo.CurrentCulture);
     }
 
     private sealed class TaxYearDashboardRow

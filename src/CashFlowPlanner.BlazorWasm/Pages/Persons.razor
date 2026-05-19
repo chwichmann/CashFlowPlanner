@@ -121,7 +121,7 @@ else
                     <th class="text-end">@L["Person_SimulatedIncome"]</th>
                     <th class="text-end">@L["Accounts"]</th>
                     <th class="text-end">@L["Person_Pillar3aContracts"]</th>
-                    <th>@L["Actions"]</th>
+                    <th class="text-end">@L["Actions"]</th>
                 </tr>
             </thead>
 
@@ -146,13 +146,13 @@ else
                         <td class="text-end">@FormatMoney(simulatedIncome)</td>
                         <td class="text-end">@usedByAccounts</td>
                         <td class="text-end">@usedByPillar3aContracts</td>
-                        <td style="white-space: nowrap;">
+                        <td class="text-end" style="white-space: nowrap;">
                             <button class="btn btn-sm btn-primary me-1"
                                     @onclick="() => Edit(person)">
                                 @L["Edit"]
                             </button>
 
-                            <button class="btn btn-sm btn-outline-danger"
+                            <button class="btn btn-sm btn-danger"
                                     title="@GetDeleteTitle(usedByAccounts, incomeTransactionCount, usedByPillar3aContracts)"
                                     disabled="@(!canDelete)"
                                     @onclick="() => Delete(person)">

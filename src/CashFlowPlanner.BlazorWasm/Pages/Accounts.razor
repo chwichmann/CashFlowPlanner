@@ -437,20 +437,20 @@ else
                                 <span class="badge bg-secondary">@L["Inactive"]</span>
                             }
                         </td>
-                        <td class="text-end">
+                        <td class="text-end" style="white-space: nowrap;">
                             <button type="button"
-                                    class="btn btn-sm btn-outline-secondary me-1"
+                                    class="btn btn-sm btn-secondary me-1"
                                     @onclick="() => OpenStatement(account)">
                                 @L["Account_Statement"]
                             </button>
                             <button type="button"
-                                    class="btn btn-sm btn-outline-primary me-1"
+                                    class="btn btn-sm btn-primary me-1"
                                     @onclick="() => EditAccount(account)">
                                 @L["Edit"]
                             </button>
 
                             <button type="button"
-                                    class="btn btn-sm btn-outline-danger"
+                                    class="btn btn-sm btn-danger"
                                     @onclick="() => DeleteAccount(account)">
                                 @L["Delete"]
                             </button>
