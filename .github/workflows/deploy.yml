@@ -5,10 +5,12 @@ on:
     branches: [ master ]
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,10 +26,46 @@ jobs:
         run: dotnet restore
 
       - name: Publish Blazor
-        run: dotnet publish src/CashFlowPlanner.BlazorWasm -c Release -o publish
+        run: dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj -c Release
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Set GitHub Pages base href
+        run: |
+          INDEX_FILE="CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/index.html"
+          sed -i 's|<base href="/" />|<base href="/CashFlowPlanner/" />|' "$INDEX_FILE"
+          grep '<base href=' "$INDEX_FILE"
+      
+      - name: Create GitHub Pages SPA fallback
+        run: |
+          WWWROOT="CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot"
+          cp "$WWWROOT/index.html" "$WWWROOT/404.html"
+
+      - name: Add .nojekyll
+        run: touch src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/.nojekyll
+
+      - name: Show publish output
+        run: |
+          echo "Publish wwwroot:"
+          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
+          echo "Framework folder:"
+          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/_framework
+          echo "Blazor bootstrap files:"
+          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/_framework/blazor.webassembly*
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          branch: gh-pages
-          folder: publish/wwwroot
+          path: src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
