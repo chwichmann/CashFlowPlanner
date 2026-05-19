@@ -39,6 +39,13 @@ else
     var plan = AppState.CurrentPlan;
     var filteredTransactions = GetFilteredTransactions();
     var filteredYearlyAmount = filteredTransactions.Sum(CalculateYearlyAmount);
+    var filteredEffectiveYearlyAmount = filteredTransactions.Sum(CalculateEffectiveYearlyAmount);
+    var filteredIncomingYearlyAmount = filteredTransactions
+        .Where(x => x.Kind == TransactionKind.ExternalIncome)
+        .Sum(CalculateYearlyAmount);
+    var filteredOutgoingYearlyAmount = filteredTransactions
+        .Where(x => x.Kind == TransactionKind.ExternalExpense)
+        .Sum(CalculateYearlyAmount);
 
     <div class="mb-3">
         <button class="btn btn-primary" @onclick="NewTransaction">
@@ -338,6 +345,7 @@ else
                 <tr>
                     <th>@L["Name"]</th>
                     <th>@L["Kind"]</th>
+                    <th>@L["Active"]</th>
                     <th>@L["Transaction_From"]</th>
                     <th>@L["Transaction_To"]</th>
                     <th>@L["Transaction_IncomePerson"]</th>
@@ -345,8 +353,8 @@ else
                     <th>@L["Schedule"]</th>
                     <th>@L["Category"]</th>
                     <th class="text-end">@L["Transaction_YearlyAmount"]</th>
-                    <th>@L["Active"]</th>
-                    <th>@L["Actions"]</th>
+                    <th class="text-end">@L["Transaction_EffectiveYearlyAmount"]</th>
+                    <th class="text-end">@L["Actions"]</th>
                 </tr>
             </thead>
 
@@ -365,6 +373,18 @@ else
                         </td>
 
                         <td>@EnumL.Translate(transaction.Kind)</td>
+
+                        <td>
+                            @if (transaction.IsActive)
+                            {
+                                <span class="badge bg-success">@L["Active"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@L["Inactive"]</span>
+                            }
+                        </td>
+
                         <td>@GetAccountName(transaction.FromAccountId)</td>
                         <td>@GetAccountName(transaction.ToAccountId)</td>
                         <td>@GetPersonName(transaction.IncomePersonId)</td>
@@ -383,24 +403,17 @@ else
                             @yearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
                         </td>
 
-                        <td>
-                            @if (transaction.IsActive)
-                            {
-                                <span class="badge bg-success">@L["Active"]</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">@L["Inactive"]</span>
-                            }
+                        <td class="text-end" style="white-space: nowrap;">
+                            @CalculateEffectiveYearlyAmount(transaction).ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
                         </td>
 
-                        <td style="white-space: nowrap;">
+                        <td style="white-space: nowrap;" class="text-end">
                             <button class="btn btn-sm btn-primary me-1"
                                     @onclick="() => EditTransaction(transaction)">
                                 @L["Edit"]
                             </button>
 
-                            <button class="btn btn-sm btn-outline-danger"
+                            <button class="btn btn-sm btn-danger"
                                     @onclick="() => DeleteTransaction(transaction)">
                                 @L["Delete"]
                             </button>
@@ -408,17 +421,37 @@ else
                     </tr>
                 }
 
-                <tr class="fw-bold">
-                    <td colspan="8">
-                        @L["Transaction_SumYearlyAmountFilter"]
+                <tr>
+                    <td colspan="9">
+                        <strong>@L["Transaction_SumIncomingYearlyAmountFilter"]</strong>
                     </td>
-
-                    <td class="text-end" style="white-space: nowrap;">
-                        @filteredYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency
+                    <td>
+                        <strong>@filteredIncomingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
                     </td>
-
                     <td colspan="2"></td>
                 </tr>
+                <tr>
+                    <td colspan="9">
+                        <strong>@L["Transaction_SumOutgoingYearlyAmountFilter"]</strong>
+                    </td>
+                    <td>
+                        <strong>@filteredOutgoingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
+                    </td>
+                    <td colspan="2"></td>
+                </tr>
+                <tr>
+                    <td colspan="8">
+                        <strong>@L["Transaction_SumYearlyAmountFilter"]</strong>
+                    </td>
+                    <td>
+                        <strong>@filteredYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
+                    </td>
+                    <td>
+                        <strong>@filteredEffectiveYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
+                    </td>
+                    <td colspan="2"></td>
+                </tr>
+
             </tbody>
         </table>
     }
@@ -790,5 +823,17 @@ else
     {
         _errorMessage = null;
         _infoMessage = null;
+    }
+
+    private static decimal CalculateEffectiveYearlyAmount(TransactionDefinition transaction)
+    {
+        var yearlyAmount = CalculateYearlyAmount(transaction);
+
+        return transaction.Kind switch
+        {
+            TransactionKind.ExternalIncome => yearlyAmount,
+            TransactionKind.ExternalExpense => -yearlyAmount,
+            _ => 0m
+        };
     }
 }

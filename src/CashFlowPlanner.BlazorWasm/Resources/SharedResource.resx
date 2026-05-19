@@ -951,6 +951,15 @@
   <data name="Transaction_ScheduleEveryDays" xml:space="preserve">
     <value>Every {0} day(s)</value>
   </data>
+	<data name="Transaction_EffectiveYearlyAmount" xml:space="preserve">
+        <value>Effective yearly amount</value>
+    </data>
+	<data name="Transaction_SumIncomingYearlyAmountFilter" xml:space="preserve">
+        <value>Incoming yearly amount for filtered transactions</value>
+    </data>
+	<data name="Transaction_SumOutgoingYearlyAmountFilter" xml:space="preserve">
+        <value>Outgoing yearly amount for filtered transactions</value>
+    </data>
   <data name="CreditCard_Title" xml:space="preserve">
     <value>Credit Cards</value>
   </data>
@@ -1608,7 +1617,10 @@
   <data name="Pillar3a_ContractDeleted" xml:space="preserve">
     <value>Pillar 3a contract '{0}' deleted.</value>
   </data>
-  <data name="Mortgages_Title" xml:space="preserve">
+	<data name="Pillar3a_RemainingYears" xml:space="preserve">
+      <value>Remaining years</value>
+    </data>
+	<data name="Mortgages_Title" xml:space="preserve">
     <value>Mortgages</value>
   </data>
   <data name="Mortgages_NoPlanLoaded" xml:space="preserve">

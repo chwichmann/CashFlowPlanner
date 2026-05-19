@@ -294,14 +294,15 @@ else
                 <tr>
                     <th>@L["Name"]</th>
                     <th>@L["Type"]</th>
+                    <th>@L["Active"]</th>
                     <th>@L["Mortgages_PaymentAccount"]</th>
                     <th class="text-end">@L["Mortgages_InitialPrincipal"]</th>
                     <th class="text-end">@L["Mortgages_CalculationPrincipal"]</th>
                     <th class="text-end">@L["Mortgages_ProjectedPrincipal"]</th>
                     <th class="text-end">@L["Mortgages_FixedPercent"]</th>
                     <th>@L["Mortgages_Amortisation"]</th>
-                    <th>@L["Active"]</th>
-                    <th>@L["Actions"]</th>
+                    
+                    <th class="text-end">@L["Actions"]</th>
                 </tr>
             </thead>
 
@@ -311,6 +312,16 @@ else
                     <tr>
                         <td>@mortgage.Name</td>
                         <td>@EnumL.Translate(mortgage.Type)</td>
+                        <td>
+                            @if (mortgage.IsActive)
+                            {
+                                <span class="badge bg-success">@L["Active"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@L["Inactive"]</span>
+                            }
+                        </td>
                         <td>@GetAccountName(mortgage.PaymentAccountId)</td>
                         <td class="text-end">@FormatAmount(mortgage.InitialPrincipal)</td>
                         <td class="text-end">
@@ -332,23 +343,14 @@ else
                                 <span>/ @FormatAmount(mortgage.AnnualAmortisationAmount) @L["Mortgages_PerYearAbbreviation"]</span>
                             }
                         </td>
-                        <td>
-                            @if (mortgage.IsActive)
-                            {
-                                <span class="badge bg-success">@L["Active"]</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">@L["Inactive"]</span>
-                            }
-                        </td>
-                        <td style="white-space: nowrap;">
+                        
+                        <td class="text-end" style="white-space: nowrap;">
                             <button class="btn btn-sm btn-primary me-1"
                                     @onclick="() => EditMortgage(mortgage)">
                                 @L["Edit"]
                             </button>
 
-                            <button class="btn btn-sm btn-outline-danger"
+                            <button class="btn btn-sm btn-danger"
                                     @onclick="() => DeleteMortgage(mortgage)">
                                 @L["Delete"]
                             </button>
