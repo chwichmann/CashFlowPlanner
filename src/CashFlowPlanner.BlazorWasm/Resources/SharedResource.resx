@@ -634,10 +634,25 @@
     <value>Bank name</value>
   </data>
   <data name="Account_OpeningBalance" xml:space="preserve">
-    <value>Opening balance</value>
+    <value>Current balance</value>
   </data>
   <data name="Account_OpeningDate" xml:space="preserve">
-    <value>Opening date</value>
+    <value>Balance date</value>
+  </data>
+  <data name="Account_SetBalance" xml:space="preserve">
+    <value>Set balance</value>
+  </data>
+  <data name="Account_SetBalanceTitle" xml:space="preserve">
+    <value>Set account balance for "{0}"</value>
+  </data>
+  <data name="Account_SetBalanceDescription" xml:space="preserve">
+    <value>Enter the current balance for {0}. This value is used as the starting point for future simulations.</value>
+  </data>
+  <data name="Account_BalanceUpdated" xml:space="preserve">
+    <value>Balance for {0} was updated to {1} as of {2}.</value>
+  </data>
+  <data name="Account_ErrorAccountNotFound" xml:space="preserve">
+    <value>The account could not be found.</value>
   </data>
   <data name="Account_IbanMasked" xml:space="preserve">
     <value>IBAN</value>
@@ -951,15 +966,15 @@
   <data name="Transaction_ScheduleEveryDays" xml:space="preserve">
     <value>Every {0} day(s)</value>
   </data>
-	<data name="Transaction_EffectiveYearlyAmount" xml:space="preserve">
-        <value>Effective yearly amount</value>
-    </data>
-	<data name="Transaction_SumIncomingYearlyAmountFilter" xml:space="preserve">
-        <value>Incoming yearly amount for filtered transactions</value>
-    </data>
-	<data name="Transaction_SumOutgoingYearlyAmountFilter" xml:space="preserve">
-        <value>Outgoing yearly amount for filtered transactions</value>
-    </data>
+  <data name="Transaction_EffectiveYearlyAmount" xml:space="preserve">
+    <value>Effective yearly amount</value>
+  </data>
+  <data name="Transaction_SumIncomingYearlyAmountFilter" xml:space="preserve">
+    <value>Incoming yearly amount for filtered transactions</value>
+  </data>
+  <data name="Transaction_SumOutgoingYearlyAmountFilter" xml:space="preserve">
+    <value>Outgoing yearly amount for filtered transactions</value>
+  </data>
   <data name="CreditCard_Title" xml:space="preserve">
     <value>Credit Cards</value>
   </data>
@@ -1617,10 +1632,10 @@
   <data name="Pillar3a_ContractDeleted" xml:space="preserve">
     <value>Pillar 3a contract '{0}' deleted.</value>
   </data>
-	<data name="Pillar3a_RemainingYears" xml:space="preserve">
-      <value>Remaining years</value>
-    </data>
-	<data name="Mortgages_Title" xml:space="preserve">
+  <data name="Pillar3a_RemainingYears" xml:space="preserve">
+    <value>Remaining years</value>
+  </data>
+  <data name="Mortgages_Title" xml:space="preserve">
     <value>Mortgages</value>
   </data>
   <data name="Mortgages_NoPlanLoaded" xml:space="preserve">
@@ -1961,5 +1976,209 @@
   </data>
   <data name="Mortgages_PerYearAbbreviation" xml:space="preserve">
     <value>per year</value>
+  </data>
+  <data name="Nav_BankImport" xml:space="preserve">
+    <value>Bank import</value>
+  </data>
+  <data name="BankImport_Title" xml:space="preserve">
+    <value>Bank import</value>
+  </data>
+  <data name="BankImport_NoPlanLoaded" xml:space="preserve">
+    <value>No plan is loaded.</value>
+  </data>
+  <data name="BankImport_UploadMt940" xml:space="preserve">
+    <value>Upload MT940 statement</value>
+  </data>
+  <data name="BankImport_UploadDescription" xml:space="preserve">
+    <value>Upload a UBS MT940 Light or Enriched export. The file is used to import actual account transactions into the local browser cache.</value>
+  </data>
+  <data name="BankImport_SelectedFile" xml:space="preserve">
+    <value>Selected file: {0} ({1})</value>
+  </data>
+  <data name="BankImport_Analyze" xml:space="preserve">
+    <value>Analyze file</value>
+  </data>
+  <data name="BankImport_Working" xml:space="preserve">
+    <value>Working...</value>
+  </data>
+  <data name="BankImport_Preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="BankImport_Field" xml:space="preserve">
+    <value>Field</value>
+  </data>
+  <data name="BankImport_Value" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="BankImport_SourceFormat" xml:space="preserve">
+    <value>Source format</value>
+  </data>
+  <data name="BankImport_FileName" xml:space="preserve">
+    <value>File name</value>
+  </data>
+  <data name="BankImport_AccountIdentifier" xml:space="preserve">
+    <value>Account identifier</value>
+  </data>
+  <data name="BankImport_TransactionReference" xml:space="preserve">
+    <value>Transaction reference</value>
+  </data>
+  <data name="BankImport_StatementNumber" xml:space="preserve">
+    <value>Statement number</value>
+  </data>
+  <data name="BankImport_OpeningBalance" xml:space="preserve">
+    <value>Opening balance from file</value>
+  </data>
+  <data name="BankImport_OpeningBalanceDate" xml:space="preserve">
+    <value>Opening balance date from file</value>
+  </data>
+  <data name="BankImport_ClosingBalance" xml:space="preserve">
+    <value>Closing balance from file</value>
+  </data>
+  <data name="BankImport_ClosingBalanceDate" xml:space="preserve">
+    <value>Closing balance date from file</value>
+  </data>
+  <data name="BankImport_FirstTransactionDate" xml:space="preserve">
+    <value>First transaction date</value>
+  </data>
+  <data name="BankImport_LastTransactionDate" xml:space="preserve">
+    <value>Last transaction date</value>
+  </data>
+  <data name="BankImport_ParsedTransactionCount" xml:space="preserve">
+    <value>Parsed transactions</value>
+  </data>
+  <data name="BankImport_TransactionNetAmount" xml:space="preserve">
+    <value>Net transaction amount</value>
+  </data>
+  <data name="BankImport_Reconciliation" xml:space="preserve">
+    <value>Reconciliation</value>
+  </data>
+  <data name="BankImport_ReconciliationNotAvailable" xml:space="preserve">
+    <value>Not available</value>
+  </data>
+  <data name="BankImport_ReconciliationBalanced" xml:space="preserve">
+    <value>Balanced</value>
+  </data>
+  <data name="BankImport_ReconciliationDifference" xml:space="preserve">
+    <value>Difference: {0}</value>
+  </data>
+  <data name="BankImport_AccountMatching" xml:space="preserve">
+    <value>Account matching</value>
+  </data>
+  <data name="BankImport_AccountMatchStatus" xml:space="preserve">
+    <value>Match status: {0}</value>
+  </data>
+  <data name="BankImport_MatchedAccount" xml:space="preserve">
+    <value>Matched account: {0}</value>
+  </data>
+  <data name="BankImport_SelectAccount" xml:space="preserve">
+    <value>Select account</value>
+  </data>
+  <data name="BankImport_SelectAccountPlaceholder" xml:space="preserve">
+    <value>Please select an account</value>
+  </data>
+  <data name="BankImport_UseSelectedAccount" xml:space="preserve">
+    <value>Use selected account</value>
+  </data>
+  <data name="BankImport_MatchStatusMatchedByBankIdentifier" xml:space="preserve">
+    <value>Matched by bank identifier</value>
+  </data>
+  <data name="BankImport_MatchStatusSelectedManually" xml:space="preserve">
+    <value>Selected manually</value>
+  </data>
+  <data name="BankImport_MatchStatusNotMatched" xml:space="preserve">
+    <value>Not matched</value>
+  </data>
+  <data name="BankImport_MergeResult" xml:space="preserve">
+    <value>Merge result</value>
+  </data>
+  <data name="BankImport_ExistingTransactionsBeforeMerge" xml:space="preserve">
+    <value>Existing transactions before merge</value>
+  </data>
+  <data name="BankImport_AddedTransactions" xml:space="preserve">
+    <value>Added transactions</value>
+  </data>
+  <data name="BankImport_SkippedDuplicates" xml:space="preserve">
+    <value>Skipped duplicates</value>
+  </data>
+  <data name="BankImport_TransactionsAfterMerge" xml:space="preserve">
+    <value>Transactions after merge</value>
+  </data>
+  <data name="BankImport_SuggestedBalanceUpdate" xml:space="preserve">
+    <value>Suggested balance update</value>
+  </data>
+  <data name="BankImport_Balance" xml:space="preserve">
+    <value>Balance</value>
+  </data>
+  <data name="BankImport_SuggestedBalanceDate" xml:space="preserve">
+    <value>Suggested balance date</value>
+  </data>
+  <data name="BankImport_ClosingBalanceDateFromFile" xml:space="preserve">
+    <value>Closing balance date from file</value>
+  </data>
+  <data name="BankImport_BalanceDateWarning" xml:space="preserve">
+    <value>Balance date warning</value>
+  </data>
+  <data name="BankImport_SuspiciousClosingDateHint" xml:space="preserve">
+    <value>The closing balance date from the file is after the latest transaction date. The latest transaction date is suggested as the balance date.</value>
+  </data>
+  <data name="BankImport_ApplySuggestedBalanceUpdate" xml:space="preserve">
+    <value>Update account balance with the suggested value</value>
+  </data>
+  <data name="BankImport_RememberAccountMapping" xml:space="preserve">
+    <value>Remember account mapping for bank identifier {0}</value>
+  </data>
+  <data name="BankImport_ApplyImport" xml:space="preserve">
+    <value>Apply import</value>
+  </data>
+  <data name="BankImport_TransactionPreview" xml:space="preserve">
+    <value>Transaction preview</value>
+  </data>
+  <data name="BankImport_BookingDate" xml:space="preserve">
+    <value>Booking date</value>
+  </data>
+  <data name="BankImport_Code" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="BankImport_Reference" xml:space="preserve">
+    <value>Reference</value>
+  </data>
+  <data name="BankImport_TransactionPreviewLimited" xml:space="preserve">
+    <value>Showing the first {0} of {1} transactions.</value>
+  </data>
+  <data name="BankImport_FileTooLarge" xml:space="preserve">
+    <value>The selected file is too large. Maximum allowed size is {0}.</value>
+  </data>
+  <data name="BankImport_ErrorSelectAccount" xml:space="preserve">
+    <value>Please select an account.</value>
+  </data>
+  <data name="BankImport_ErrorInvalidSelectedAccount" xml:space="preserve">
+    <value>The selected account is invalid.</value>
+  </data>
+  <data name="BankImport_ErrorNoFileSelected" xml:space="preserve">
+    <value>Please select an MT940 file first.</value>
+  </data>
+  <data name="BankImport_ErrorNothingToApply" xml:space="preserve">
+    <value>There is no completed import to apply.</value>
+  </data>
+  <data name="BankImport_ErrorMissingMergeResult" xml:space="preserve">
+    <value>The import merge result is missing.</value>
+  </data>
+  <data name="BankImport_ErrorMissingAccount" xml:space="preserve">
+    <value>The import account is missing.</value>
+  </data>
+  <data name="BankImport_InfoManualAccountSelectionRequired" xml:space="preserve">
+    <value>The account could not be matched automatically. Please select the account manually.</value>
+  </data>
+  <data name="BankImport_InfoAnalysisCompleted" xml:space="preserve">
+    <value>The file was analyzed successfully.</value>
+  </data>
+  <data name="BankImport_ImportApplied" xml:space="preserve">
+    <value>Import applied. Added transactions: {0}. Skipped duplicates: {1}.</value>
+  </data>
+  <data name="Account_Balance" xml:space="preserve">
+    <value>Current balance</value>
+  </data>
+  <data name="Account_SetBalanceTodayHint" xml:space="preserve">
+    <value>The account balance date will be set to today.</value>
   </data>
 </root>

@@ -1,0 +1,748 @@
+﻿@page "/bank-import"
+
+@using System.Globalization
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.BlazorWasm.Services.BankImport
+@using CashFlowPlanner.Core.Accounts
+@using CashFlowPlanner.Core.Banking.Import
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Localization
+
+@inject CashFlowAppState AppState
+@inject IBankImportStore ImportStore
+@inject BankStatementImportService ImportService
+@inject IStringLocalizer<SharedResource> L
+@inject EnumLocalizer EnumL
+
+<PageTitle>@L["BankImport_Title"] - CashFlow Planner</PageTitle>
+
+<h2>@L["BankImport_Title"]</h2>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">
+        @_errorMessage
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_infoMessage))
+{
+    <div class="alert alert-success">
+        @_infoMessage
+    </div>
+}
+
+@if (AppState.CurrentPlan is null)
+{
+    <p>@L["BankImport_NoPlanLoaded"]</p>
+}
+else
+{
+    var plan = AppState.CurrentPlan;
+
+    <section>
+        <h3>@L["BankImport_UploadMt940"]</h3>
+
+        <p>@L["BankImport_UploadDescription"]</p>
+
+        <InputFile OnChange="OnFileSelected" />
+
+        @if (_fileBytes is not null)
+        {
+            <p>
+                @Text("BankImport_SelectedFile", _fileName, FormatFileSize(_fileBytes.Length))
+            </p>
+
+            <button type="button"
+                    disabled="@_isBusy"
+                    @onclick="AnalyzeAsync">
+                @L["BankImport_Analyze"]
+            </button>
+        }
+    </section>
+
+    @if (_isBusy)
+    {
+        <p>@L["BankImport_Working"]</p>
+    }
+
+    @if (_result is not null)
+    {
+        <section>
+            <h3>@L["BankImport_Preview"]</h3>
+
+            <table>
+                <tr>
+                    <th>@L["BankImport_Field"]</th>
+                    <th>@L["BankImport_Value"]</th>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_SourceFormat"]</td>
+                    <td>@_result.Preview.SourceFormat</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_FileName"]</td>
+                    <td>@_result.Preview.FileName</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_AccountIdentifier"]</td>
+                    <td>@_result.Preview.BankAccountIdentifier</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_TransactionReference"]</td>
+                    <td>@_result.Preview.TransactionReference</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_StatementNumber"]</td>
+                    <td>@_result.Preview.StatementNumber</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_OpeningBalance"]</td>
+                    <td>@FormatNullableMoney(_result.Preview.OpeningBalance, _result.Preview.Currency)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_OpeningBalanceDate"]</td>
+                    <td>@FormatNullableDate(_result.Preview.OpeningBalanceDate)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_ClosingBalance"]</td>
+                    <td>@FormatNullableMoney(_result.Preview.ClosingBalance, _result.Preview.Currency)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_ClosingBalanceDate"]</td>
+                    <td>@FormatNullableDate(_result.Preview.ClosingBalanceDate)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_FirstTransactionDate"]</td>
+                    <td>@FormatNullableDate(_result.Preview.FirstTransactionDate)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_LastTransactionDate"]</td>
+                    <td>@FormatNullableDate(_result.Preview.LastTransactionDate)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_ParsedTransactionCount"]</td>
+                    <td>@_result.Preview.ParsedTransactionCount.ToString("N0", CultureInfo.CurrentCulture)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_TransactionNetAmount"]</td>
+                    <td>@FormatMoney(_result.Preview.TransactionNetAmount, _result.Preview.Currency)</td>
+                </tr>
+                <tr>
+                    <td>@L["BankImport_Reconciliation"]</td>
+                    <td>@FormatReconciliation(_result.Preview)</td>
+                </tr>
+            </table>
+        </section>
+
+        <section>
+            <h3>@L["BankImport_AccountMatching"]</h3>
+
+            <p>
+                @Text(
+                    "BankImport_AccountMatchStatus",
+                    FormatAccountMatchStatus(_result.AccountMatchStatus))
+            </p>
+
+            @if (_result.AccountId is not null)
+            {
+                <p>
+                    @Text(
+                        "BankImport_MatchedAccount",
+                        GetAccountDisplayName(_result.AccountId.Value))
+                </p>
+            }
+
+            @if (_result.RequiresAccountSelection)
+            {
+                <div>
+                    <label>@L["BankImport_SelectAccount"]</label>
+                    <select @bind="_selectedAccountIdValue">
+                        <option value="">@L["BankImport_SelectAccountPlaceholder"]</option>
+                        @foreach (var account in plan.Accounts.OrderBy(x => x.Type).ThenBy(x => x.Name))
+                        {
+                            <option value="@account.Id">@GetAccountDisplayName(account)</option>
+                        }
+                    </select>
+                </div>
+
+                <button type="button"
+                        disabled="@_isBusy"
+                        @onclick="AnalyzeWithSelectedAccountAsync">
+                    @L["BankImport_UseSelectedAccount"]
+                </button>
+            }
+        </section>
+
+        @if (_result.CanImport && _result.MergeResult is not null)
+        {
+            <section>
+                <h3>@L["BankImport_MergeResult"]</h3>
+
+                <table>
+                    <tr>
+                        <th>@L["BankImport_Field"]</th>
+                        <th>@L["BankImport_Value"]</th>
+                    </tr>
+                    <tr>
+                        <td>@L["BankImport_ExistingTransactionsBeforeMerge"]</td>
+                        <td>@_result.MergeResult.ExistingTransactionCountBeforeMerge.ToString("N0", CultureInfo.CurrentCulture)</td>
+                    </tr>
+                    <tr>
+                        <td>@L["BankImport_AddedTransactions"]</td>
+                        <td>@_result.MergeResult.AddedCount.ToString("N0", CultureInfo.CurrentCulture)</td>
+                    </tr>
+                    <tr>
+                        <td>@L["BankImport_SkippedDuplicates"]</td>
+                        <td>@_result.MergeResult.SkippedDuplicateCount.ToString("N0", CultureInfo.CurrentCulture)</td>
+                    </tr>
+                    <tr>
+                        <td>@L["BankImport_TransactionsAfterMerge"]</td>
+                        <td>@_result.MergeResult.ExistingTransactionCountAfterMerge.ToString("N0", CultureInfo.CurrentCulture)</td>
+                    </tr>
+                </table>
+            </section>
+
+            @if (_result.SuggestedBalanceUpdate is not null)
+            {
+                <section>
+                    <h3>@L["BankImport_SuggestedBalanceUpdate"]</h3>
+
+                    <table>
+                        <tr>
+                            <th>@L["BankImport_Field"]</th>
+                            <th>@L["BankImport_Value"]</th>
+                        </tr>
+                        <tr>
+                            <td>@L["BankImport_Balance"]</td>
+                            <td>@FormatMoney(_result.SuggestedBalanceUpdate.Balance, _result.SuggestedBalanceUpdate.Currency)</td>
+                        </tr>
+                        <tr>
+                            <td>@L["BankImport_SuggestedBalanceDate"]</td>
+                            <td>@FormatDate(_result.SuggestedBalanceUpdate.BalanceDate)</td>
+                        </tr>
+                        <tr>
+                            <td>@L["BankImport_ClosingBalanceDateFromFile"]</td>
+                            <td>@FormatNullableDate(_result.SuggestedBalanceUpdate.ClosingBalanceDateFromFile)</td>
+                        </tr>
+                        <tr>
+                            <td>@L["BankImport_LastTransactionDate"]</td>
+                            <td>@FormatNullableDate(_result.SuggestedBalanceUpdate.LastTransactionDate)</td>
+                        </tr>
+                        <tr>
+                            <td>@L["BankImport_BalanceDateWarning"]</td>
+                            <td>
+                                @if (_result.SuggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious)
+                                {
+                                    @L["Yes"]
+                                }
+                                else
+                                {
+                                    @L["No"]
+                                }
+                            </td>
+                        </tr>
+                    </table>
+
+                    @if (_result.SuggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious)
+                    {
+                        <p>
+                            @L["BankImport_SuspiciousClosingDateHint"]
+                        </p>
+                    }
+
+                    <label>
+                        <input type="checkbox" @bind="_applySuggestedBalanceUpdate" />
+                        @L["BankImport_ApplySuggestedBalanceUpdate"]
+                    </label>
+                </section>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_result.BankAccountIdentifierToRemember))
+            {
+                <section>
+                    <label>
+                        <input type="checkbox" @bind="_rememberAccountMapping" />
+                        @Text(
+                            "BankImport_RememberAccountMapping",
+                            _result.BankAccountIdentifierToRemember)
+                    </label>
+                </section>
+            }
+
+            <section>
+                <button type="button"
+                        disabled="@_isBusy"
+                        @onclick="ApplyImportAsync">
+                    @L["BankImport_ApplyImport"]
+                </button>
+
+                <button type="button"
+                        disabled="@_isBusy"
+                        @onclick="ResetImport">
+                    @L["Cancel"]
+                </button>
+            </section>
+        }
+
+        @if (_result.CanImport && _result.MappingResult?.Transactions.Count > 0)
+        {
+            <section>
+                <h3>@L["BankImport_TransactionPreview"]</h3>
+
+                <table>
+                    <tr>
+                        <th>@L["Date"]</th>
+                        <th>@L["BankImport_BookingDate"]</th>
+                        <th>@L["Amount"]</th>
+                        <th>@L["Currency"]</th>
+                        <th>@L["BankImport_Code"]</th>
+                        <th>@L["BankImport_Reference"]</th>
+                        <th>@L["Description"]</th>
+                    </tr>
+
+                    @foreach (var transaction in _result.MappingResult.Transactions
+                        .OrderBy(x => x.ValueDate)
+                        .ThenBy(x => x.BookingDate)
+                        .ThenBy(x => x.Description)
+                        .Take(25))
+                    {
+                        <tr>
+                            <td>@FormatDate(transaction.ValueDate)</td>
+                            <td>@FormatNullableDate(transaction.BookingDate)</td>
+                            <td>@transaction.SignedAmount.ToString("N2", CultureInfo.CurrentCulture)</td>
+                            <td>@transaction.Currency</td>
+                            <td>@transaction.TransactionCode</td>
+                            <td>@transaction.BankReference</td>
+                            <td>@transaction.Description</td>
+                        </tr>
+                    }
+                </table>
+
+                @if (_result.MappingResult.Transactions.Count > 25)
+                {
+                    <p>
+                        @Text(
+                            "BankImport_TransactionPreviewLimited",
+                            25,
+                            _result.MappingResult.Transactions.Count)
+                    </p>
+                }
+            </section>
+        }
+    }
+}
+
+@code {
+    private const long MaxUploadSizeBytes = 20 * 1024 * 1024;
+
+    private byte[]? _fileBytes;
+    private string? _fileName;
+    private string? _errorMessage;
+    private string? _infoMessage;
+    private bool _isBusy;
+    private string? _selectedAccountIdValue;
+    private BankStatementImportResult? _result;
+    private bool _rememberAccountMapping = true;
+    private bool _applySuggestedBalanceUpdate = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ImportStore.InitializeAsync();
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        ClearMessages();
+        ResetResultOnly();
+
+        var file = args.File;
+
+        if (file.Size > MaxUploadSizeBytes)
+        {
+            _errorMessage = Text(
+                "BankImport_FileTooLarge",
+                FormatFileSize(MaxUploadSizeBytes));
+
+            _fileBytes = null;
+            _fileName = null;
+            return;
+        }
+
+        await using var stream = file.OpenReadStream(MaxUploadSizeBytes);
+        using var memoryStream = new MemoryStream();
+
+        await stream.CopyToAsync(memoryStream);
+
+        _fileBytes = memoryStream.ToArray();
+        _fileName = file.Name;
+    }
+
+    private async Task AnalyzeAsync()
+    {
+        await AnalyzeInternalAsync(
+            selectedAccountId: null);
+    }
+
+    private async Task AnalyzeWithSelectedAccountAsync()
+    {
+        ClearMessages();
+
+        if (string.IsNullOrWhiteSpace(_selectedAccountIdValue))
+        {
+            _errorMessage = Text("BankImport_ErrorSelectAccount");
+            return;
+        }
+
+        if (!Guid.TryParse(_selectedAccountIdValue, out var selectedAccountId))
+        {
+            _errorMessage = Text("BankImport_ErrorInvalidSelectedAccount");
+            return;
+        }
+
+        await AnalyzeInternalAsync(selectedAccountId);
+    }
+
+    private async Task AnalyzeInternalAsync(Guid? selectedAccountId)
+    {
+        ClearMessages();
+
+        if (AppState.CurrentPlan is null)
+        {
+            _errorMessage = Text("BankImport_NoPlanLoaded");
+            return;
+        }
+
+        if (_fileBytes is null)
+        {
+            _errorMessage = Text("BankImport_ErrorNoFileSelected");
+            return;
+        }
+
+        try
+        {
+            _isBusy = true;
+
+            var existingTransactions = await ImportStore.GetAllTransactionsAsync();
+
+            _result = ImportService.ImportMt940(new BankStatementImportRequest
+            {
+                FileBytes = _fileBytes,
+                FileName = _fileName,
+                Accounts = AppState.CurrentPlan.Accounts,
+                ExistingImportedTransactions = existingTransactions,
+                SelectedAccountId = selectedAccountId,
+                AsOfDate = DateOnly.FromDateTime(DateTime.Today)
+            });
+
+            if (_result.AccountId is not null)
+            {
+                _selectedAccountIdValue = _result.AccountId.Value.ToString();
+            }
+
+            if (_result.RequiresAccountSelection)
+            {
+                _infoMessage = Text("BankImport_InfoManualAccountSelectionRequired");
+            }
+            else
+            {
+                _infoMessage = Text("BankImport_InfoAnalysisCompleted");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _result = null;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ApplyImportAsync()
+    {
+        ClearMessages();
+
+        if (AppState.CurrentPlan is null)
+        {
+            _errorMessage = Text("BankImport_NoPlanLoaded");
+            return;
+        }
+
+        if (_result is null || !_result.CanImport)
+        {
+            _errorMessage = Text("BankImport_ErrorNothingToApply");
+            return;
+        }
+
+        if (_result.MergeResult is null)
+        {
+            _errorMessage = Text("BankImport_ErrorMissingMergeResult");
+            return;
+        }
+
+        if (_result.AccountId is null)
+        {
+            _errorMessage = Text("BankImport_ErrorMissingAccount");
+            return;
+        }
+
+        try
+        {
+            _isBusy = true;
+
+            await ImportStore.ApplyImportAsync(_result.MergeResult);
+
+            var account = AppState.CurrentPlan.Accounts
+                .SingleOrDefault(x => x.Id == _result.AccountId.Value);
+
+            if (account is null)
+            {
+                throw new InvalidOperationException(Text("Account_ErrorAccountNotFound"));
+            }
+
+            var updatedAccount = account;
+            var needsAccountUpdate = false;
+
+            if (_rememberAccountMapping &&
+                !string.IsNullOrWhiteSpace(_result.BankAccountIdentifierToRemember))
+            {
+                updatedAccount = AddMt940IdentifierIfMissing(
+                    updatedAccount,
+                    _result.BankAccountIdentifierToRemember);
+
+                needsAccountUpdate = true;
+            }
+
+            if (_applySuggestedBalanceUpdate &&
+                _result.SuggestedBalanceUpdate is not null)
+            {
+                updatedAccount = CopyAccount(
+                    updatedAccount,
+                    openingBalance: _result.SuggestedBalanceUpdate.Balance,
+                    openingDate: _result.SuggestedBalanceUpdate.BalanceDate,
+                    bankIdentifiers: updatedAccount.BankIdentifiers);
+
+                needsAccountUpdate = true;
+            }
+
+            if (needsAccountUpdate)
+            {
+                AppState.AddOrUpdateAccount(updatedAccount);
+            }
+
+            _infoMessage = Text(
+                "BankImport_ImportApplied",
+                _result.MergeResult.AddedCount,
+                _result.MergeResult.SkippedDuplicateCount);
+
+            ResetImportAfterApply();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private Account AddMt940IdentifierIfMissing(
+        Account account,
+        string mt940AccountIdentifier)
+    {
+        if (AccountBankIdentifierMatcher.HasMt940AccountId(
+                account,
+                mt940AccountIdentifier,
+                account.BankName))
+        {
+            return account;
+        }
+
+        var bankIdentifiers = account.BankIdentifiers
+            .Concat(
+            [
+                new AccountBankIdentifier
+                {
+                    Type = AccountBankIdentifierType.Mt940AccountId,
+                    Value = mt940AccountIdentifier,
+                    BankName = account.BankName,
+                    Notes = "Added from MT940 import."
+                }
+            ])
+            .ToList();
+
+        return CopyAccount(
+            account,
+            openingBalance: account.OpeningBalance,
+            openingDate: account.OpeningDate,
+            bankIdentifiers: bankIdentifiers);
+    }
+
+    private static Account CopyAccount(
+        Account account,
+        decimal openingBalance,
+        DateOnly openingDate,
+        List<AccountBankIdentifier> bankIdentifiers)
+    {
+        return new Account
+        {
+            Id = account.Id,
+            InterestContracts = account.InterestContracts,
+            Name = account.Name,
+            Type = account.Type,
+            Currency = account.Currency,
+            OpeningBalance = openingBalance,
+            OpeningDate = openingDate,
+            IsActive = account.IsActive,
+            BankName = account.BankName,
+            Iban = account.Iban,
+            IbanMasked = account.IbanMasked,
+            BankIdentifiers = bankIdentifiers,
+            Notes = account.Notes,
+            Owners = account.Owners,
+            Pillar3aSubtype = account.Pillar3aSubtype
+        };
+    }
+
+    private void ResetImport()
+    {
+        ClearMessages();
+        _fileBytes = null;
+        _fileName = null;
+        _selectedAccountIdValue = null;
+        _rememberAccountMapping = true;
+        _applySuggestedBalanceUpdate = true;
+        _result = null;
+    }
+
+    private void ResetImportAfterApply()
+    {
+        _fileBytes = null;
+        _fileName = null;
+        _selectedAccountIdValue = null;
+        _rememberAccountMapping = true;
+        _applySuggestedBalanceUpdate = true;
+        _result = null;
+    }
+
+    private void ResetResultOnly()
+    {
+        _selectedAccountIdValue = null;
+        _rememberAccountMapping = true;
+        _applySuggestedBalanceUpdate = true;
+        _result = null;
+    }
+
+    private void ClearMessages()
+    {
+        _errorMessage = null;
+        _infoMessage = null;
+    }
+
+    private string GetAccountDisplayName(Guid accountId)
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            return "?";
+        }
+
+        var account = AppState.CurrentPlan.Accounts
+            .SingleOrDefault(x => x.Id == accountId);
+
+        return account is null
+            ? "?"
+            : GetAccountDisplayName(account);
+    }
+
+    private string GetAccountDisplayName(Account account)
+    {
+        return $"{account.Name} ({EnumL.Translate(account.Type)}, {account.Currency})";
+    }
+
+    private string FormatReconciliation(BankStatementImportPreview preview)
+    {
+        if (!preview.ReconciliationAvailable)
+        {
+            return Text("BankImport_ReconciliationNotAvailable");
+        }
+
+        if (preview.ReconciliationBalanced)
+        {
+            return Text("BankImport_ReconciliationBalanced");
+        }
+
+        return Text(
+            "BankImport_ReconciliationDifference",
+            FormatNullableMoney(preview.ReconciliationDifference, preview.Currency));
+    }
+
+    private string FormatAccountMatchStatus(BankStatementAccountMatchStatus status)
+    {
+        return status switch
+        {
+            BankStatementAccountMatchStatus.MatchedByBankIdentifier =>
+                Text("BankImport_MatchStatusMatchedByBankIdentifier"),
+
+            BankStatementAccountMatchStatus.SelectedManually =>
+                Text("BankImport_MatchStatusSelectedManually"),
+
+            BankStatementAccountMatchStatus.NotMatched =>
+                Text("BankImport_MatchStatusNotMatched"),
+
+            _ => status.ToString()
+        };
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatNullableDate(DateOnly? date)
+    {
+        return date is null
+            ? "-"
+            : date.Value.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private static string FormatMoney(decimal amount, string currency)
+    {
+        return $"{amount.ToString("N2", CultureInfo.CurrentCulture)} {currency}";
+    }
+
+    private static string FormatNullableMoney(decimal? amount, string currency)
+    {
+        return amount is null
+            ? "-"
+            : $"{amount.Value.ToString("N2", CultureInfo.CurrentCulture)} {currency}";
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{(bytes / 1024m).ToString("N1", CultureInfo.CurrentCulture)} KB";
+        }
+
+        return $"{(bytes / 1024m / 1024m).ToString("N1", CultureInfo.CurrentCulture)} MB";
+    }
+
+    private string Text(string key)
+    {
+        return L[key].Value;
+    }
+
+    private string Text(string key, params object?[] arguments)
+    {
+        return L[key, arguments].Value;
+    }
+}
