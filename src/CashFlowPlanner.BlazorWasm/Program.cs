@@ -2,6 +2,8 @@ using System.Globalization;
 using CashFlowPlanner.BlazorWasm;
 using CashFlowPlanner.BlazorWasm.Models;
 using CashFlowPlanner.BlazorWasm.Services;
+using CashFlowPlanner.BlazorWasm.Services.BankImport;
+using CashFlowPlanner.Core.Banking.Import;
 using CashFlowPlanner.Core.Pillar3a;
 using CashFlowPlanner.Storage.Json;
 using Microsoft.AspNetCore.Components.Web;
@@ -27,6 +29,8 @@ builder.Services.AddScoped<EnumLocalizer>();
 builder.Services.AddScoped<Pillar3aProjectionEngine>();
 builder.Services.AddScoped<Pillar3aTaxYearSimulator>();
 builder.Services.AddScoped<UiFeedbackService>();
+builder.Services.AddScoped<IBankImportStore, BankImportStoreLocalStorage>();
+builder.Services.AddScoped<BankStatementImportService>();
 
 var host = builder.Build();
 
