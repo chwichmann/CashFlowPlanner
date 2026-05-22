@@ -2181,4 +2181,7 @@
   <data name="Account_SetBalanceTodayHint" xml:space="preserve">
     <value>The account balance date will be set to today.</value>
   </data>
+  <data name="Transaction_ShowAllTransactions" xml:space="preserve">
+    <value>Show all transactions</value>
+  </data>
 </root>

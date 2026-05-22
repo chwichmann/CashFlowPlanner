@@ -55,7 +55,10 @@ else
 
     @if (_editModel is not null)
     {
-        <div class="card mb-3">
+        <div class="modal show d-block" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="card mb-3">
             <div class="card-header">
                 <strong>@(_isNewTransaction ? L["Transaction_AddTransaction"] : L["Transaction_EditTransaction"])</strong>
             </div>
@@ -192,46 +195,61 @@ else
                                @bind="_editModel.StartDate" />
                     </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_EndDate"]</label>
-                        <input type="date"
-                               class="form-control"
-                               @bind="_editModel.EndDate" />
-                    </div>
+                    @if (_editModel.Frequency != ScheduleFrequency.Once)
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label">@L["Transaction_EndDate"]</label>
+                            <input type="date"
+                            class="form-control"
+                            @bind="_editModel.EndDate" />
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_Interval"]</label>
-                        <input type="number"
-                               class="form-control"
-                               @bind="_editModel.Interval" />
-                    </div>
+                        <div class="col-md-3">
+                            <label class="form-label">@L["Transaction_Interval"]</label>
+                            <input type="number"
+                            class="form-control"
+                            @bind="_editModel.Interval" />
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_DayOfMonth"]</label>
-                        <input type="number"
-                               class="form-control"
-                               @bind="_editModel.DayOfMonth" />
-                    </div>
+                        @if (_editModel.Frequency == ScheduleFrequency.Monthly || 
+                            _editModel.Frequency == ScheduleFrequency.Quarterly || 
+                            _editModel.Frequency == ScheduleFrequency.SemiYearly)
+                        {
+                              <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_DayOfMonth"]</label>
+                                <input type="number"
+                                class="form-control"
+                                @bind="_editModel.DayOfMonth" />
+                             </div>          
+                         }
+                        
+                         @if (_editModel.Frequency == ScheduleFrequency.Weekly)
+                        {
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_DayOfWeek"]</label>
+                                <select class="form-select" @bind="_editModel.DayOfWeek">
+                                    <option value="">@L["Transaction_NoneOption"]</option>
+                                    @foreach (var day in Enum.GetValues<DayOfWeek>())
+                                    {
+                                        <option value="@day">@FormatDayOfWeek(day)</option>
+                                    }
+                                </select>
+                            </div>         
+                        }
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_DayOfWeek"]</label>
-                        <select class="form-select" @bind="_editModel.DayOfWeek">
-                            <option value="">@L["Transaction_NoneOption"]</option>
-                            @foreach (var day in Enum.GetValues<DayOfWeek>())
-                            {
-                                <option value="@day">@FormatDayOfWeek(day)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_Month"]</label>
-                        <input type="number"
-                               min="1"
-                               max="12"
-                               class="form-control"
-                               @bind="_editModel.Month" />
-                    </div>
+                        @if (_editModel.Frequency == ScheduleFrequency.Yearly)
+                        {
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_Month"]</label>
+                                <input type="number"
+                                        min="1"
+                                        max="12"
+                                        class="form-control"
+                                        @bind="_editModel.Month" />
+                            </div>     
+                         }
+                       
+                    }
 
                     <div class="col-md-3">
                         <label class="form-label">@L["Transaction_BusinessDayAdjustment"]</label>
@@ -262,7 +280,11 @@ else
                     </button>
                 </div>
             </div>
+                    </div>
+                </div>
+            </div>
         </div>
+        <div class="modal-backdrop fade show"></div>
     }
 
     <div class="card mb-3">
@@ -314,6 +336,18 @@ else
                                @bind="_showOnlyActive" />
                         <label class="form-check-label" for="active-only">
                             @L["Transaction_ActiveOnly"]
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <div class="form-check">
+                        <input id="show-all-transactions"
+                               type="checkbox"
+                               class="form-check-input"
+                               @bind="_showAllTransactions" />
+                        <label class="form-check-label" for="show-all-transactions">
+                            @L["Transaction_ShowAllTransactions"]
                         </label>
                     </div>
                 </div>
@@ -468,6 +502,7 @@ else
     private string? _categoryFilter;
     private TransactionKind? _kindFilter;
     private bool _showOnlyActive = false;
+    private bool _showAllTransactions = false;
 
     private IReadOnlyList<Person> PersonList =>
         AppState.CurrentPlan?.Persons ?? [];
@@ -477,7 +512,7 @@ else
         ClearMessages();
 
         var plan = AppState.CurrentPlan;
-        var startDate = plan?.SimulationSettings.StartDate ?? DateOnly.FromDateTime(DateTime.Today);
+        var startDate = DateOnly.FromDateTime(DateTime.Today);
 
         _editModel = new TransactionEditModel
         {
@@ -488,7 +523,7 @@ else
             StartDate = startDate,
             DayOfMonth = startDate.Day,
             Interval = 1,
-            Frequency = ScheduleFrequency.Monthly,
+            Frequency = ScheduleFrequency.Once,
             Priority = 100,
             IsActive = true
         };
@@ -593,6 +628,12 @@ else
 
         var query = AppState.CurrentPlan.Transactions.AsEnumerable();
 
+        if (!_showAllTransactions)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            query = query.Where(x => IsVisibleByDefault(x, today));
+        }
+
         if (_showOnlyActive)
         {
             query = query.Where(x => x.IsActive);
@@ -658,6 +699,7 @@ else
         _categoryFilter = null;
         _kindFilter = null;
         _showOnlyActive = false;
+        _showAllTransactions = false;
     }
 
     private void OnTransactionFilterInput(ChangeEventArgs args)
@@ -719,6 +761,21 @@ else
             .SingleOrDefault(x => x.Id == personId.Value)
             ?.DisplayName
             ?? "?";
+    }
+
+    private static bool IsVisibleByDefault(TransactionDefinition transaction, DateOnly today)
+    {
+        if (!transaction.IsActive)
+        {
+            return false;
+        }
+
+        if (transaction.Schedule.Frequency == ScheduleFrequency.Once)
+        {
+            return transaction.Schedule.StartDate >= today;
+        }
+
+        return transaction.Schedule.EndDate is null || transaction.Schedule.EndDate.Value >= today;
     }
 
     private static bool ContainsIgnoreCase(
