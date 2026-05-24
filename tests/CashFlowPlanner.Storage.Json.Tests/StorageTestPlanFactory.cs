@@ -27,6 +27,18 @@ internal static class StorageTestPlanFactory
             Name = "Private Cashflow",
             BaseCurrency = "CHF",
 
+            DefaultPaymentAccountId = mainAccountId,
+            TreatWeekendsAsBankOffDays = true,
+            BankOffDays =
+            [
+                new BankOffDay
+                {
+                    Date = new DateOnly(2026, 8, 3),
+                    Name = "Bank holiday",
+                    Note = "Storage roundtrip test"
+                }
+            ],
+
             Persons =
             [
                 new Person

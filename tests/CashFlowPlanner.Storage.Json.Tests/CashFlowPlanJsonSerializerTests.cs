@@ -61,6 +61,13 @@ public sealed class CashFlowPlanJsonSerializerTests
         Assert.Contains("\"dayCountConvention\": \"Actual360\"", json);
         Assert.Contains("\"annualRatePercent\": 2", json);
         Assert.DoesNotContain("\"dayCountConvention\": 0", json);
+
+        Assert.Contains("\"defaultPaymentAccountId\": \"10000000-0000-0000-0000-000000000001\"", json);
+        Assert.Contains("\"treatWeekendsAsBankOffDays\": true", json);
+        Assert.Contains("\"bankOffDays\":", json);
+        Assert.Contains("\"date\": \"2026-08-03\"", json);
+        Assert.Contains("\"name\": \"Bank holiday\"", json);
+        Assert.Contains("\"note\": \"Storage roundtrip test\"", json);
     }
 
     [Fact]
@@ -150,6 +157,18 @@ public sealed class CashFlowPlanJsonSerializerTests
         Assert.Equal(
             originalLeasing.Schedule.BusinessDayAdjustment,
             loadedLeasing.Schedule.BusinessDayAdjustment);
+
+        Assert.Equal(
+            originalPlan.DefaultPaymentAccountId,
+            loadedPlan.DefaultPaymentAccountId);
+
+        Assert.Equal(
+            originalPlan.TreatWeekendsAsBankOffDays,
+            loadedPlan.TreatWeekendsAsBankOffDays);
+
+        Assert.Equal(
+            originalPlan.BankOffDays.Count,
+            loadedPlan.BankOffDays.Count);
     }
 
     [Fact]
@@ -542,4 +561,74 @@ public sealed class CashFlowPlanJsonSerializerTests
         Assert.Single(loaded.EquitySources);
     }
 
+    [Fact]
+    public void Roundtrip_Should_PreservePlanDefaultsAndBankCalendar()
+    {
+        // Arrange
+        var originalPlan = StorageTestPlanFactory.CreateSimplePlan();
+        var serializer = new CashFlowPlanJsonSerializer();
+
+        // Act
+        var json = serializer.SerializePlan(originalPlan);
+        var restored = serializer.DeserializePlan(json);
+
+        // Assert
+        Assert.Equal(
+            originalPlan.DefaultPaymentAccountId,
+            restored.DefaultPaymentAccountId);
+
+        Assert.Equal(
+            originalPlan.TreatWeekendsAsBankOffDays,
+            restored.TreatWeekendsAsBankOffDays);
+
+        Assert.Equal(
+            originalPlan.BankOffDays.Count,
+            restored.BankOffDays.Count);
+
+        var originalBankOffDay = originalPlan.BankOffDays.Single();
+        var restoredBankOffDay = restored.BankOffDays.Single();
+
+        Assert.Equal(originalBankOffDay.Date, restoredBankOffDay.Date);
+        Assert.Equal(originalBankOffDay.Name, restoredBankOffDay.Name);
+        Assert.Equal(originalBankOffDay.Note, restoredBankOffDay.Note);
+    }
+
+    [Fact]
+    public void DeserializePlan_WithoutPlanDefaultsAndBankCalendar_Should_UseDefaults()
+    {
+        // Arrange
+        var json = """
+    {
+      "schemaVersion": 1,
+      "planId": "00000000-0000-0000-0000-000000000001",
+      "name": "Private Cashflow",
+      "baseCurrency": "CHF",
+      "persons": [],
+      "accounts": [],
+      "transactions": [],
+      "mortgages": [],
+      "creditCards": [],
+      "pillar3aContracts": [],
+      "houseBuyScenarios": [],
+      "simulationSettings": {
+        "dateMode": "ExplicitDateRange",
+        "startDate": "2026-06-01",
+        "endDate": "2026-12-31",
+        "granularity": "Daily",
+        "includeInactiveAccounts": false,
+        "warnOnNegativeBankBalance": true
+      }
+    }
+    """;
+
+        var serializer = new CashFlowPlanJsonSerializer();
+
+        // Act
+        var plan = serializer.DeserializePlan(json);
+
+        // Assert
+        Assert.Null(plan.DefaultPaymentAccountId);
+        Assert.True(plan.TreatWeekendsAsBankOffDays);
+        Assert.Empty(plan.BankOffDays);
+    }
 }

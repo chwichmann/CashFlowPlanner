@@ -1,0 +1,55 @@
+﻿.account-info-list dt {
+    font-weight: 600;
+}
+
+.account-info-list dd {
+    margin-bottom: 0.55rem;
+}
+
+.statement-chart-panel {
+    min-height: 220px;
+    padding: 0.75rem 0.75rem 0.25rem 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.statement-balance-chart {
+    width: 100%;
+    height: 220px;
+    display: block;
+}
+
+.statement-chart-axis {
+    stroke: #cbd5e1;
+    stroke-width: 1;
+}
+
+.statement-chart-grid {
+    stroke: #e5e7eb;
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+.statement-chart-area {
+    fill: rgba(13, 110, 253, 0.10);
+}
+
+.statement-chart-line {
+    fill: none;
+    stroke: #0d6efd;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.statement-chart-point {
+    fill: #ffffff;
+    stroke: #0d6efd;
+    stroke-width: 2;
+}
+
+.statement-chart-label {
+    fill: #64748b;
+    font-size: 11px;
+}

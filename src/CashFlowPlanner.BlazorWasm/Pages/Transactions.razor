@@ -1,4 +1,5 @@
 ﻿@page "/transactions"
+
 @using System.Globalization
 @using Microsoft.Extensions.Localization
 @using CashFlowPlanner.Core
@@ -7,6 +8,7 @@
 @using CashFlowPlanner.BlazorWasm.Services
 @using CashFlowPlanner.BlazorWasm.Components
 @using CashFlowPlanner.BlazorWasm.Resources
+
 @inject UiFeedbackService Feedback
 @inject CashFlowAppState AppState
 @inject EnumLocalizer EnumL
@@ -14,18 +16,22 @@
 
 <PageTitle>@L["Transactions"] - CashFlow Planner</PageTitle>
 
-<h1>@L["Transactions"]</h1>
+<h2>@L["Transactions"]</h2>
 
 <ConfirmDialog @ref="_confirmDialog" />
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
-    <div class="alert alert-danger">@_errorMessage</div>
+    <div class="alert alert-danger">
+        @_errorMessage
+    </div>
 }
 
 @if (!string.IsNullOrWhiteSpace(_infoMessage))
 {
-    <div class="alert alert-info">@_infoMessage</div>
+    <div class="alert alert-info">
+        @_infoMessage
+    </div>
 }
 
 @if (AppState.CurrentPlan is null)
@@ -37,276 +43,292 @@
 else
 {
     var plan = AppState.CurrentPlan;
+
     var filteredTransactions = GetFilteredTransactions();
-    var filteredYearlyAmount = filteredTransactions.Sum(CalculateYearlyAmount);
-    var filteredEffectiveYearlyAmount = filteredTransactions.Sum(CalculateEffectiveYearlyAmount);
-    var filteredIncomingYearlyAmount = filteredTransactions
-        .Where(x => x.Kind == TransactionKind.ExternalIncome)
-        .Sum(CalculateYearlyAmount);
-    var filteredOutgoingYearlyAmount = filteredTransactions
-        .Where(x => x.Kind == TransactionKind.ExternalExpense)
-        .Sum(CalculateYearlyAmount);
+
+    var oneTimeTransactions = filteredTransactions
+        .Where(IsOneTimeTransaction)
+        .OrderByDescending(x => x.Schedule.StartDate)
+        .ThenBy(x => x.Name)
+        .ToList();
+
+    var recurringTransactions = filteredTransactions
+        .Where(x => !IsOneTimeTransaction(x))
+        .OrderBy(x => x.Name)
+        .ThenBy(x => x.Amount)
+        .ToList();
+
+    var visibleTransactions = _selectedTransactionTab == TransactionTab.OneTime
+        ? oneTimeTransactions
+        : recurringTransactions;
+
+    var showTotals = _selectedTransactionTab == TransactionTab.Recurring;
+
+    var visibleYearlyAmount = showTotals
+        ? visibleTransactions.Sum(CalculateYearlyAmount)
+        : 0m;
+
+    var visibleEffectiveYearlyAmount = showTotals
+        ? visibleTransactions.Sum(CalculateEffectiveYearlyAmount)
+        : 0m;
+
+    var visibleIncomingYearlyAmount = showTotals
+        ? visibleTransactions
+            .Where(x => x.Kind == TransactionKind.ExternalIncome)
+            .Sum(CalculateYearlyAmount)
+        : 0m;
+
+    var visibleOutgoingYearlyAmount = showTotals
+        ? visibleTransactions
+            .Where(x => x.Kind == TransactionKind.ExternalExpense)
+            .Sum(CalculateYearlyAmount)
+        : 0m;
 
     <div class="mb-3">
-        <button class="btn btn-primary" @onclick="NewTransaction">
+        <button type="button" class="btn btn-primary" @onclick="NewTransaction">
             @L["Transaction_AddTransaction"]
         </button>
     </div>
 
     @if (_editModel is not null)
     {
-        <div class="modal show d-block" tabindex="-1">
-            <div class="modal-dialog modal-xl">
+        <div class="modal fade show d-block" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
                 <div class="modal-content">
-                    <div class="card mb-3">
-            <div class="card-header">
-                <strong>@(_isNewTransaction ? L["Transaction_AddTransaction"] : L["Transaction_EditTransaction"])</strong>
-            </div>
-
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Name"]</label>
-                        <input class="form-control" @bind="_editModel.Name" />
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            @(_isNewTransaction ? L["Transaction_AddTransaction"] : L["Transaction_EditTransaction"])
+                        </h5>
+                        <button type="button" class="btn-close" aria-label="Close" @onclick="CancelEdit"></button>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Kind"]</label>
-                        <select class="form-select" @bind="_editModel.Kind">
-                            @foreach (var kind in Enum.GetValues<TransactionKind>())
-                            {
-                                <option value="@kind">@EnumL.Translate(kind)</option>
-                            }
-                        </select>
-                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">@L["Name"]</label>
+                                <input class="form-control" @bind="_editModel.Name" />
+                            </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">@L["Amount"]</label>
-                        <input type="number"
-                               step="0.01"
-                               class="form-control"
-                               @bind="_editModel.Amount" />
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">@L["Currency"]</label>
-                        <input class="form-control" @bind="_editModel.Currency" />
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">@L["Transaction_Priority"]</label>
-                        <input type="number"
-                               class="form-control"
-                               @bind="_editModel.Priority" />
-                    </div>
-
-                    <div class="col-md-5">
-                        <label class="form-label">@L["Transaction_FromAccount"]</label>
-                        <select class="form-select" @bind="_editModel.FromAccountId">
-                            <option value="">@L["Transaction_NoneOption"]</option>
-                            @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
-                            {
-                                <option value="@account.Id">
-                                    @account.Name (@EnumL.Translate(account.Type))
-                                </option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-5">
-                        <label class="form-label">@L["Transaction_ToAccount"]</label>
-                        <select class="form-select" @bind="_editModel.ToAccountId">
-                            <option value="">@L["Transaction_NoneOption"]</option>
-                            @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
-                            {
-                                <option value="@account.Id">
-                                    @account.Name (@EnumL.Translate(account.Type))
-                                </option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Transaction_IncomePerson"]</label>
-                        <select class="form-select" @bind="_editModel.IncomePersonId">
-                            <option value="">@L["Transaction_NotAssignedOption"]</option>
-                            @foreach (var person in PersonList.OrderBy(x => x.DisplayName))
-                            {
-                                <option value="@person.Id">@person.DisplayName</option>
-                            }
-                        </select>
-                        <div class="form-text">
-                            @L["Transaction_IncomePersonHint"]
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Transaction_PaymentMethod"]</label>
-                        <select class="form-select" @bind="_editModel.PaymentMethod">
-                            @foreach (var paymentMethod in Enum.GetValues<PaymentMethod>())
-                            {
-                                <option value="@paymentMethod">@EnumL.Translate(paymentMethod)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Category"]</label>
-                        <input class="form-control" @bind="_editModel.Category" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Transaction_Counterparty"]</label>
-                        <input class="form-control" @bind="_editModel.Counterparty" />
-                    </div>
-
-                    <div class="col-md-2 d-flex align-items-end">
-                        <div class="form-check">
-                            <input id="transaction-active"
-                                   type="checkbox"
-                                   class="form-check-input"
-                                   @bind="_editModel.IsActive" />
-                            <label class="form-check-label" for="transaction-active">
-                                @L["Active"]
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <hr />
-
-                <h6>@L["Schedule"]</h6>
-
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_Frequency"]</label>
-                        <select class="form-select" @bind="_editModel.Frequency">
-                            @foreach (var frequency in Enum.GetValues<ScheduleFrequency>())
-                            {
-                                <option value="@frequency">@EnumL.Translate(frequency)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_StartDate"]</label>
-                        <input type="date"
-                               class="form-control"
-                               @bind="_editModel.StartDate" />
-                    </div>
-
-                    @if (_editModel.Frequency != ScheduleFrequency.Once)
-                    {
-                        <div class="col-md-3">
-                            <label class="form-label">@L["Transaction_EndDate"]</label>
-                            <input type="date"
-                            class="form-control"
-                            @bind="_editModel.EndDate" />
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">@L["Transaction_Interval"]</label>
-                            <input type="number"
-                            class="form-control"
-                            @bind="_editModel.Interval" />
-                        </div>
-
-                        @if (_editModel.Frequency == ScheduleFrequency.Monthly || 
-                            _editModel.Frequency == ScheduleFrequency.Quarterly || 
-                            _editModel.Frequency == ScheduleFrequency.SemiYearly)
-                        {
-                              <div class="col-md-3">
-                                <label class="form-label">@L["Transaction_DayOfMonth"]</label>
-                                <input type="number"
-                                class="form-control"
-                                @bind="_editModel.DayOfMonth" />
-                             </div>          
-                         }
-                        
-                         @if (_editModel.Frequency == ScheduleFrequency.Weekly)
-                        {
                             <div class="col-md-3">
-                                <label class="form-label">@L["Transaction_DayOfWeek"]</label>
-                                <select class="form-select" @bind="_editModel.DayOfWeek">
-                                    <option value="">@L["Transaction_NoneOption"]</option>
-                                    @foreach (var day in Enum.GetValues<DayOfWeek>())
+                                <label class="form-label">@L["Kind"]</label>
+                                <select class="form-select" @bind="_editModel.Kind">
+                                    @foreach (var kind in Enum.GetValues<TransactionKind>())
                                     {
-                                        <option value="@day">@FormatDayOfWeek(day)</option>
+                                        <option value="@kind">@EnumL.Translate(kind)</option>
                                     }
                                 </select>
-                            </div>         
-                        }
+                            </div>
 
-                        @if (_editModel.Frequency == ScheduleFrequency.Yearly)
-                        {
                             <div class="col-md-3">
-                                <label class="form-label">@L["Transaction_Month"]</label>
-                                <input type="number"
-                                        min="1"
-                                        max="12"
-                                        class="form-control"
-                                        @bind="_editModel.Month" />
-                            </div>     
-                         }
-                       
-                    }
+                                <label class="form-label">@L["Amount"]</label>
+                                <input type="number" step="0.01" class="form-control" @bind="_editModel.Amount" />
+                            </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Transaction_BusinessDayAdjustment"]</label>
-                        <select class="form-select" @bind="_editModel.BusinessDayAdjustment">
-                            @foreach (var adjustment in Enum.GetValues<BusinessDayAdjustment>())
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Currency"]</label>
+                                <input class="form-control" @bind="_editModel.Currency" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_Priority"]</label>
+                                <input type="number" class="form-control" @bind="_editModel.Priority" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_FromAccount"]</label>
+                                <select class="form-select" @bind="_editModel.FromAccountId">
+                                    <option value="">@L["Transaction_NoneOption"]</option>
+                                    @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
+                                    {
+                                        <option value="@account.Id">
+                                            @account.Name (@EnumL.Translate(account.Type))
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_ToAccount"]</label>
+                                <select class="form-select" @bind="_editModel.ToAccountId">
+                                    <option value="">@L["Transaction_NoneOption"]</option>
+                                    @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
+                                    {
+                                        <option value="@account.Id">
+                                            @account.Name (@EnumL.Translate(account.Type))
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">@L["Transaction_IncomePerson"]</label>
+                                <select class="form-select" @bind="_editModel.IncomePersonId">
+                                    <option value="">@L["Transaction_NotAssignedOption"]</option>
+                                    @foreach (var person in PersonList.OrderBy(x => x.DisplayName))
+                                    {
+                                        <option value="@person.Id">@person.DisplayName</option>
+                                    }
+                                </select>
+                                <div class="form-text">
+                                    @L["Transaction_IncomePersonHint"]
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">@L["Transaction_PaymentMethod"]</label>
+                                <select class="form-select" @bind="_editModel.PaymentMethod">
+                                    @foreach (var paymentMethod in Enum.GetValues<PaymentMethod>())
+                                    {
+                                        <option value="@paymentMethod">@EnumL.Translate(paymentMethod)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">@L["Category"]</label>
+                                <input class="form-control" @bind="_editModel.Category" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">@L["Transaction_Counterparty"]</label>
+                                <input class="form-control" @bind="_editModel.Counterparty" />
+                            </div>
+
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    <input id="transactionIsActive"
+                                           class="form-check-input"
+                                           type="checkbox"
+                                           @bind="_editModel.IsActive" />
+                                    <label class="form-check-label" for="transactionIsActive">
+                                        @L["Active"]
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <hr />
+                                <h5>@L["Schedule"]</h5>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_Frequency"]</label>
+                                <select class="form-select" @bind="_editModel.Frequency">
+                                    @foreach (var frequency in Enum.GetValues<ScheduleFrequency>())
+                                    {
+                                        <option value="@frequency">@EnumL.Translate(frequency)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_StartDate"]</label>
+                                <input type="date" class="form-control" @bind="_editModel.StartDate" />
+                            </div>
+
+                            @if (_editModel.Frequency != ScheduleFrequency.Once)
                             {
-                                <option value="@adjustment">@EnumL.Translate(adjustment)</option>
+                                <div class="col-md-3">
+                                    <label class="form-label">@L["Transaction_EndDate"]</label>
+                                    <input type="date" class="form-control" @bind="_editModel.EndDate" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">@L["Transaction_Interval"]</label>
+                                    <input type="number" min="1" class="form-control" @bind="_editModel.Interval" />
+                                </div>
+
+                                @if (_editModel.Frequency == ScheduleFrequency.Monthly
+                                    || _editModel.Frequency == ScheduleFrequency.Quarterly
+                                    || _editModel.Frequency == ScheduleFrequency.SemiYearly
+                                    || _editModel.Frequency == ScheduleFrequency.Yearly)
+                                {
+                                    <div class="col-md-3">
+                                        <label class="form-label">@L["Transaction_DayOfMonth"]</label>
+                                        <input type="number"
+                                               min="1"
+                                               max="31"
+                                               class="form-control"
+                                               @bind="_editModel.DayOfMonth" />
+                                    </div>
+                                }
+
+                                @if (_editModel.Frequency == ScheduleFrequency.Weekly)
+                                {
+                                    <div class="col-md-3">
+                                        <label class="form-label">@L["Transaction_DayOfWeek"]</label>
+                                        <select class="form-select" @bind="_editModel.DayOfWeek">
+                                            <option value="">@L["Transaction_NoneOption"]</option>
+                                            @foreach (var day in Enum.GetValues<DayOfWeek>())
+                                            {
+                                                <option value="@day">@FormatDayOfWeek(day)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                }
+
+                                @if (_editModel.Frequency == ScheduleFrequency.Yearly)
+                                {
+                                    <div class="col-md-3">
+                                        <label class="form-label">@L["Transaction_Month"]</label>
+                                        <input type="number"
+                                               min="1"
+                                               max="12"
+                                               class="form-control"
+                                               @bind="_editModel.Month" />
+                                    </div>
+                                }
                             }
-                        </select>
+
+                            <div class="col-md-3">
+                                <label class="form-label">@L["Transaction_BusinessDayAdjustment"]</label>
+                                <select class="form-select" @bind="_editModel.BusinessDayAdjustment">
+                                    @foreach (var adjustment in Enum.GetValues<BusinessDayAdjustment>())
+                                    {
+                                        <option value="@adjustment">@EnumL.Translate(adjustment)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">@L["Notes"]</label>
+                                <textarea class="form-control" rows="3" @bind="_editModel.Notes"></textarea>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="col-md-12">
-                        <label class="form-label">@L["Notes"]</label>
-                        <textarea class="form-control"
-                                  rows="2"
-                                  @bind="_editModel.Notes">
-                        </textarea>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <button class="btn btn-primary" @onclick="SaveTransaction">
-                        @L["Save"]
-                    </button>
-
-                    <button class="btn btn-outline-secondary ms-2" @onclick="CancelEdit">
-                        @L["Cancel"]
-                    </button>
-                </div>
-            </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" @onclick="SaveTransaction">
+                            @L["Save"]
+                        </button>
+                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">
+                            @L["Cancel"]
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
+
         <div class="modal-backdrop fade show"></div>
     }
 
     <div class="card mb-3">
         <div class="card-header">
-            <strong>@L["Transaction_Filter"]</strong>
+            @L["Transaction_Filter"]
         </div>
 
         <div class="card-body">
-            <div class="row g-3 align-items-end">
+            <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">@L["Transaction_Search"]</label>
                     <input class="form-control"
-                           placeholder="@L["Transaction_SearchPlaceholder"]"
                            value="@_transactionFilterText"
                            @oninput="OnTransactionFilterInput" />
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label">@L["Category"]</label>
-                    <select class="form-select"
-                            value="@_categoryFilter"
-                            @onchange="OnCategoryFilterChanged">
+                    <select class="form-select" @onchange="OnCategoryFilterChanged" value="@_categoryFilter">
                         <option value="">@L["Transaction_AllCategories"]</option>
                         @foreach (var category in GetCategories())
                         {
@@ -317,9 +339,7 @@ else
 
                 <div class="col-md-3">
                     <label class="form-label">@L["Kind"]</label>
-                    <select class="form-select"
-                            value="@_kindFilter"
-                            @onchange="OnKindFilterChanged">
+                    <select class="form-select" @onchange="OnKindFilterChanged" value="@_kindFilter">
                         <option value="">@L["Transaction_AllKinds"]</option>
                         @foreach (var kind in Enum.GetValues<TransactionKind>())
                         {
@@ -328,45 +348,64 @@ else
                     </select>
                 </div>
 
-                <div class="col-md-2">
-                    <div class="form-check">
-                        <input id="active-only"
-                               type="checkbox"
-                               class="form-check-input"
-                               @bind="_showOnlyActive" />
-                        <label class="form-check-label" for="active-only">
-                            @L["Transaction_ActiveOnly"]
-                        </label>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div>
+                        <div class="form-check">
+                            <input id="showOnlyActive"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   @bind="_showOnlyActive" />
+                            <label class="form-check-label" for="showOnlyActive">
+                                @L["Transaction_ActiveOnly"]
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input id="showAllTransactions"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   @bind="_showAllTransactions" />
+                            <label class="form-check-label" for="showAllTransactions">
+                                @L["Transaction_ShowAllTransactions"]
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="col-md-2">
-                    <div class="form-check">
-                        <input id="show-all-transactions"
-                               type="checkbox"
-                               class="form-check-input"
-                               @bind="_showAllTransactions" />
-                        <label class="form-check-label" for="show-all-transactions">
-                            @L["Transaction_ShowAllTransactions"]
-                        </label>
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div class="text-muted">
+                        @Text("Transaction_ShowingTransactions", filteredTransactions.Count, plan.Transactions.Count)
                     </div>
-                </div>
-            </div>
 
-            <div class="mt-3 d-flex justify-content-between align-items-center">
-                <div class="text-muted">
-                    @Text("Transaction_ShowingTransactions", filteredTransactions.Count, plan.Transactions.Count)
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ClearTransactionFilters">
+                        @L["Transaction_ClearFilter"]
+                    </button>
                 </div>
-
-                <button class="btn btn-outline-secondary btn-sm"
-                        @onclick="ClearTransactionFilters">
-                    @L["Transaction_ClearFilter"]
-                </button>
             </div>
         </div>
     </div>
 
-    @if (filteredTransactions.Count == 0)
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <button type="button"
+                    class="nav-link @(_selectedTransactionTab == TransactionTab.OneTime ? "active" : null)"
+                    @onclick="() => _selectedTransactionTab = TransactionTab.OneTime">
+                @L["Transaction_TabOneTime"]
+                <span class="badge bg-secondary ms-1">@oneTimeTransactions.Count</span>
+            </button>
+        </li>
+
+        <li class="nav-item">
+            <button type="button"
+                    class="nav-link @(_selectedTransactionTab == TransactionTab.Recurring ? "active" : null)"
+                    @onclick="() => _selectedTransactionTab = TransactionTab.Recurring">
+                @L["Transaction_TabRecurring"]
+                <span class="badge bg-secondary ms-1">@recurringTransactions.Count</span>
+            </button>
+        </li>
+    </ul>
+
+    @if (visibleTransactions.Count == 0)
     {
         <div class="alert alert-info">
             @L["Transaction_NoTransactionsMatchFilter"]
@@ -383,23 +422,38 @@ else
                     <th>@L["Transaction_From"]</th>
                     <th>@L["Transaction_To"]</th>
                     <th>@L["Transaction_IncomePerson"]</th>
-                    <th class="text-end">@L["Amount"]</th>
-                    <th>@L["Schedule"]</th>
+                    <th>@L["Amount"]</th>
+
+                    @if(_selectedTransactionTab == TransactionTab.Recurring)
+                    {
+                        <th>@L["Schedule"]</th>
+                    }
+                    else
+                    {
+                        <th>@L["Date"]</th>
+                    }
+
                     <th>@L["Category"]</th>
-                    <th class="text-end">@L["Transaction_YearlyAmount"]</th>
-                    <th class="text-end">@L["Transaction_EffectiveYearlyAmount"]</th>
+
+                    @if(_selectedTransactionTab == TransactionTab.Recurring)
+                    {
+                        <th>@L["Transaction_YearlyAmount"]</th>
+                        <th>@L["Transaction_EffectiveYearlyAmount"]</th>
+                    }
+                    
                     <th class="text-end">@L["Actions"]</th>
                 </tr>
             </thead>
 
             <tbody>
-                @foreach (var transaction in filteredTransactions)
+                @foreach (var transaction in visibleTransactions)
                 {
                     var yearlyAmount = CalculateYearlyAmount(transaction);
 
                     <tr>
                         <td>
                             <div>@transaction.Name</div>
+
                             @if (!string.IsNullOrWhiteSpace(transaction.Notes))
                             {
                                 <small class="text-muted">@transaction.Notes</small>
@@ -423,31 +477,41 @@ else
                         <td>@GetAccountName(transaction.ToAccountId)</td>
                         <td>@GetPersonName(transaction.IncomePersonId)</td>
 
-                        <td class="text-end" style="white-space: nowrap;">
+                        <td>
                             @transaction.Amount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
                         </td>
 
                         <td>
-                            @FormatSchedule(transaction.Schedule)
+                            @if (_selectedTransactionTab == TransactionTab.Recurring)
+                            {
+                                @FormatSchedule(transaction.Schedule)
+                            }
+                            else
+                            {
+                                @FormatDate(transaction.Schedule.StartDate)
+                            }
                         </td>
 
                         <td>@transaction.Category</td>
 
-                        <td class="text-end" style="white-space: nowrap;">
-                            @yearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
-                        </td>
+                        @if (_selectedTransactionTab == TransactionTab.Recurring)
+                        {
+                            <td>
+                                @yearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
+                            </td>
 
-                        <td class="text-end" style="white-space: nowrap;">
-                            @CalculateEffectiveYearlyAmount(transaction).ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
-                        </td>
+                            <td>
+                                @CalculateEffectiveYearlyAmount(transaction).ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
+                            </td>
+                        }
 
-                        <td style="white-space: nowrap;" class="text-end">
-                            <button class="btn btn-sm btn-primary me-1"
+                        <td class="text-end text-nowrap" style="white-space: nowrap;">
+                            <button type="button" class="btn btn-sm btn-primary me-1"
                                     @onclick="() => EditTransaction(transaction)">
                                 @L["Edit"]
                             </button>
 
-                            <button class="btn btn-sm btn-danger"
+                            <button type="button" class="btn btn-sm btn-danger"
                                     @onclick="() => DeleteTransaction(transaction)">
                                 @L["Delete"]
                             </button>
@@ -455,37 +519,41 @@ else
                     </tr>
                 }
 
-                <tr>
-                    <td colspan="9">
-                        <strong>@L["Transaction_SumIncomingYearlyAmountFilter"]</strong>
-                    </td>
-                    <td>
-                        <strong>@filteredIncomingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
-                    </td>
-                    <td colspan="2"></td>
-                </tr>
-                <tr>
-                    <td colspan="9">
-                        <strong>@L["Transaction_SumOutgoingYearlyAmountFilter"]</strong>
-                    </td>
-                    <td>
-                        <strong>@filteredOutgoingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
-                    </td>
-                    <td colspan="2"></td>
-                </tr>
-                <tr>
-                    <td colspan="8">
-                        <strong>@L["Transaction_SumYearlyAmountFilter"]</strong>
-                    </td>
-                    <td>
-                        <strong>@filteredYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
-                    </td>
-                    <td>
-                        <strong>@filteredEffectiveYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
-                    </td>
-                    <td colspan="2"></td>
-                </tr>
+                @if (showTotals)
+                {
+                    <tr>
+                        <td colspan="9">
+                            <strong>@L["Transaction_SumIncomingYearlyAmountFilter"]</strong>
+                        </td>
+                        <td>
+                            <strong>@visibleIncomingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
 
+                    <tr>
+                        <td colspan="9">
+                            <strong>@L["Transaction_SumOutgoingYearlyAmountFilter"]</strong>
+                        </td>
+                        <td>
+                            <strong>@visibleOutgoingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+
+                    <tr>
+                        <td colspan="8">
+                            <strong>@L["Transaction_SumYearlyAmountFilter"]</strong>
+                        </td>
+                        <td>
+                            <strong>@visibleYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
+                        </td>
+                        <td>
+                            <strong>@visibleEffectiveYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+                }
             </tbody>
         </table>
     }
@@ -494,18 +562,28 @@ else
 @code {
     private TransactionEditModel? _editModel;
     private bool _isNewTransaction;
+
     private string? _errorMessage;
     private string? _infoMessage;
+
     private ConfirmDialog? _confirmDialog;
 
     private string? _transactionFilterText;
     private string? _categoryFilter;
     private TransactionKind? _kindFilter;
+
     private bool _showOnlyActive = false;
     private bool _showAllTransactions = false;
 
-    private IReadOnlyList<Person> PersonList =>
-        AppState.CurrentPlan?.Persons ?? [];
+    private TransactionTab _selectedTransactionTab = TransactionTab.OneTime;
+
+    private IReadOnlyList<Person> PersonList => AppState.CurrentPlan?.Persons ?? [];
+
+    private enum TransactionTab
+    {
+        OneTime,
+        Recurring
+    }
 
     private void NewTransaction()
     {
@@ -522,6 +600,8 @@ else
             Currency = plan?.BaseCurrency ?? "CHF",
             StartDate = startDate,
             DayOfMonth = startDate.Day,
+            Month = startDate.Month,
+            DayOfWeek = startDate.DayOfWeek,
             Interval = 1,
             Frequency = ScheduleFrequency.Once,
             Priority = 100,
@@ -529,6 +609,7 @@ else
         };
 
         _isNewTransaction = true;
+        _selectedTransactionTab = TransactionTab.OneTime;
     }
 
     private void EditTransaction(TransactionDefinition transaction)
@@ -537,6 +618,10 @@ else
 
         _editModel = TransactionEditModel.FromTransaction(transaction);
         _isNewTransaction = false;
+
+        _selectedTransactionTab = transaction.Schedule.Frequency == ScheduleFrequency.Once
+            ? TransactionTab.OneTime
+            : TransactionTab.Recurring;
     }
 
     private void SaveTransaction()
@@ -566,7 +651,12 @@ else
             }
 
             var transaction = _editModel.ToTransaction();
+
             AppState.AddOrUpdateTransaction(transaction);
+
+            _selectedTransactionTab = transaction.Schedule.Frequency == ScheduleFrequency.Once
+                ? TransactionTab.OneTime
+                : TransactionTab.Recurring;
 
             Feedback.Success(
                 _isNewTransaction
@@ -646,11 +736,10 @@ else
 
         if (!string.IsNullOrWhiteSpace(_categoryFilter))
         {
-            query = query.Where(x =>
-                string.Equals(
-                    x.Category,
-                    _categoryFilter,
-                    StringComparison.OrdinalIgnoreCase));
+            query = query.Where(x => string.Equals(
+                x.Category,
+                _categoryFilter,
+                StringComparison.OrdinalIgnoreCase));
         }
 
         if (!string.IsNullOrWhiteSpace(_transactionFilterText))
@@ -671,10 +760,7 @@ else
                 || ContainsIgnoreCase(CalculateYearlyAmount(x).ToString("N2", CultureInfo.CurrentCulture), filter));
         }
 
-        return query
-            .OrderBy(x => x.Name)
-            .ThenBy(x => x.Amount)
-            .ToList();
+        return query.ToList();
     }
 
     private IReadOnlyList<string> GetCategories()
@@ -746,8 +832,7 @@ else
 
         return AppState.CurrentPlan.Accounts
             .SingleOrDefault(x => x.Id == accountId.Value)
-            ?.Name
-            ?? "?";
+            ?.Name ?? "?";
     }
 
     private string GetPersonName(Guid? personId)
@@ -759,8 +844,12 @@ else
 
         return AppState.CurrentPlan.Persons
             .SingleOrDefault(x => x.Id == personId.Value)
-            ?.DisplayName
-            ?? "?";
+            ?.DisplayName ?? "?";
+    }
+
+    private static bool IsOneTimeTransaction(TransactionDefinition transaction)
+    {
+        return transaction.Schedule.Frequency == ScheduleFrequency.Once;
     }
 
     private static bool IsVisibleByDefault(TransactionDefinition transaction, DateOnly today)
@@ -775,12 +864,11 @@ else
             return transaction.Schedule.StartDate >= today;
         }
 
-        return transaction.Schedule.EndDate is null || transaction.Schedule.EndDate.Value >= today;
+        return transaction.Schedule.EndDate is null
+            || transaction.Schedule.EndDate.Value >= today;
     }
 
-    private static bool ContainsIgnoreCase(
-        string? value,
-        string filter)
+    private static bool ContainsIgnoreCase(string? value, string filter)
     {
         return !string.IsNullOrWhiteSpace(value)
             && value.Contains(filter, StringComparison.OrdinalIgnoreCase);
@@ -807,6 +895,18 @@ else
         return transaction.Amount * multiplier;
     }
 
+    private static decimal CalculateEffectiveYearlyAmount(TransactionDefinition transaction)
+    {
+        var yearlyAmount = CalculateYearlyAmount(transaction);
+
+        return transaction.Kind switch
+        {
+            TransactionKind.ExternalIncome => yearlyAmount,
+            TransactionKind.ExternalExpense => -yearlyAmount,
+            _ => 0m
+        };
+    }
+
     private string FormatSchedule(Schedule schedule)
     {
         var interval = schedule.Interval < 1
@@ -815,42 +915,39 @@ else
 
         return schedule.Frequency switch
         {
-            ScheduleFrequency.Once =>
-                Text("Transaction_ScheduleOnceOn", FormatDate(schedule.StartDate)),
+            ScheduleFrequency.Once => Text(
+                "Transaction_ScheduleOnceOn",
+                FormatDate(schedule.StartDate)),
 
-            ScheduleFrequency.Weekly =>
-                Text(
-                    "Transaction_ScheduleEveryWeeksOn",
-                    interval,
-                    FormatDayOfWeek(schedule.DayOfWeek ?? schedule.StartDate.DayOfWeek)),
+            ScheduleFrequency.Weekly => Text(
+                "Transaction_ScheduleEveryWeeksOn",
+                interval,
+                FormatDayOfWeek(schedule.DayOfWeek ?? schedule.StartDate.DayOfWeek)),
 
-            ScheduleFrequency.Monthly =>
-                Text(
-                    "Transaction_ScheduleEveryMonthsOnDay",
-                    interval,
-                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+            ScheduleFrequency.Monthly => Text(
+                "Transaction_ScheduleEveryMonthsOnDay",
+                interval,
+                schedule.DayOfMonth ?? schedule.StartDate.Day),
 
-            ScheduleFrequency.Quarterly =>
-                Text(
-                    "Transaction_ScheduleEveryQuartersOnDay",
-                    interval,
-                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+            ScheduleFrequency.Quarterly => Text(
+                "Transaction_ScheduleEveryQuartersOnDay",
+                interval,
+                schedule.DayOfMonth ?? schedule.StartDate.Day),
 
-            ScheduleFrequency.SemiYearly =>
-                Text(
-                    "Transaction_ScheduleEveryHalfYearsOnDay",
-                    interval,
-                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+            ScheduleFrequency.SemiYearly => Text(
+                "Transaction_ScheduleEveryHalfYearsOnDay",
+                interval,
+                schedule.DayOfMonth ?? schedule.StartDate.Day),
 
-            ScheduleFrequency.Yearly =>
-                Text(
-                    "Transaction_ScheduleEveryYearsOn",
-                    interval,
-                    schedule.Month ?? schedule.StartDate.Month,
-                    schedule.DayOfMonth ?? schedule.StartDate.Day),
+            ScheduleFrequency.Yearly => Text(
+                "Transaction_ScheduleEveryYearsOn",
+                interval,
+                schedule.Month ?? schedule.StartDate.Month,
+                schedule.DayOfMonth ?? schedule.StartDate.Day),
 
-            ScheduleFrequency.Daily =>
-                Text("Transaction_ScheduleEveryDays", interval),
+            ScheduleFrequency.Daily => Text(
+                "Transaction_ScheduleEveryDays",
+                interval),
 
             _ => EnumL.Translate(schedule.Frequency)
         };
@@ -880,17 +977,5 @@ else
     {
         _errorMessage = null;
         _infoMessage = null;
-    }
-
-    private static decimal CalculateEffectiveYearlyAmount(TransactionDefinition transaction)
-    {
-        var yearlyAmount = CalculateYearlyAmount(transaction);
-
-        return transaction.Kind switch
-        {
-            TransactionKind.ExternalIncome => yearlyAmount,
-            TransactionKind.ExternalExpense => -yearlyAmount,
-            _ => 0m
-        };
     }
 }

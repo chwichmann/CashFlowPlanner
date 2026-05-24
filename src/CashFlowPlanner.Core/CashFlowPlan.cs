@@ -15,6 +15,12 @@ public sealed class CashFlowPlan
 
     public string BaseCurrency { get; init; } = "CHF";
 
+    public Guid? DefaultPaymentAccountId { get; init; }
+
+    public bool TreatWeekendsAsBankOffDays { get; init; } = true;
+
+    public List<BankOffDay> BankOffDays { get; init; } = [];
+
     public List<Person> Persons { get; init; } = [];
 
     public List<Account> Accounts { get; init; } = [];
@@ -25,7 +31,6 @@ public sealed class CashFlowPlan
 
     public List<CreditCardContract> CreditCards { get; init; } = [];
 
-    // ✅ NEW
     public List<Pillar3aContract> Pillar3aContracts { get; init; } = [];
 
     public SimulationSettings SimulationSettings { get; init; } = new();
@@ -52,6 +57,15 @@ public sealed class CashFlowPlan
         var accountIds = Accounts.Select(x => x.Id).ToHashSet();
         var personIds = Persons.Select(x => x.Id).ToHashSet();
 
+        if (DefaultPaymentAccountId is not null &&
+            !accountIds.Contains(DefaultPaymentAccountId.Value))
+        {
+            throw new InvalidOperationException(
+                $"Default payment account references unknown account '{DefaultPaymentAccountId}'.");
+        }
+
+        ValidateBankOffDays();
+
         foreach (var mortgage in Mortgages)
         {
             mortgage.Validate();
@@ -62,7 +76,6 @@ public sealed class CashFlowPlan
             creditCard.Validate();
         }
 
-        // ✅ NEW
         foreach (var pillar3a in Pillar3aContracts)
         {
             pillar3a.Validate();
@@ -100,5 +113,26 @@ public sealed class CashFlowPlan
         }
 
         SimulationSettings.Validate();
+    }
+
+    private void ValidateBankOffDays()
+    {
+        var duplicateDates = BankOffDays
+            .GroupBy(x => x.Date)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .OrderBy(x => x)
+            .ToList();
+
+        if (duplicateDates.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Bank off-days contain duplicate dates: {string.Join(", ", duplicateDates)}.");
+        }
+
+        foreach (var offDay in BankOffDays)
+        {
+            offDay.Validate();
+        }
     }
 }

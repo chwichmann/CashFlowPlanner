@@ -3,9 +3,10 @@
 public sealed class ScheduleOccurrenceGenerator
 {
     public IReadOnlyList<DateOnly> GenerateOccurrences(
-    Schedule schedule,
-    DateOnly rangeStart,
-    DateOnly rangeEnd)
+        Schedule schedule,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        CashFlowPlan? plan = null)
     {
         schedule.Validate();
 
@@ -21,21 +22,22 @@ public sealed class ScheduleOccurrenceGenerator
 
         return schedule.Frequency switch
         {
-            ScheduleFrequency.Once => GenerateOnce(schedule, rangeStart, rangeEnd),
-            ScheduleFrequency.Daily => GenerateDaily(schedule, rangeStart, rangeEnd),
-            ScheduleFrequency.Weekly => GenerateWeekly(schedule, rangeStart, rangeEnd),
-            ScheduleFrequency.Monthly => GenerateMonthly(schedule, rangeStart, rangeEnd),
-            ScheduleFrequency.Quarterly => GenerateMonthlyLike(schedule, rangeStart, rangeEnd, 3),
-            ScheduleFrequency.SemiYearly => GenerateMonthlyLike(schedule, rangeStart, rangeEnd, 6),
-            ScheduleFrequency.Yearly => GenerateYearly(schedule, rangeStart, rangeEnd),
+            ScheduleFrequency.Once => GenerateOnce(schedule, rangeStart, rangeEnd, plan),
+            ScheduleFrequency.Daily => GenerateDaily(schedule, rangeStart, rangeEnd, plan),
+            ScheduleFrequency.Weekly => GenerateWeekly(schedule, rangeStart, rangeEnd, plan),
+            ScheduleFrequency.Monthly => GenerateMonthly(schedule, rangeStart, rangeEnd, plan),
+            ScheduleFrequency.Quarterly => GenerateMonthlyLike(schedule, rangeStart, rangeEnd, 3, plan),
+            ScheduleFrequency.SemiYearly => GenerateMonthlyLike(schedule, rangeStart, rangeEnd, 6, plan),
+            ScheduleFrequency.Yearly => GenerateYearly(schedule, rangeStart, rangeEnd, plan),
             _ => throw new InvalidOperationException($"Unsupported schedule frequency '{schedule.Frequency}'.")
         };
     }
 
     private static IReadOnlyList<DateOnly> GenerateOnce(
-    Schedule schedule,
-    DateOnly rangeStart,
-    DateOnly rangeEnd)
+        Schedule schedule,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        CashFlowPlan? plan)
     {
         if (!IsNominalDateInsideSchedule(schedule, schedule.StartDate))
         {
@@ -44,7 +46,8 @@ public sealed class ScheduleOccurrenceGenerator
 
         var adjusted = ApplyBusinessDayAdjustment(
             schedule.StartDate,
-            schedule.BusinessDayAdjustment);
+            schedule.BusinessDayAdjustment,
+            plan);
 
         return adjusted >= rangeStart && adjusted <= rangeEnd
             ? [adjusted]
@@ -52,9 +55,10 @@ public sealed class ScheduleOccurrenceGenerator
     }
 
     private static IReadOnlyList<DateOnly> GenerateDaily(
-    Schedule schedule,
-    DateOnly rangeStart,
-    DateOnly rangeEnd)
+        Schedule schedule,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        CashFlowPlan? plan)
     {
         var result = new List<DateOnly>();
 
@@ -73,7 +77,8 @@ public sealed class ScheduleOccurrenceGenerator
 
             var adjusted = ApplyBusinessDayAdjustment(
                 nominalDate,
-                schedule.BusinessDayAdjustment);
+                schedule.BusinessDayAdjustment,
+                plan);
 
             if (adjusted >= rangeStart && adjusted <= rangeEnd)
             {
@@ -85,13 +90,14 @@ public sealed class ScheduleOccurrenceGenerator
     }
 
     private static IReadOnlyList<DateOnly> GenerateWeekly(
-    Schedule schedule,
-    DateOnly rangeStart,
-    DateOnly rangeEnd)
+        Schedule schedule,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        CashFlowPlan? plan)
     {
         var result = new List<DateOnly>();
-        var wantedDay = schedule.DayOfWeek ?? schedule.StartDate.DayOfWeek;
 
+        var wantedDay = schedule.DayOfWeek ?? schedule.StartDate.DayOfWeek;
         var first = schedule.StartDate;
 
         while (first.DayOfWeek != wantedDay)
@@ -114,7 +120,8 @@ public sealed class ScheduleOccurrenceGenerator
 
             var adjusted = ApplyBusinessDayAdjustment(
                 nominalDate,
-                schedule.BusinessDayAdjustment);
+                schedule.BusinessDayAdjustment,
+                plan);
 
             if (adjusted >= rangeStart && adjusted <= rangeEnd)
             {
@@ -128,22 +135,23 @@ public sealed class ScheduleOccurrenceGenerator
     private static IReadOnlyList<DateOnly> GenerateMonthly(
         Schedule schedule,
         DateOnly effectiveStart,
-        DateOnly effectiveEnd)
+        DateOnly effectiveEnd,
+        CashFlowPlan? plan)
     {
-        return GenerateMonthlyLike(schedule, effectiveStart, effectiveEnd, 1);
+        return GenerateMonthlyLike(schedule, effectiveStart, effectiveEnd, 1, plan);
     }
 
     private static IReadOnlyList<DateOnly> GenerateMonthlyLike(
-    Schedule schedule,
-    DateOnly rangeStart,
-    DateOnly rangeEnd,
-    int monthStep)
+        Schedule schedule,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        int monthStep,
+        CashFlowPlan? plan)
     {
         var result = new List<DateOnly>();
 
         var current = new DateOnly(schedule.StartDate.Year, schedule.StartDate.Month, 1);
         var day = schedule.DayOfMonth ?? schedule.StartDate.Day;
-
         var effectiveMonthStep = monthStep * schedule.Interval;
 
         var nominalEnd = schedule.EndDate is null
@@ -161,7 +169,8 @@ public sealed class ScheduleOccurrenceGenerator
             {
                 var adjusted = ApplyBusinessDayAdjustment(
                     nominalDate,
-                    schedule.BusinessDayAdjustment);
+                    schedule.BusinessDayAdjustment,
+                    plan);
 
                 if (adjusted >= rangeStart && adjusted <= rangeEnd)
                 {
@@ -176,9 +185,10 @@ public sealed class ScheduleOccurrenceGenerator
     }
 
     private static IReadOnlyList<DateOnly> GenerateYearly(
-    Schedule schedule,
-    DateOnly rangeStart,
-    DateOnly rangeEnd)
+        Schedule schedule,
+        DateOnly rangeStart,
+        DateOnly rangeEnd,
+        CashFlowPlan? plan)
     {
         var result = new List<DateOnly>();
 
@@ -200,7 +210,8 @@ public sealed class ScheduleOccurrenceGenerator
 
             var adjusted = ApplyBusinessDayAdjustment(
                 nominalDate,
-                schedule.BusinessDayAdjustment);
+                schedule.BusinessDayAdjustment,
+                plan);
 
             if (adjusted >= rangeStart && adjusted <= rangeEnd)
             {
@@ -211,16 +222,19 @@ public sealed class ScheduleOccurrenceGenerator
         return result.Distinct().Order().ToList();
     }
 
-    private static DateOnly CreateDateClampedToMonth(int year, int month, int day)
-    {
-        var daysInMonth = DateTime.DaysInMonth(year, month);
-        return new DateOnly(year, month, Math.Min(day, daysInMonth));
-    }
-
     private static DateOnly ApplyBusinessDayAdjustment(
         DateOnly date,
-        BusinessDayAdjustment adjustment)
+        BusinessDayAdjustment adjustment,
+        CashFlowPlan? plan)
     {
+        if (plan is not null)
+        {
+            return BankCalendarCalculator.ApplyBusinessDayAdjustment(
+                date,
+                plan,
+                adjustment);
+        }
+
         return adjustment switch
         {
             BusinessDayAdjustment.None => date,
@@ -228,6 +242,12 @@ public sealed class ScheduleOccurrenceGenerator
             BusinessDayAdjustment.PreviousBusinessDay => MoveToPreviousBusinessDay(date),
             _ => date
         };
+    }
+
+    private static DateOnly CreateDateClampedToMonth(int year, int month, int day)
+    {
+        var daysInMonth = DateTime.DaysInMonth(year, month);
+        return new DateOnly(year, month, Math.Min(day, daysInMonth));
     }
 
     private static DateOnly MoveToNextBusinessDay(DateOnly date)
@@ -253,15 +273,12 @@ public sealed class ScheduleOccurrenceGenerator
     private static bool IsWeekend(DateOnly date)
         => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 
-    private static DateOnly Max(DateOnly left, DateOnly right)
-        => left >= right ? left : right;
-
     private static DateOnly Min(DateOnly left, DateOnly right)
         => left <= right ? left : right;
 
     private static bool IsNominalDateInsideSchedule(
-    Schedule schedule,
-    DateOnly nominalDate)
+        Schedule schedule,
+        DateOnly nominalDate)
     {
         if (nominalDate < schedule.StartDate)
         {

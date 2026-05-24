@@ -2184,4 +2184,58 @@
   <data name="Transaction_ShowAllTransactions" xml:space="preserve">
     <value>Alle Transaktionen anzeigen</value>
   </data>
+  <data name="Settings_PlanDefaults" xml:space="preserve">
+    <value>Plan-Standardwerte</value>
+  </data>
+  <data name="Settings_DefaultPaymentAccount" xml:space="preserve">
+    <value>Standard-Zahlungskonto</value>
+  </data>
+  <data name="Settings_NoDefaultPaymentAccount" xml:space="preserve">
+    <value>Kein Standard-Zahlungskonto</value>
+  </data>
+  <data name="Settings_DefaultPaymentAccountHelp" xml:space="preserve">
+    <value>Dieses Konto wird beim Erfassen einer neuen Transaktion vorausgewählt.</value>
+  </data>
+  <data name="Settings_TreatWeekendsAsBankOffDays" xml:space="preserve">
+    <value>Wochenenden als bankfreie Tage behandeln</value>
+  </data>
+  <data name="Settings_BankOffDays" xml:space="preserve">
+    <value>Bankfreie Tage</value>
+  </data>
+  <data name="Settings_BankOffDaysHelp" xml:space="preserve">
+    <value>Erfasse Feiertage oder andere Tage, an denen deine Bank keine Zahlungen verarbeitet.</value>
+  </data>
+  <data name="Settings_NoBankOffDaysDefined" xml:space="preserve">
+    <value>Keine bankfreien Tage definiert.</value>
+  </data>
+  <data name="Settings_AddBankOffDay" xml:space="preserve">
+    <value>Bankfreien Tag hinzufügen</value>
+  </data>
+  <data name="Settings_SavePlanDefaults" xml:space="preserve">
+    <value>Plan-Standardwerte speichern</value>
+  </data>
+  <data name="Settings_PlanDefaultsSaved" xml:space="preserve">
+    <value>Plan-Standardwerte gespeichert.</value>
+  </data>
+  <data name="Settings_ErrorDefaultPaymentAccountUnknown" xml:space="preserve">
+    <value>Das ausgewählte Standard-Zahlungskonto existiert nicht.</value>
+  </data>
+  <data name="Settings_ErrorDuplicateBankOffDays" xml:space="preserve">
+    <value>Bankfreie Tage enthalten doppelte Datumswerte.</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>Notiz</value>
+  </data>
+  <data name="AccountStatement_BalanceOverTime" xml:space="preserve">
+    <value>Kontostand über Zeit</value>
+  </data>
+  <data name="AccountStatement_NotEnoughChartData" xml:space="preserve">
+    <value>Nicht genügend Daten für ein Kontostand-Diagramm.</value>
+  </data>
+  <data name="Transaction_TabOneTime" xml:space="preserve">
+    <value>Einmalige Transaktionen</value>
+  </data>
+  <data name="Transaction_TabRecurring" xml:space="preserve">
+    <value>Wiederkehrende Transaktionen</value>
+  </data>
 </root>

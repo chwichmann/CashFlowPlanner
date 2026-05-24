@@ -214,4 +214,131 @@ public sealed class ScheduleOccurrenceGeneratorTests
         new DateOnly(2026, 2, 27)
         ], dates);
     }
+
+    [Fact]
+    public void MonthlySchedule_WithNextBusinessDayAndPlanHoliday_Should_MoveToNextBankBusinessDay()
+    {
+        // Arrange
+        var generator = new ScheduleOccurrenceGenerator();
+
+        // 2026-08-01 is Saturday.
+        // 2026-08-03 is Monday, but configured as bank off day.
+        // Expected adjusted date is Tuesday 2026-08-04.
+        var schedule = new Schedule
+        {
+            Frequency = ScheduleFrequency.Monthly,
+            StartDate = new DateOnly(2026, 8, 1),
+            DayOfMonth = 1,
+            BusinessDayAdjustment = BusinessDayAdjustment.NextBusinessDay
+        };
+
+        var plan = CreatePlanWithBankOffDays(
+        [
+            new BankOffDay
+        {
+            Date = new DateOnly(2026, 8, 3),
+            Name = "Bank holiday"
+        }
+        ]);
+
+        // Act
+        var dates = generator.GenerateOccurrences(
+            schedule,
+            new DateOnly(2026, 8, 1),
+            new DateOnly(2026, 8, 31),
+            plan);
+
+        // Assert
+        Assert.Single(dates);
+        Assert.Equal(new DateOnly(2026, 8, 4), dates[0]);
+    }
+
+    [Fact]
+    public void MonthlySchedule_WithPreviousBusinessDayAndPlanHoliday_Should_MoveToPreviousBankBusinessDay()
+    {
+        // Arrange
+        var generator = new ScheduleOccurrenceGenerator();
+
+        // 2026-02-01 is Sunday.
+        // Previous weekend-only business day would be Friday 2026-01-30.
+        // But 2026-01-30 is configured as bank off day.
+        // Expected adjusted date is Thursday 2026-01-29.
+        var schedule = new Schedule
+        {
+            Frequency = ScheduleFrequency.Monthly,
+            StartDate = new DateOnly(2026, 2, 1),
+            DayOfMonth = 1,
+            BusinessDayAdjustment = BusinessDayAdjustment.PreviousBusinessDay
+        };
+
+        var plan = CreatePlanWithBankOffDays(
+        [
+            new BankOffDay
+        {
+            Date = new DateOnly(2026, 1, 30),
+            Name = "Bank holiday"
+        }
+        ]);
+
+        // Act
+        var dates = generator.GenerateOccurrences(
+            schedule,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 1, 31),
+            plan);
+
+        // Assert
+        Assert.Single(dates);
+        Assert.Equal(new DateOnly(2026, 1, 29), dates[0]);
+    }
+
+    [Fact]
+    public void MonthlySchedule_WithPlanAndWeekendsDisabled_Should_NotTreatWeekendAsBankOffDay()
+    {
+        // Arrange
+        var generator = new ScheduleOccurrenceGenerator();
+
+        // 2026-08-01 is Saturday.
+        // Because TreatWeekendsAsBankOffDays = false, the date should stay 2026-08-01.
+        var schedule = new Schedule
+        {
+            Frequency = ScheduleFrequency.Monthly,
+            StartDate = new DateOnly(2026, 8, 1),
+            DayOfMonth = 1,
+            BusinessDayAdjustment = BusinessDayAdjustment.NextBusinessDay
+        };
+
+        var plan = new CashFlowPlan
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Plan",
+            BaseCurrency = "CHF",
+            TreatWeekendsAsBankOffDays = false,
+            BankOffDays = []
+        };
+
+        // Act
+        var dates = generator.GenerateOccurrences(
+            schedule,
+            new DateOnly(2026, 8, 1),
+            new DateOnly(2026, 8, 31),
+            plan);
+
+        // Assert
+        Assert.Single(dates);
+        Assert.Equal(new DateOnly(2026, 8, 1), dates[0]);
+    }
+
+    private static CashFlowPlan CreatePlanWithBankOffDays(
+        List<BankOffDay> bankOffDays)
+    {
+        return new CashFlowPlan
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Plan",
+            BaseCurrency = "CHF",
+            TreatWeekendsAsBankOffDays = true,
+            BankOffDays = bankOffDays
+        };
+    }
 }
