@@ -223,7 +223,7 @@
     <value>Status</value>
   </data>
   <data name="Transactions" xml:space="preserve">
-    <value>Bewegungen</value>
+    <value>Transaktionen</value>
   </data>
   <data name="Type" xml:space="preserve">
     <value>Typ</value>
@@ -268,7 +268,7 @@
     <value>Simulation</value>
   </data>
   <data name="Nav_Transactions" xml:space="preserve">
-    <value>Bewegungen</value>
+    <value>Transaktionen</value>
   </data>
   <data name="Enum.AccountInterestCalculationMethod.FlatBalance" xml:space="preserve">
     <value>Fixer Kontostand</value>
@@ -820,10 +820,10 @@
     <value>Kein Plan geladen. Gehe zu Home und importiere eine Cashflow-JSON-Datei.</value>
   </data>
   <data name="Transaction_AddTransaction" xml:space="preserve">
-    <value>Bewegung hinzufügen</value>
+    <value>Transaktion hinzufügen</value>
   </data>
   <data name="Transaction_EditTransaction" xml:space="preserve">
-    <value>Bewegung bearbeiten</value>
+    <value>Transaktion bearbeiten</value>
   </data>
   <data name="Transaction_Priority" xml:space="preserve">
     <value>Priorität</value>
@@ -907,7 +907,7 @@
     <value>Filter zurücksetzen</value>
   </data>
   <data name="Transaction_NoTransactionsMatchFilter" xml:space="preserve">
-    <value>Keine Bewegungen entsprechen dem aktuellen Filter.</value>
+    <value>Keine Transaktionen entsprechen dem aktuellen Filter.</value>
   </data>
   <data name="Transaction_From" xml:space="preserve">
     <value>Von</value>
@@ -931,19 +931,19 @@
     <value>Intervall muss grösser oder gleich 1 sein.</value>
   </data>
   <data name="Transaction_Added" xml:space="preserve">
-    <value>Bewegung '{0}' hinzugefügt.</value>
+    <value>Transaktion '{0}' hinzugefügt.</value>
   </data>
   <data name="Transaction_Updated" xml:space="preserve">
     <value>Bewegung '{0}' aktualisiert.</value>
   </data>
   <data name="Transaction_DeleteTitle" xml:space="preserve">
-    <value>Bewegung löschen</value>
+    <value>Transaktion löschen</value>
   </data>
   <data name="Transaction_DeleteConfirm" xml:space="preserve">
-    <value>Bewegung '{0}' löschen?</value>
+    <value>Transaktion '{0}' löschen?</value>
   </data>
   <data name="Transaction_Deleted" xml:space="preserve">
-    <value>Bewegung '{0}' gelöscht.</value>
+    <value>Transaktion '{0}' gelöscht.</value>
   </data>
   <data name="Transaction_ScheduleOnceOn" xml:space="preserve">
     <value>Einmalig am {0}</value>
