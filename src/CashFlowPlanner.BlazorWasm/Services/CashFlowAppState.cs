@@ -47,7 +47,6 @@ public sealed class CashFlowAppState
         }
 
         var engine = new SimulationEngine();
-
         CurrentSimulationResult = engine.Simulate(CurrentPlan);
 
         NotifyChanged();
@@ -115,7 +114,32 @@ public sealed class CashFlowAppState
             return;
         }
 
-        CurrentPlan.Accounts.Remove(account);
+        var accounts = CurrentPlan.Accounts
+            .Where(x => x.Id != accountId)
+            .ToList();
+
+        CurrentPlan = new CashFlowPlan
+        {
+            Id = CurrentPlan.Id,
+            Name = CurrentPlan.Name,
+            BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId =
+                CurrentPlan.DefaultPaymentAccountId == accountId
+                    ? null
+                    : CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
+            Persons = CurrentPlan.Persons,
+            Accounts = accounts,
+            Transactions = CurrentPlan.Transactions,
+            Mortgages = CurrentPlan.Mortgages,
+            CreditCards = CurrentPlan.CreditCards,
+            Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
+            SimulationSettings = CurrentPlan.SimulationSettings
+        };
 
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
@@ -185,6 +209,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -201,6 +230,45 @@ public sealed class CashFlowAppState
         NotifyChanged();
     }
 
+    public void UpdatePlanDefaultsAndBankCalendar(
+        Guid? defaultPaymentAccountId,
+        bool treatWeekendsAsBankOffDays,
+        List<BankOffDay> bankOffDays)
+    {
+        if (CurrentPlan is null)
+        {
+            throw new InvalidOperationException("No cashflow plan is loaded.");
+        }
+
+        var candidatePlan = new CashFlowPlan
+        {
+            Id = CurrentPlan.Id,
+            Name = CurrentPlan.Name,
+            BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = defaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = treatWeekendsAsBankOffDays,
+            BankOffDays = bankOffDays,
+
+            Persons = CurrentPlan.Persons,
+            Accounts = CurrentPlan.Accounts,
+            Transactions = CurrentPlan.Transactions,
+            Mortgages = CurrentPlan.Mortgages,
+            CreditCards = CurrentPlan.CreditCards,
+            Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
+            SimulationSettings = CurrentPlan.SimulationSettings
+        };
+
+        candidatePlan.Validate();
+
+        CurrentPlan = candidatePlan;
+        CurrentSimulationResult = null;
+        CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
+
+        NotifyChanged();
+    }
+
     public void AddOrUpdateMortgage(MortgageContract mortgage)
     {
         if (CurrentPlan is null)
@@ -211,7 +279,6 @@ public sealed class CashFlowAppState
         mortgage.Validate();
 
         var mortgages = CurrentPlan.Mortgages.ToList();
-
         var existingIndex = mortgages.FindIndex(x => x.Id == mortgage.Id);
 
         if (existingIndex >= 0)
@@ -228,6 +295,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -263,6 +335,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -292,7 +369,6 @@ public sealed class CashFlowAppState
         creditCard.Validate();
 
         var creditCards = CurrentPlan.CreditCards.ToList();
-
         var existingIndex = creditCards.FindIndex(x => x.Id == creditCard.Id);
 
         if (existingIndex >= 0)
@@ -309,6 +385,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -344,6 +425,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -376,7 +462,6 @@ public sealed class CashFlowAppState
         }
 
         var persons = CurrentPlan.Persons.ToList();
-
         var existingIndex = persons.FindIndex(x => x.Id == person.Id);
 
         if (existingIndex >= 0)
@@ -393,6 +478,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -455,6 +545,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -491,6 +586,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = name.Trim(),
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -516,7 +616,6 @@ public sealed class CashFlowAppState
         contract.Validate();
 
         var pillar3aContracts = CurrentPlan.Pillar3aContracts.ToList();
-
         var existingIndex = pillar3aContracts.FindIndex(x => x.Id == contract.Id);
 
         if (existingIndex >= 0)
@@ -533,6 +632,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -568,6 +672,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -595,7 +704,6 @@ public sealed class CashFlowAppState
         }
 
         var scenarios = CurrentPlan.HouseBuyScenarios.ToList();
-
         var existingIndex = scenarios.FindIndex(x => x.Id == scenario.Id);
 
         if (existingIndex >= 0)
@@ -612,6 +720,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,
@@ -644,6 +757,11 @@ public sealed class CashFlowAppState
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
             BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
             Persons = CurrentPlan.Persons,
             Accounts = CurrentPlan.Accounts,
             Transactions = CurrentPlan.Transactions,

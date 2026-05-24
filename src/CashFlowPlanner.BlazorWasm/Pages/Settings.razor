@@ -18,46 +18,47 @@
 
 <PageTitle>@L["Settings"] - CashFlow Planner</PageTitle>
 
-<h1>@L["Settings"]</h1>
+<div class="container py-3">
+    <h1 class="mb-3">@L["Settings"]</h1>
 
-@if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <div class="alert alert-danger">
-        @_errorMessage
-    </div>
-}
-
-@if (!string.IsNullOrWhiteSpace(_infoMessage))
-{
-    <div class="alert alert-success">
-        @_infoMessage
-    </div>
-}
-
-@if (AppState.CurrentPlan is null)
-{
-    <div class="alert alert-warning">
-        @L["Settings_NoPlanLoaded"]
-    </div>
-}
-else if (_editModel is not null)
-{
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>@L["Plan"]</strong>
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            @_errorMessage
         </div>
+    }
 
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label" for="planName">@L["PlanTitle"]</label>
-                    <InputText id="planName"
-                               class="form-control"
-                               @bind-Value="_planName" />
-                </div>
+    @if (!string.IsNullOrWhiteSpace(_infoMessage))
+    {
+        <div class="alert alert-success">
+            @_infoMessage
+        </div>
+    }
+
+    @if (AppState.CurrentPlan is null)
+    {
+        <div class="alert alert-warning">
+            @L["Settings_NoPlanLoaded"]
+        </div>
+    }
+    else if (_editModel is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @L["Plan"]
             </div>
 
-            <div class="mt-3">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="plan-title">
+                        @L["PlanTitle"]
+                    </label>
+
+                    <input id="plan-title"
+                           class="form-control"
+                           @bind="_planName" />
+                </div>
+
                 <button type="button"
                         class="btn btn-primary"
                         @onclick="SavePlanName">
@@ -65,119 +66,262 @@ else if (_editModel is not null)
                 </button>
             </div>
         </div>
-    </div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>@L["Settings_SimulationSettings"]</strong>
-        </div>
+        @if (_planDefaultsEditModel is not null && AppState.CurrentPlan is not null)
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    @L["Settings_PlanDefaults"]
+                </div>
 
-        <div class="card-body">
-            <p class="text-muted">
-                @L["Settings_SimulationSettingsText"]
-            </p>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="default-payment-account">
+                            @L["Settings_DefaultPaymentAccount"]
+                        </label>
 
-            <EditForm Model="_editModel" OnValidSubmit="SaveSettings">
-                <DataAnnotationsValidator />
+                        <select id="default-payment-account"
+                                class="form-select"
+                                @bind="_planDefaultsEditModel.DefaultPaymentAccountId">
+                            <option value="">
+                                @L["Settings_NoDefaultPaymentAccount"]
+                            </option>
 
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label" for="dateMode">@L["Settings_DateMode"]</label>
-                        <InputSelect id="dateMode"
-                                     class="form-select"
-                                     @bind-Value="_editModel.DateMode">
-                            @foreach (var mode in Enum.GetValues<SimulationDateMode>())
+                            @foreach (var account in AppState.CurrentPlan.Accounts.OrderBy(x => x.Name))
                             {
-                                <option value="@mode">@EnumL.Translate(mode)</option>
+                                <option value="@account.Id">
+                                    @account.Name
+                                </option>
                             }
-                        </InputSelect>
+                        </select>
+
+                        <div class="form-text">
+                            @L["Settings_DefaultPaymentAccountHelp"]
+                        </div>
                     </div>
 
-                    @if (_editModel.DateMode == SimulationDateMode.RollingHorizon)
+                    <div class="form-check mb-3">
+                        <input id="treat-weekends-as-bank-off-days"
+                               class="form-check-input"
+                               type="checkbox"
+                               @bind="_planDefaultsEditModel.TreatWeekendsAsBankOffDays" />
+
+                        <label class="form-check-label" for="treat-weekends-as-bank-off-days">
+                            @L["Settings_TreatWeekendsAsBankOffDays"]
+                        </label>
+                    </div>
+
+                    <h5>@L["Settings_BankOffDays"]</h5>
+
+                    <p class="text-muted">
+                        @L["Settings_BankOffDaysHelp"]
+                    </p>
+
+                    @if (_planDefaultsEditModel.BankOffDays.Count == 0)
                     {
-                        <div class="col-md-3">
-                            <label class="form-label" for="startAnchor">@L["Settings_StartAnchor"]</label>
-                            <InputSelect id="startAnchor"
-                                         class="form-select"
-                                         @bind-Value="_editModel.StartAnchor">
-                                @foreach (var anchor in Enum.GetValues<SimulationStartAnchor>())
-                                {
-                                    <option value="@anchor">@EnumL.Translate(anchor)</option>
-                                }
-                            </InputSelect>
-                        </div>
-
-                        <div class="col-md-2">
-                            <label class="form-label" for="horizonMonths">@L["Settings_HorizonMonths"]</label>
-                            <InputNumber id="horizonMonths"
-                                         class="form-control"
-                                         @bind-Value="_editModel.HorizonMonths" />
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">@L["Settings_EffectiveRangePreview"]</label>
-                            <div class="form-control-plaintext">
-                                @FormatDate(GetPreviewRange().StartDate)
-                                -
-                                @FormatDate(GetPreviewRange().EndDate)
-                            </div>
+                        <div class="alert alert-light">
+                            @L["Settings_NoBankOffDaysDefined"]
                         </div>
                     }
                     else
                     {
-                        <div class="col-md-3">
-                            <label class="form-label" for="startDate">@L["Settings_StartDate"]</label>
-                            <InputDate id="startDate"
-                                       class="form-control"
-                                       @bind-Value="_editModel.StartDate" />
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label" for="endDate">@L["Settings_EndDate"]</label>
-                            <InputDate id="endDate"
-                                       class="form-control"
-                                       @bind-Value="_editModel.EndDate" />
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>@L["Date"]</th>
+                                        <th>@L["Name"]</th>
+                                        <th>@L["Note"]</th>
+                                        <th class="text-end">@L["Actions"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var bankOffDay in _planDefaultsEditModel.BankOffDays.OrderBy(x => x.Date))
+                                    {
+                                        <tr>
+                                            <td style="width: 12rem;">
+                                                <input type="date"
+                                                       class="form-control"
+                                                       @bind="bankOffDay.Date" />
+                                            </td>
+                                            <td>
+                                                <input class="form-control"
+                                                       @bind="bankOffDay.Name" />
+                                            </td>
+                                            <td>
+                                                <input class="form-control"
+                                                       @bind="bankOffDay.Note" />
+                                            </td>
+                                            <td class="text-end">
+                                                <button type="button"
+                                                        class="btn btn-outline-danger btn-sm"
+                                                        @onclick="() => RemoveBankOffDay(bankOffDay)">
+                                                    @L["Delete"]
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
                     }
 
-                    <div class="col-md-3">
-                        <label class="form-label" for="granularity">@L["Settings_Granularity"]</label>
-                        <InputSelect id="granularity"
-                                     class="form-select"
-                                     @bind-Value="_editModel.Granularity">
-                            @foreach (var granularity in Enum.GetValues<SimulationGranularity>())
-                            {
-                                <option value="@granularity">@EnumL.Translate(granularity)</option>
-                            }
-                        </InputSelect>
-                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="AddBankOffDay">
+                            @L["Settings_AddBankOffDay"]
+                        </button>
 
-                    <div class="col-md-12">
-                        <div class="form-check">
-                            <InputCheckbox id="includeInactiveAccounts"
-                                           class="form-check-input"
-                                           @bind-Value="_editModel.IncludeInactiveAccounts" />
-                            <label class="form-check-label" for="includeInactiveAccounts">
-                                @L["Settings_IncludeInactiveAccounts"]
-                            </label>
-                        </div>
-                    </div>
+                        <button type="button"
+                                class="btn btn-primary"
+                                @onclick="SavePlanDefaults">
+                            @L["Settings_SavePlanDefaults"]
+                        </button>
 
-                    <div class="col-md-12">
-                        <div class="form-check">
-                            <InputCheckbox id="warnOnNegativeBankBalance"
-                                           class="form-check-input"
-                                           @bind-Value="_editModel.WarnOnNegativeBankBalance" />
-                            <label class="form-check-label" for="warnOnNegativeBankBalance">
-                                @L["Settings_WarnOnNegativeBankBalance"]
-                            </label>
-                        </div>
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                @onclick="ReloadFromPlan">
+                            @L["Reset"]
+                        </button>
                     </div>
                 </div>
+            </div>
+        }
 
-                <div class="mt-3 d-flex gap-2">
-                    <button type="submit"
-                            class="btn btn-primary">
+        <div class="card mb-3">
+            <div class="card-header">
+                @L["Settings_SimulationSettings"]
+            </div>
+
+            <div class="card-body">
+                <p class="text-muted">
+                    @L["Settings_SimulationSettingsText"]
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label" for="date-mode">
+                        @L["Settings_DateMode"]
+                    </label>
+
+                    <select id="date-mode"
+                            class="form-select"
+                            @bind="_editModel.DateMode">
+                        @foreach (var mode in Enum.GetValues<SimulationDateMode>())
+                        {
+                            <option value="@mode">
+                                @EnumL.Translate(mode)
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                @if (_editModel.DateMode == SimulationDateMode.RollingHorizon)
+                {
+                    <div class="mb-3">
+                        <label class="form-label" for="start-anchor">
+                            @L["Settings_StartAnchor"]
+                        </label>
+
+                        <select id="start-anchor"
+                                class="form-select"
+                                @bind="_editModel.StartAnchor">
+                            @foreach (var anchor in Enum.GetValues<SimulationStartAnchor>())
+                            {
+                                <option value="@anchor">
+                                    @EnumL.Translate(anchor)
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="horizon-months">
+                            @L["Settings_HorizonMonths"]
+                        </label>
+
+                        <input id="horizon-months"
+                               type="number"
+                               min="1"
+                               class="form-control"
+                               @bind="_editModel.HorizonMonths" />
+                    </div>
+
+                    <div class="alert alert-light">
+                        <strong>@L["Settings_EffectiveRangePreview"]</strong>
+                        <div>
+                            @FormatDate(GetPreviewRange().StartDate) - @FormatDate(GetPreviewRange().EndDate)
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label class="form-label" for="simulation-start-date">
+                            @L["Settings_StartDate"]
+                        </label>
+
+                        <input id="simulation-start-date"
+                               type="date"
+                               class="form-control"
+                               @bind="_editModel.StartDate" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="simulation-end-date">
+                            @L["Settings_EndDate"]
+                        </label>
+
+                        <input id="simulation-end-date"
+                               type="date"
+                               class="form-control"
+                               @bind="_editModel.EndDate" />
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label" for="granularity">
+                        @L["Settings_Granularity"]
+                    </label>
+
+                    <select id="granularity"
+                            class="form-select"
+                            @bind="_editModel.Granularity">
+                        @foreach (var granularity in Enum.GetValues<SimulationGranularity>())
+                        {
+                            <option value="@granularity">
+                                @EnumL.Translate(granularity)
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input id="include-inactive-accounts"
+                           class="form-check-input"
+                           type="checkbox"
+                           @bind="_editModel.IncludeInactiveAccounts" />
+
+                    <label class="form-check-label" for="include-inactive-accounts">
+                        @L["Settings_IncludeInactiveAccounts"]
+                    </label>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input id="warn-on-negative-bank-balance"
+                           class="form-check-input"
+                           type="checkbox"
+                           @bind="_editModel.WarnOnNegativeBankBalance" />
+
+                    <label class="form-check-label" for="warn-on-negative-bank-balance">
+                        @L["Settings_WarnOnNegativeBankBalance"]
+                    </label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SaveSettings">
                         @L["Settings_SaveSettings"]
                     </button>
 
@@ -187,93 +331,99 @@ else if (_editModel is not null)
                         @L["Reset"]
                     </button>
                 </div>
-            </EditForm>
 
-            @if (AppState.CurrentSimulationResult is not null)
-            {
-                <div class="alert alert-info mt-3">
-                    @Text(
-                        "Settings_CurrentSimulationResult",
-                        FormatDate(AppState.CurrentSimulationResult.StartDate),
-                        FormatDate(AppState.CurrentSimulationResult.EndDate),
-                        AppState.CurrentSimulationResult.Events.Count,
-                        AppState.CurrentSimulationResult.BalancePoints.Count,
-                        AppState.CurrentSimulationResult.Warnings.Count)
-                </div>
-            }
-        </div>
-    </div>
-
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>@L["BrowserWorkingCopy"]</strong>
+                @if (AppState.CurrentSimulationResult is not null)
+                {
+                    <div class="alert alert-info mt-3">
+                        @Text(
+                            "Settings_CurrentSimulationResult",
+                            FormatDate(AppState.CurrentSimulationResult.StartDate),
+                            FormatDate(AppState.CurrentSimulationResult.EndDate),
+                            AppState.CurrentSimulationResult.Events.Count,
+                            AppState.CurrentSimulationResult.BalancePoints.Count,
+                            AppState.CurrentSimulationResult.Warnings.Count)
+                    </div>
+                }
+            </div>
         </div>
 
-        <div class="card-body">
-            <p>
-                @L["Settings_BrowserWorkingCopyText"]
-            </p>
+        <div class="card mb-3">
+            <div class="card-header">
+                @L["BrowserWorkingCopy"]
+            </div>
 
-            <button type="button"
-                    class="btn btn-outline-danger"
-                    @onclick="ClearBrowserCacheAsync">
-                @L["ClearBrowserCache"]
-            </button>
+            <div class="card-body">
+                <p class="text-muted">
+                    @L["Settings_BrowserWorkingCopyText"]
+                </p>
 
-            @if (!string.IsNullOrWhiteSpace(_browserCacheMessage))
-            {
-                <div class="alert alert-info mt-3">
-                    @_browserCacheMessage
-                </div>
-            }
+                <button type="button"
+                        class="btn btn-outline-danger"
+                        @onclick="ClearBrowserCacheAsync">
+                    @L["ClearBrowserCache"]
+                </button>
+
+                @if (!string.IsNullOrWhiteSpace(_browserCacheMessage))
+                {
+                    <div class="alert alert-info mt-3">
+                        @_browserCacheMessage
+                    </div>
+                }
+            </div>
         </div>
-    </div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>@L["LanguageAndRegion"]</strong>
-        </div>
+        <div class="card mb-3">
+            <div class="card-header">
+                @L["LanguageAndRegion"]
+            </div>
 
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">@L["Language"]</label>
-                    <InputSelect class="form-select"
-                                 @bind-Value="_cultureEditModel.LanguageCulture">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="language-culture">
+                        @L["Language"]
+                    </label>
+
+                    <select id="language-culture"
+                            class="form-select"
+                            @bind="_cultureEditModel.LanguageCulture">
                         <option value="en">@L["Language_English"]</option>
                         <option value="de">@L["Language_German"]</option>
-                    </InputSelect>
+                    </select>
                 </div>
 
-                <div class="col-md-3">
-                    <label class="form-label">@L["Region"]</label>
-                    <InputSelect class="form-select"
-                                 @bind-Value="_cultureEditModel.RegionCulture">
+                <div class="mb-3">
+                    <label class="form-label" for="region-culture">
+                        @L["Region"]
+                    </label>
+
+                    <select id="region-culture"
+                            class="form-select"
+                            @bind="_cultureEditModel.RegionCulture">
                         <option value="en-CH">@L["Region_SwitzerlandEnglish"]</option>
                         <option value="de-CH">@L["Region_SwitzerlandGerman"]</option>
                         <option value="en-US">@L["Region_UnitedStatesEnglish"]</option>
                         <option value="de-DE">@L["Region_GermanyGerman"]</option>
-                    </InputSelect>
+                    </select>
                 </div>
-            </div>
 
-            <div class="mt-3 d-flex gap-2">
                 <button type="button"
                         class="btn btn-primary"
                         @onclick="SaveCulturePreferencesAsync">
                     @L["SaveLanguageAndRegion"]
                 </button>
-            </div>
 
-            <div class="form-text mt-2">
-                @L["LanguageChangeReloadHint"]
+                <div class="form-text mt-2">
+                    @L["LanguageChangeReloadHint"]
+                </div>
             </div>
         </div>
-    </div>
-}
+    }
+</div>
 
 @code {
     private SimulationSettingsEditModel? _editModel;
+    private PlanDefaultsEditModel? _planDefaultsEditModel;
+
     private string? _planName;
     private Guid? _loadedPlanId;
 
@@ -299,8 +449,10 @@ else if (_editModel is not null)
         if (AppState.CurrentPlan is null)
         {
             _editModel = null;
+            _planDefaultsEditModel = null;
             _planName = null;
             _loadedPlanId = null;
+
             return;
         }
 
@@ -317,8 +469,10 @@ else if (_editModel is not null)
         if (AppState.CurrentPlan is null)
         {
             _editModel = null;
+            _planDefaultsEditModel = null;
             _planName = null;
             _loadedPlanId = null;
+
             return;
         }
 
@@ -327,6 +481,9 @@ else if (_editModel is not null)
 
         _editModel = SimulationSettingsEditModel.FromSettings(
             AppState.CurrentPlan.SimulationSettings);
+
+        _planDefaultsEditModel = PlanDefaultsEditModel.FromPlan(
+            AppState.CurrentPlan);
     }
 
     private void SavePlanName()
@@ -347,6 +504,99 @@ else if (_editModel is not null)
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
+        }
+    }
+
+    private void SavePlanDefaults()
+    {
+        ClearMessages();
+
+        if (_planDefaultsEditModel is null || AppState.CurrentPlan is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var bankOffDays = _planDefaultsEditModel.ToBankOffDays();
+
+            ValidatePlanDefaults(
+                _planDefaultsEditModel.DefaultPaymentAccountId,
+                bankOffDays);
+
+            AppState.UpdatePlanDefaultsAndBankCalendar(
+                _planDefaultsEditModel.DefaultPaymentAccountId,
+                _planDefaultsEditModel.TreatWeekendsAsBankOffDays,
+                bankOffDays);
+
+            _infoMessage = Text("Settings_PlanDefaultsSaved");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void AddBankOffDay()
+    {
+        ClearMessages();
+
+        if (_planDefaultsEditModel is null)
+        {
+            return;
+        }
+
+        _planDefaultsEditModel.BankOffDays.Add(new BankOffDayEditModel
+        {
+            Date = DateOnly.FromDateTime(DateTime.Today),
+            Name = string.Empty,
+            Note = null
+        });
+    }
+
+    private void RemoveBankOffDay(BankOffDayEditModel bankOffDay)
+    {
+        ClearMessages();
+
+        _planDefaultsEditModel?.BankOffDays.Remove(bankOffDay);
+    }
+
+    private void ValidatePlanDefaults(
+        Guid? defaultPaymentAccountId,
+        IReadOnlyCollection<BankOffDay> bankOffDays)
+    {
+        if (AppState.CurrentPlan is null)
+        {
+            return;
+        }
+
+        var accountIds = AppState.CurrentPlan.Accounts
+            .Select(x => x.Id)
+            .ToHashSet();
+
+        if (defaultPaymentAccountId is not null &&
+            !accountIds.Contains(defaultPaymentAccountId.Value))
+        {
+            throw new InvalidOperationException(
+                Text("Settings_ErrorDefaultPaymentAccountUnknown"));
+        }
+
+        var duplicateDates = bankOffDays
+            .GroupBy(x => x.Date)
+            .Where(x => x.Count() > 1)
+            .Select(x => x.Key)
+            .OrderBy(x => x)
+            .ToList();
+
+        if (duplicateDates.Count > 0)
+        {
+            throw new InvalidOperationException(
+                Text("Settings_ErrorDuplicateBankOffDays"));
+        }
+
+        foreach (var bankOffDay in bankOffDays)
+        {
+            bankOffDay.Validate();
         }
     }
 
@@ -401,6 +651,7 @@ else if (_editModel is not null)
         }
 
         var settings = _editModel.ToSettings();
+
         settings.Validate();
     }
 
@@ -409,6 +660,7 @@ else if (_editModel is not null)
         if (_editModel is null)
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
+
             return new SimulationDateRange(today, today);
         }
 

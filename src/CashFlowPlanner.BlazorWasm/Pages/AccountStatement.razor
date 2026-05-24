@@ -2,8 +2,8 @@
 
 @using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
-@using CashFlowPlanner.Core.Accounts
 @using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.Core.Accounts
 @using Microsoft.Extensions.Localization
 
 @inject CashFlowAppState AppState
@@ -12,7 +12,7 @@
 
 <PageTitle>@L["AccountStatement_Title"] - CashFlow Planner</PageTitle>
 
-<h1>@L["AccountStatement_Title"]</h1>
+<h2>@L["AccountStatement_Title"]</h2>
 
 @if (AppState.CurrentPlan is null)
 {
@@ -22,31 +22,120 @@
 }
 else if (Account is null)
 {
-    <div class="alert alert-danger">
+    <div class="alert alert-warning">
         @L["AccountStatement_AccountNotFound"]
     </div>
 }
 else
 {
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>@Account.Name</strong>
+    var rows = BuildRows();
+    var closingBalanceByDate = BuildClosingBalanceByDate();
+    var chartPoints = BuildBalanceChartPoints(closingBalanceByDate);
+
+    <div class="card mb-3">
+        <div class="card-header fw-bold">
+            @Account.Name
         </div>
 
         <div class="card-body">
-            <dl class="row mb-0">
-                <dt class="col-sm-2">@L["Account_Type"]</dt>
-                <dd class="col-sm-10">@EnumL.Translate(Account.Type)</dd>
+            <div class="row g-4 align-items-stretch">
+                <div class="col-12 col-lg-4">
+                    <dl class="row mb-0 account-info-list">
+                        <dt class="col-sm-5">@L["Account_Type"]</dt>
+                        <dd class="col-sm-7">@EnumL.Translate(Account.Type)</dd>
 
-                <dt class="col-sm-2">@L["Account_Currency"]</dt>
-                <dd class="col-sm-10">@Account.Currency</dd>
+                        <dt class="col-sm-5">@L["Account_Currency"]</dt>
+                        <dd class="col-sm-7">@Account.Currency</dd>
 
-                <dt class="col-sm-2">@L["Account_OpeningBalance"]</dt>
-                <dd class="col-sm-10">@Account.OpeningBalance.ToString("N2", CultureInfo.CurrentCulture) @Account.Currency</dd>
+                        <dt class="col-sm-5">@L["Account_OpeningBalance"]</dt>
+                        <dd class="col-sm-7">
+                            @Account.OpeningBalance.ToString("N2", CultureInfo.CurrentCulture) @Account.Currency
+                        </dd>
 
-                <dt class="col-sm-2">@L["Account_OpeningDate"]</dt>
-                <dd class="col-sm-10">@FormatDate(Account.OpeningDate)</dd>
-            </dl>
+                        <dt class="col-sm-5">@L["Account_OpeningDate"]</dt>
+                        <dd class="col-sm-7">@FormatDate(Account.OpeningDate)</dd>
+                    </dl>
+                </div>
+
+                <div class="col-12 col-lg-8">
+                    <div class="statement-chart-panel">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="fw-semibold">
+                                    @L["AccountStatement_BalanceOverTime"]
+                                </div>
+
+                                @if (chartPoints.Count > 0)
+                                {
+                                    var latestPoint = chartPoints[^1];
+
+                                    <div class="text-muted small">
+                                        @FormatDate(latestPoint.Date):
+                                        @latestPoint.Balance.ToString("N2", CultureInfo.CurrentCulture)
+                                        @latestPoint.Currency
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        @if (chartPoints.Count < 2)
+                        {
+                            <div class="text-muted small py-4">
+                                @L["AccountStatement_NotEnoughChartData"]
+                            </div>
+                        }
+                        else
+                        {
+                            var svgPoints = BuildSvgBalanceChartPoints(chartPoints);
+                            var polyline = BuildSvgPolyline(svgPoints);
+                            var area = BuildSvgArea(svgPoints);
+                            var minBalance = chartPoints.Min(x => x.Balance);
+                            var maxBalance = chartPoints.Max(x => x.Balance);
+
+                            <svg class="statement-balance-chart"
+                                 viewBox="0 0 640 220"
+                                 role="img"
+                                 aria-label="@L["AccountStatement_BalanceOverTime"]">
+
+                                <line x1="52" y1="20" x2="52" y2="178" class="statement-chart-axis" />
+                                <line x1="52" y1="178" x2="620" y2="178" class="statement-chart-axis" />
+
+                                <line x1="52" y1="60" x2="620" y2="60" class="statement-chart-grid" />
+                                <line x1="52" y1="105" x2="620" y2="105" class="statement-chart-grid" />
+                                <line x1="52" y1="150" x2="620" y2="150" class="statement-chart-grid" />
+
+                                <polygon points="@area" class="statement-chart-area" />
+                                <polyline points="@polyline" class="statement-chart-line" />
+
+                                @foreach (var point in svgPoints)
+                                {
+                                    <circle cx="@FormatSvg(point.X)"
+                                            cy="@FormatSvg(point.Y)"
+                                            r="3"
+                                            class="statement-chart-point">
+                                        <title>
+                                            @FormatDate(point.Date):
+                                            @point.Balance.ToString("N2", CultureInfo.CurrentCulture)
+                                            @point.Currency
+                                        </title>
+                                    </circle>
+                                }
+                            </svg>
+
+                            <div class="d-flex justify-content-between small text-muted mt-1">
+                                <span>@FormatDate(chartPoints[0].Date)</span>
+                                <span>
+                                    @minBalance.ToString("N0", CultureInfo.CurrentCulture)
+                                    -
+                                    @maxBalance.ToString("N0", CultureInfo.CurrentCulture)
+                                    @chartPoints[^1].Currency
+                                </span>
+                                <span>@FormatDate(chartPoints[^1].Date)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -58,27 +147,25 @@ else
     }
     else
     {
-        <div class="card mb-4">
-            <div class="card-header">
-                <strong>@L["AccountStatement_Range"]</strong>
+        <div class="card mb-3">
+            <div class="card-header fw-bold">
+                @L["AccountStatement_Range"]
             </div>
 
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-3">
                         <label class="form-label">@L["AccountStatement_From"]</label>
-                        <InputDate class="form-control" @bind-Value="_fromDate" />
+                        <input type="date" class="form-control" @bind="_fromDate" />
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-12 col-md-3">
                         <label class="form-label">@L["AccountStatement_To"]</label>
-                        <InputDate class="form-control" @bind-Value="_toDate" />
+                        <input type="date" class="form-control" @bind="_toDate" />
                     </div>
                 </div>
             </div>
         </div>
-
-        var rows = BuildRows();
 
         @if (rows.Count == 0)
         {
@@ -88,7 +175,7 @@ else
         }
         else
         {
-            <table class="table table-striped table-hover align-middle">
+            <table class="table table-sm table-striped align-middle">
                 <thead>
                     <tr>
                         <th>@L["AccountStatement_ValutaDate"]</th>
@@ -102,30 +189,48 @@ else
                 </thead>
 
                 <tbody>
-                    @foreach (var row in rows)
+                    @foreach (var item in rows.Select((row, index) => new { Row = row, Index = index }))
                     {
+                        var row = item.Row;
+                        var index = item.Index;
+
                         <tr>
                             <td>@FormatDate(row.ValutaDate)</td>
+
                             <td>
                                 @row.Title
 
                                 @if (!string.IsNullOrWhiteSpace(row.Notes))
                                 {
-                                    <div class="text-muted small">
+                                    <div class="small text-muted">
                                         @row.Notes
                                     </div>
                                 }
                             </td>
+
                             <td>@row.Category</td>
                             <td>@row.Counterparty</td>
+
                             <td class="text-end text-success">
                                 @FormatAmount(row.Incoming)
                             </td>
+
                             <td class="text-end text-danger">
                                 @FormatAmount(row.Outgoing)
                             </td>
-                            <td class="text-end">
-                                @row.Balance.ToString("N2", CultureInfo.CurrentCulture) @row.Currency
+
+                            <td class="text-end fw-semibold">
+                                @if (ShowBalanceForRow(rows, index))
+                                {
+                                    if (closingBalanceByDate.TryGetValue(row.ValutaDate, out var closingBalance))
+                                    {
+                                        @FormatAmount(closingBalance.Balance)
+                                    }
+                                    else
+                                    {
+                                        @FormatAmount(row.Balance)
+                                    }
+                                }
                             </td>
                         </tr>
                     }
@@ -170,11 +275,74 @@ else
             return [];
         }
 
-        return AccountStatementBuilder.Build(
+        var rows = AccountStatementBuilder.Build(
             Account,
             AppState.CurrentSimulationResult.Events,
             _fromDate,
             _toDate);
+
+        // Important:
+        // The displayed closing balance no longer depends on row.Balance.
+        // We still sort the visible movement rows so that daily grouping is stable.
+        return rows
+            .Select((row, index) => new { Row = row, Index = index })
+            .OrderBy(x => x.Row.ValutaDate)
+            .ThenBy(x => IsOpeningBalanceRow(x.Row) ? 0 : 1)
+            .ThenBy(x => x.Index)
+            .Select(x => x.Row)
+            .ToList();
+    }
+
+    private IReadOnlyDictionary<DateOnly, DailyClosingBalance> BuildClosingBalanceByDate()
+    {
+        if (Account is null || AppState.CurrentSimulationResult is null)
+        {
+            return new Dictionary<DateOnly, DailyClosingBalance>();
+        }
+
+        return AppState.CurrentSimulationResult.BalancePoints
+            .Where(x => x.AccountId == Account.Id)
+            .Where(x => x.Date >= _fromDate && x.Date <= _toDate)
+            .GroupBy(x => x.Date)
+            .OrderBy(x => x.Key)
+            .ToDictionary(
+                x => x.Key,
+                x =>
+                {
+                    var point = x.Last();
+
+                    return new DailyClosingBalance(
+                        point.Date,
+                        point.Balance,
+                        point.Currency);
+                });
+    }
+
+    private static bool ShowBalanceForRow(
+        IReadOnlyList<AccountStatementRow> rows,
+        int index)
+    {
+        if (index < 0 || index >= rows.Count)
+        {
+            return false;
+        }
+
+        var row = rows[index];
+
+        return index == rows.Count - 1
+            || rows[index + 1].ValutaDate != row.ValutaDate;
+    }
+
+    private static bool IsOpeningBalanceRow(AccountStatementRow row)
+    {
+        return string.Equals(
+                row.Title,
+                "Opening balance",
+                StringComparison.OrdinalIgnoreCase)
+            || string.Equals(
+                row.Category,
+                "Opening Balance",
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatAmount(decimal? amount)
@@ -187,5 +355,123 @@ else
     private static string FormatDate(DateOnly date)
     {
         return date.ToString("d", CultureInfo.CurrentCulture);
+    }
+
+    private sealed record DailyClosingBalance(
+        DateOnly Date,
+        decimal Balance,
+        string Currency);
+
+    private sealed record AccountBalanceChartPoint(
+        DateOnly Date,
+        decimal Balance,
+        string Currency);
+
+    private sealed record SvgBalanceChartPoint(
+        double X,
+        double Y,
+        DateOnly Date,
+        decimal Balance,
+        string Currency);
+
+    private static IReadOnlyList<AccountBalanceChartPoint> BuildBalanceChartPoints(
+        IReadOnlyDictionary<DateOnly, DailyClosingBalance> closingBalanceByDate)
+    {
+        return closingBalanceByDate
+            .OrderBy(x => x.Key)
+            .Select(x => new AccountBalanceChartPoint(
+                x.Value.Date,
+                x.Value.Balance,
+                x.Value.Currency))
+            .ToList();
+    }
+
+    private static IReadOnlyList<SvgBalanceChartPoint> BuildSvgBalanceChartPoints(
+        IReadOnlyList<AccountBalanceChartPoint> points)
+    {
+        const double plotLeft = 52;
+        const double plotTop = 20;
+        const double plotWidth = 568;
+        const double plotHeight = 158;
+
+        if (points.Count == 0)
+        {
+            return [];
+        }
+
+        var minDate = points.Min(x => x.Date);
+        var maxDate = points.Max(x => x.Date);
+
+        var minBalance = points.Min(x => x.Balance);
+        var maxBalance = points.Max(x => x.Balance);
+
+        var dayRange = Math.Max(
+            1,
+            maxDate.DayNumber - minDate.DayNumber);
+
+        var minValue = (double)minBalance;
+        var maxValue = (double)maxBalance;
+
+        if (Math.Abs(maxValue - minValue) < 0.0001)
+        {
+            var padding = Math.Max(
+                1d,
+                Math.Abs(maxValue) * 0.05d);
+
+            minValue -= padding;
+            maxValue += padding;
+        }
+
+        var valueRange = maxValue - minValue;
+
+        return points
+            .Select(point =>
+            {
+                var x = plotLeft
+                    + ((point.Date.DayNumber - minDate.DayNumber) / (double)dayRange) * plotWidth;
+
+                var y = plotTop
+                    + ((maxValue - (double)point.Balance) / valueRange) * plotHeight;
+
+                return new SvgBalanceChartPoint(
+                    x,
+                    y,
+                    point.Date,
+                    point.Balance,
+                    point.Currency);
+            })
+            .ToList();
+    }
+
+    private static string BuildSvgPolyline(
+        IReadOnlyList<SvgBalanceChartPoint> points)
+    {
+        return string.Join(
+            " ",
+            points.Select(point => $"{FormatSvg(point.X)},{FormatSvg(point.Y)}"));
+    }
+
+    private static string BuildSvgArea(
+        IReadOnlyList<SvgBalanceChartPoint> points)
+    {
+        if (points.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        const double baselineY = 178;
+
+        var first = points[0];
+        var last = points[^1];
+        var linePoints = BuildSvgPolyline(points);
+
+        return $"{FormatSvg(first.X)},{FormatSvg(baselineY)} " +
+               $"{linePoints} " +
+               $"{FormatSvg(last.X)},{FormatSvg(baselineY)}";
+    }
+
+    private static string FormatSvg(double value)
+    {
+        return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 }

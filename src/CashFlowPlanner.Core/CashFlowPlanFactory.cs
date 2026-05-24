@@ -10,13 +10,22 @@ public static class CashFlowPlanFactory
 
         return new CashFlowPlan
         {
+            Id = Guid.NewGuid(),
             Name = name,
             BaseCurrency = baseCurrency,
+
+            DefaultPaymentAccountId = null,
+            TreatWeekendsAsBankOffDays = true,
+            BankOffDays = [],
+
             Accounts = [],
             Transactions = [],
             Mortgages = [],
             CreditCards = [],
             Persons = [],
+            Pillar3aContracts = [],
+            HouseBuyScenarios = [],
+
             SimulationSettings = new SimulationSettings
             {
                 StartDate = today,

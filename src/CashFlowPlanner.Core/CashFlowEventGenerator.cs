@@ -38,7 +38,8 @@ public sealed class CashFlowEventGenerator
         var events = GenerateTransactionEvents(
             transactions,
             startDate,
-            endDate);
+            endDate,
+            plan: null);
 
         return SortEvents(events);
     }
@@ -62,7 +63,8 @@ public sealed class CashFlowEventGenerator
         var events = GenerateTransactionEvents(
             plan.Transactions,
             startDate,
-            endDate);
+            endDate,
+            plan);
 
         var hasInterestContracts = plan.Accounts.Any(account =>
             account.InterestContracts.Any(contract => contract.IsActive));
@@ -84,7 +86,8 @@ public sealed class CashFlowEventGenerator
     private List<CashFlowEvent> GenerateTransactionEvents(
         IEnumerable<TransactionDefinition> transactions,
         DateOnly startDate,
-        DateOnly endDate)
+        DateOnly endDate,
+        CashFlowPlan? plan)
     {
         var events = new List<CashFlowEvent>();
 
@@ -95,7 +98,8 @@ public sealed class CashFlowEventGenerator
             var dates = _scheduleOccurrenceGenerator.GenerateOccurrences(
                 transaction.Schedule,
                 startDate,
-                endDate);
+                endDate,
+                plan);
 
             foreach (var date in dates)
             {

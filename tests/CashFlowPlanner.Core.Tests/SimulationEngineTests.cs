@@ -393,4 +393,60 @@ public sealed class SimulationEngineTests
 
         Assert.Equal(9_700m, result.GetBalance(bankAccount.Id, new DateOnly(2026, 3, 31)));
     }
+
+    [Fact]
+    public void Simulate_Should_ApplyPlanBankOffDays_WhenScheduleUsesBusinessDayAdjustment()
+    {
+        // Arrange
+        var account = TestPlanBuilder.CreateBankAccount(
+            openingBalance: 1000m,
+            openingDate: new DateOnly(2026, 8, 1));
+
+        var invoice = TestPlanBuilder.ExternalExpense(
+            fromAccountId: account.Id,
+            amount: 100m,
+            schedule: new Schedule
+            {
+                Frequency = ScheduleFrequency.Once,
+                StartDate = new DateOnly(2026, 8, 1), // Saturday
+                BusinessDayAdjustment = BusinessDayAdjustment.NextBusinessDay
+            },
+            name: "Invoice");
+
+        var plan = new CashFlowPlan
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Plan",
+            BaseCurrency = "CHF",
+            Accounts = [account],
+            Transactions = [invoice],
+            TreatWeekendsAsBankOffDays = true,
+            BankOffDays =
+            [
+                new BankOffDay
+            {
+                Date = new DateOnly(2026, 8, 3), // Monday
+                Name = "Bank holiday"
+            }
+            ],
+            SimulationSettings = new SimulationSettings
+            {
+                StartDate = new DateOnly(2026, 8, 1),
+                EndDate = new DateOnly(2026, 8, 31)
+            }
+        };
+
+        var engine = new SimulationEngine();
+
+        // Act
+        var result = engine.Simulate(plan);
+
+        // Assert
+        Assert.Single(result.Events);
+        Assert.Equal(new DateOnly(2026, 8, 4), result.Events[0].Date);
+
+        Assert.Equal(1000m, result.GetBalance(account.Id, new DateOnly(2026, 8, 3)));
+        Assert.Equal(900m, result.GetBalance(account.Id, new DateOnly(2026, 8, 4)));
+        Assert.Equal(900m, result.GetBalance(account.Id, new DateOnly(2026, 8, 31)));
+    }
 }

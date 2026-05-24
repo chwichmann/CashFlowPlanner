@@ -2184,4 +2184,58 @@
   <data name="Transaction_ShowAllTransactions" xml:space="preserve">
     <value>Show all transactions</value>
   </data>
+  <data name="Settings_PlanDefaults" xml:space="preserve">
+    <value>Plan defaults</value>
+  </data>
+  <data name="Settings_DefaultPaymentAccount" xml:space="preserve">
+    <value>Default payment account </value>
+  </data>
+  <data name="Settings_NoDefaultPaymentAccount" xml:space="preserve">
+    <value>No default payment account</value>
+  </data>
+  <data name="Settings_DefaultPaymentAccountHelp" xml:space="preserve">
+    <value>This account is preselected when you add a new transaction.</value>
+  </data>
+  <data name="Settings_TreatWeekendsAsBankOffDays" xml:space="preserve">
+    <value>Treat weekends as bank off days</value>
+  </data>
+  <data name="Settings_BankOffDays" xml:space="preserve">
+    <value>Bank off days</value>
+  </data>
+  <data name="Settings_BankOffDaysHelp" xml:space="preserve">
+    <value>Add holidays or other days where your bank does not process payments.</value>
+  </data>
+  <data name="Settings_NoBankOffDaysDefined" xml:space="preserve">
+    <value>No bank off days defined.</value>
+  </data>
+  <data name="Settings_AddBankOffDay" xml:space="preserve">
+    <value>Add bank off day</value>
+  </data>
+  <data name="Settings_SavePlanDefaults" xml:space="preserve">
+    <value>Save plan defaults</value>
+  </data>
+  <data name="Settings_PlanDefaultsSaved" xml:space="preserve">
+    <value>Plan defaults saved.</value>
+  </data>
+  <data name="Settings_ErrorDefaultPaymentAccountUnknown" xml:space="preserve">
+    <value>The selected default payment account does not exist.</value>
+  </data>
+  <data name="Settings_ErrorDuplicateBankOffDays" xml:space="preserve">
+    <value>Bank off days contain duplicate dates.</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="AccountStatement_BalanceOverTime" xml:space="preserve">
+    <value>Balance over time</value>
+  </data>
+  <data name="AccountStatement_NotEnoughChartData" xml:space="preserve">
+    <value>Not enough data to display a balance</value>
+  </data>
+  <data name="Transaction_TabOneTime" xml:space="preserve">
+    <value>One-time transactions</value>
+  </data>
+  <data name="Transaction_TabRecurring" xml:space="preserve">
+    <value>Recurring transactions</value>
+  </data>
 </root>

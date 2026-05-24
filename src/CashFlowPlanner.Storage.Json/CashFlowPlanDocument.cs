@@ -18,6 +18,12 @@ public sealed class CashFlowPlanDocument
 
     public string BaseCurrency { get; init; } = "CHF";
 
+    public Guid? DefaultPaymentAccountId { get; init; }
+
+    public bool TreatWeekendsAsBankOffDays { get; init; } = true;
+
+    public List<BankOffDay> BankOffDays { get; init; } = [];
+
     public List<Person> Persons { get; init; } = [];
 
     public List<Account> Accounts { get; init; } = [];
@@ -28,7 +34,6 @@ public sealed class CashFlowPlanDocument
 
     public List<CreditCardContract> CreditCards { get; init; } = [];
 
-    // ✅ NEW
     public List<Pillar3aContract> Pillar3aContracts { get; init; } = [];
 
     public List<HouseBuySimulatorScenario> HouseBuyScenarios { get; init; } = [];

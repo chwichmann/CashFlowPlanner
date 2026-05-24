@@ -66,6 +66,8 @@ public sealed class SimulationEngine
 
     public SimulationResult Simulate(CashFlowPlan plan)
     {
+        ArgumentNullException.ThrowIfNull(plan);
+
         plan.Validate();
 
         var settings = plan.SimulationSettings;
@@ -88,8 +90,11 @@ public sealed class SimulationEngine
             x => x.Id,
             x => x.OpeningDate <= simulationStart);
 
+        // Important:
+        // Use the plan-aware overload so transaction schedules can apply
+        // plan.BankOffDays and plan.TreatWeekendsAsBankOffDays.
         var transactionEvents = _eventGenerator.GenerateEvents(
-            plan.Transactions,
+            plan,
             simulationStart,
             simulationEnd);
 
