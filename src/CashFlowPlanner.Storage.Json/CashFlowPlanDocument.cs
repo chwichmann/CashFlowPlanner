@@ -5,12 +5,14 @@ using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
 using CashFlowPlanner.Core.RealEstate;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CashFlowPlanner.Storage.Json;
 
 public sealed class CashFlowPlanDocument
 {
-    public int SchemaVersion { get; init; } = 1;
+    public int SchemaVersion { get; set; } = CashFlowPlanJsonSerializer.CurrentSchemaVersion;
 
     public Guid PlanId { get; init; }
 
@@ -39,4 +41,13 @@ public sealed class CashFlowPlanDocument
     public List<HouseBuySimulatorScenario> HouseBuyScenarios { get; init; } = [];
 
     public SimulationSettings SimulationSettings { get; init; } = new();
+
+    /// <summary>
+    /// Every top-level JSON property that has no matching document property is captured here on
+    /// load and written back verbatim on save. Without this bucket a load/save round trip silently
+    /// deletes fields this build does not know about yet (finding P2a: the shipped sample lost
+    /// <c>createdAt</c>, <c>modifiedAt</c> and <c>notes</c>).
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }

@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/tests/">
+    <Project Path="tests/CashFlowPlanner.BlazorWasm.Tests/CashFlowPlanner.BlazorWasm.Tests.csproj" />
     <Project Path="tests/CashFlowPlanner.Core.Tests/CashFlowPlanner.Core.Tests.csproj" />
     <Project Path="tests/CashFlowPlanner.Storage.Json.Tests/CashFlowPlanner.Storage.Json.Tests.csproj" />
   </Folder>
