@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Plan crypto self-test</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
+  li { margin: .2rem 0; }
+  .pass { color: #15803d; }
+  .fail { color: #b91c1c; font-weight: 700; }
+  code { background: #f1f5f9; padding: 0 .25rem; }
+  #summary { font-size: 1.1rem; font-weight: 700; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<h1>Plan crypto self-test</h1>
+<p>
+  Exercises <code>wwwroot/js/plan-crypto.js</code> in a real browser, because Web Crypto
+  cannot be reached from the xUnit suite. Serve the repository root over HTTP and open
+  this file.
+</p>
+<ul id="results"></ul>
+<div id="summary">running…</div>
+
+<script type="module">
+import * as C from "../src/CashFlowPlanner.BlazorWasm/wwwroot/js/plan-crypto.js";
+
+const results = document.getElementById("results");
+let passed = 0, failed = 0;
+
+async function check(name, fn) {
+  try {
+    await fn();
+    passed++;
+    results.insertAdjacentHTML("beforeend", `<li class="pass">PASS — ${name}</li>`);
+  } catch (e) {
+    failed++;
+    results.insertAdjacentHTML("beforeend", `<li class="fail">FAIL — ${name}: ${e.message}</li>`);
+  }
+}
+
+function assert(cond, msg) { if (!cond) throw new Error(msg || "assertion failed"); }
+async function throws(fn, msg) {
+  let threw = false;
+  try { await fn(); } catch { threw = true; }
+  assert(threw, msg || "expected an error but none was thrown");
+}
+
+const PLAN = JSON.stringify({ schemaVersion: 1, name: "Test Plan", accounts: [{ balance: 1234.56 }] });
+
+await check("round-trips a plan unchanged", async () => {
+  C.lock();
+  await C.unlock("correct horse battery staple", null);
+  const env = await C.encrypt(PLAN);
+  const salt = C.readSalt(env);
+  C.lock();
+  await C.unlock("correct horse battery staple", salt);
+  assert(await C.decrypt(env) === PLAN, "decrypted text differs from the original");
+});
+
+await check("the plan is not present in the ciphertext", async () => {
+  C.lock();
+  await C.unlock("pw", null);
+  const env = await C.encrypt(PLAN);
+  assert(!env.includes("Test Plan"), "plan name leaked into the envelope");
+  assert(!env.includes("1234.56"), "an amount leaked into the envelope");
+});
+
+await check("a wrong passphrase is rejected", async () => {
+  C.lock();
+  await C.unlock("right", null);
+  const env = await C.encrypt(PLAN);
+  const salt = C.readSalt(env);
+  C.lock();
+  await C.unlock("wrong", salt);
+  await throws(() => C.decrypt(env), "decrypted with the wrong passphrase");
+});
+
+await check("a tampered payload is rejected", async () => {
+  C.lock();
+  await C.unlock("pw", null);
+  const env = JSON.parse(await C.encrypt(PLAN));
+  const salt = env.kdf.salt;
+  const bytes = atob(env.payload.ciphertext);
+  const flipped = String.fromCharCode(bytes.charCodeAt(0) ^ 0x01) + bytes.slice(1);
+  env.payload.ciphertext = btoa(flipped);
+  C.lock();
+  await C.unlock("pw", salt);
+  await throws(() => C.decrypt(JSON.stringify(env)), "a flipped ciphertext bit went undetected");
+});
+
+await check("a tampered header is rejected (AAD binding)", async () => {
+  C.lock();
+  await C.unlock("pw", null);
+  const env = JSON.parse(await C.encrypt(PLAN));
+  const salt = env.kdf.salt;
+  env.kdf.iterations = 1000;          // an attacker weakening the KDF on disk
+  C.lock();
+  await C.unlock("pw", salt);
+  await throws(() => C.decrypt(JSON.stringify(env)), "header tampering went undetected");
+});
+
+await check("every save uses a fresh key and nonce", async () => {
+  C.lock();
+  await C.unlock("pw", null);
+  const a = JSON.parse(await C.encrypt(PLAN));
+  const b = JSON.parse(await C.encrypt(PLAN));
+  assert(a.payload.iv !== b.payload.iv, "payload IV was reused");
+  assert(a.wrappedKey.iv !== b.wrappedKey.iv, "wrapped-key IV was reused");
+  assert(a.wrappedKey.ciphertext !== b.wrappedKey.ciphertext, "the data key was reused");
+  assert(a.payload.ciphertext !== b.payload.ciphertext, "identical ciphertext for the same input");
+});
+
+await check("encrypt and decrypt refuse to run while locked", async () => {
+  C.lock();
+  await throws(() => C.encrypt(PLAN), "encrypted while locked");
+  await throws(() => C.decrypt("{}"), "decrypted while locked");
+});
+
+await check("recognises its own envelopes and rejects others", async () => {
+  C.lock();
+  await C.unlock("pw", null);
+  const env = await C.encrypt(PLAN);
+  assert(C.isEncrypted(env), "did not recognise its own envelope");
+  assert(!C.isEncrypted(PLAN), "treated plaintext JSON as encrypted");
+  assert(!C.isEncrypted("not json at all"), "treated garbage as encrypted");
+  await throws(() => C.readSalt(PLAN), "read a salt out of a plaintext plan");
+});
+
+await check("refuses a file from a newer format version", async () => {
+  C.lock();
+  await C.unlock("pw", null);
+  const env = JSON.parse(await C.encrypt(PLAN));
+  env.version = 99;
+  await throws(() => C.readSalt(JSON.stringify(env)), "accepted a newer format version");
+});
+
+await check("an empty passphrase is refused", async () => {
+  C.lock();
+  await throws(() => C.unlock("", null), "accepted an empty passphrase");
+});
+
+await check("handles a large plan and unicode", async () => {
+  const big = JSON.stringify({ notes: "äöü ÄÖÜ é 🏦 " .repeat(20000), n: 42 });
+  C.lock();
+  await C.unlock("pw", null);
+  const env = await C.encrypt(big);
+  const salt = C.readSalt(env);
+  C.lock();
+  await C.unlock("pw", salt);
+  assert(await C.decrypt(env) === big, "large/unicode payload did not round-trip");
+});
+
+await check("key derivation is slow enough to matter", async () => {
+  C.lock();
+  const t0 = performance.now();
+  await C.unlock("pw", null);
+  const ms = performance.now() - t0;
+  window.__kdfMs = Math.round(ms);
+  assert(ms > 40, `PBKDF2 took only ${Math.round(ms)}ms - iteration count is too low`);
+});
+
+document.getElementById("summary").textContent =
+  `${passed} passed, ${failed} failed` + (window.__kdfMs ? ` · KDF ${window.__kdfMs}ms` : "");
+window.__selftest = { passed, failed, kdfMs: window.__kdfMs ?? null };
+</script>
+</body>
+</html>

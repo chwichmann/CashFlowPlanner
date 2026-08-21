@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CashFlow Planner — recover an encrypted plan</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+         margin: 0 auto; padding: 2rem 1.25rem 4rem; max-width: 44rem; }
+  h1 { font-size: 1.5rem; margin-bottom: .25rem; }
+  .lead { color: #64748b; margin-top: 0; }
+  fieldset { border: 1px solid #cbd5e1; border-radius: .5rem; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+  legend { font-weight: 600; padding: 0 .4rem; }
+  label { display: block; font-weight: 600; margin-bottom: .25rem; }
+  input[type=password], input[type=file] { width: 100%; padding: .5rem; font: inherit;
+         border: 1px solid #94a3b8; border-radius: .375rem; box-sizing: border-box; }
+  button { font: inherit; padding: .5rem 1rem; border-radius: .375rem; border: 1px solid transparent;
+           background: #1d4ed8; color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  button.secondary { background: transparent; color: inherit; border-color: #94a3b8; }
+  #status { margin-top: 1rem; padding: .75rem 1rem; border-radius: .375rem; display: none; }
+  #status.ok { display: block; background: #dcfce7; color: #14532d; }
+  #status.err { display: block; background: #fee2e2; color: #7f1d1d; }
+  textarea { width: 100%; height: 16rem; font-family: ui-monospace, monospace; font-size: 12px;
+             box-sizing: border-box; margin-top: 1rem; }
+  .note { background: #fef9c3; color: #713f12; padding: .75rem 1rem; border-radius: .375rem; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0f172a; color: #e2e8f0; }
+    fieldset { border-color: #334155; }
+    .note { background: #422006; color: #fef08a; }
+    #status.ok { background: #14532d; color: #dcfce7; }
+    #status.err { background: #7f1d1d; color: #fee2e2; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Recover an encrypted plan</h1>
+<p class="lead">
+  Decrypts a CashFlow Planner plan file without the app.
+</p>
+
+<p class="note">
+  <strong>This page is self-contained.</strong> It makes no network requests and sends
+  nothing anywhere — save it to disk and open it offline, even with no internet, even
+  years from now. Your passphrase and your plan never leave this browser tab. Keep a copy
+  of this file alongside your encrypted plans.
+</p>
+
+<fieldset>
+  <legend>1. Choose the encrypted plan</legend>
+  <input type="file" id="file" accept=".json,.cfplan,.txt,application/json" />
+</fieldset>
+
+<fieldset>
+  <legend>2. Passphrase</legend>
+  <label for="pass">The passphrase you set when you encrypted it</label>
+  <input type="password" id="pass" autocomplete="current-password" />
+  <p style="margin:1rem 0 0">
+    <button id="go" disabled>Decrypt</button>
+    <button id="save" class="secondary" style="display:none">Save decrypted plan</button>
+  </p>
+  <div id="status"></div>
+</fieldset>
+
+<textarea id="out" readonly placeholder="The decrypted plan will appear here." hidden></textarea>
+
+<script>
+// A standalone implementation of the same envelope written by
+// src/CashFlowPlanner.BlazorWasm/wwwroot/js/plan-crypto.js. Kept deliberately
+// duplicated and dependency-free: the whole point of this page is that it keeps
+// working when nothing else does.
+const FORMAT = "cashflowplanner-encrypted";
+
+const fromB64 = t => { const b = atob(t); const u = new Uint8Array(b.length);
+                       for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+
+// Must match plan-crypto.js exactly: the header is bound into the ciphertext as
+// additional authenticated data, so any difference here fails decryption.
+const aadOf = h => new TextEncoder().encode(
+  [h.format, h.version, h.kdf.algorithm, h.kdf.hash, h.kdf.iterations, h.kdf.salt].join("|"));
+
+async function decrypt(envelopeJson, passphrase) {
+  let env;
+  try { env = JSON.parse(envelopeJson); }
+  catch { throw new Error("That file is not JSON. Is it the right file?"); }
+
+  if (env.format !== FORMAT) {
+    if (env.schemaVersion) {
+      throw new Error("That plan is not encrypted — you can open it directly in the app.");
+    }
+    throw new Error("That does not look like a CashFlow Planner plan file.");
+  }
+
+  const material = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+
+  const kek = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: fromB64(env.kdf.salt),
+      iterations: env.kdf.iterations, hash: env.kdf.hash },
+    material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+
+  const aad = aadOf(env);
+
+  let rawDek;
+  try {
+    rawDek = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: fromB64(env.wrappedKey.iv), additionalData: aad },
+      kek, fromB64(env.wrappedKey.ciphertext));
+  } catch {
+    throw new Error("Wrong passphrase, or the file has been altered.");
+  }
+
+  const dek = await crypto.subtle.importKey("raw", rawDek, { name: "AES-GCM" }, false, ["decrypt"]);
+
+  const plain = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: fromB64(env.payload.iv), additionalData: aad },
+    dek, fromB64(env.payload.ciphertext));
+
+  return new TextDecoder().decode(plain);
+}
+
+const $ = id => document.getElementById(id);
+let text = null, decrypted = null;
+
+$("file").addEventListener("change", async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  text = await f.text();
+  $("go").disabled = false;
+  show("", null);
+});
+
+$("go").addEventListener("click", async () => {
+  $("go").disabled = true;
+  try {
+    decrypted = await decrypt(text, $("pass").value);
+    $("out").hidden = false;
+    $("out").value = decrypted;
+    $("save").style.display = "";
+    let summary = "";
+    try {
+      const p = JSON.parse(decrypted);
+      summary = ` — "${p.name ?? "unnamed"}", ${(p.accounts ?? []).length} accounts, `
+              + `${(p.transactions ?? []).length} movements`;
+    } catch { /* still show the raw text */ }
+    show("Decrypted successfully" + summary + ".", true);
+  } catch (err) {
+    show(err.message, false);
+  } finally {
+    $("go").disabled = false;
+  }
+});
+
+$("save").addEventListener("click", () => {
+  const blob = new Blob([decrypted], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "cashflow-plan-decrypted.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+function show(msg, ok) {
+  const s = $("status");
+  s.textContent = msg;
+  s.className = msg ? (ok ? "ok" : "err") : "";
+}
+
+if (!crypto?.subtle) {
+  show("This browser cannot decrypt here. Open the page over https:// or from a local file.", false);
+}
+</script>
+</body>
+</html>
