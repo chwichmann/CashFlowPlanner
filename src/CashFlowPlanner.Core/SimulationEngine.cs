@@ -101,7 +101,8 @@ public sealed class SimulationEngine
         var mortgageGeneration = _mortgageEventGenerator.Generate(
             plan.Mortgages,
             simulationStart,
-            simulationEnd);
+            simulationEnd,
+            plan.BaseCurrency);
 
         var mortgageEvents = mortgageGeneration.Events;
 
@@ -118,9 +119,20 @@ public sealed class SimulationEngine
             .ThenBy(x => x.Name)
             .ToList();
 
+        // Everything else runs against the IsActive-filtered account list; this
+        // call used to be handed plan.Accounts unfiltered, so a contract on an
+        // account that is not being simulated still produced payment events. The
+        // engine then had no balance for the card, so every one of them raised a
+        // spurious UNKNOWN_ACCOUNT critical -- and the payment leg still debited
+        // the bank account, moving money out to settle a card nobody was
+        // tracking.
+        var creditCardsInScope = plan.CreditCards
+            .Where(x => accountById.ContainsKey(x.CreditCardAccountId))
+            .ToList();
+
         var creditCardPaymentEvents = _creditCardPaymentEventGenerator.GenerateEvents(
-            plan.CreditCards,
-            plan.Accounts,
+            creditCardsInScope,
+            accounts,
             baseEvents,
             simulationStart,
             simulationEnd);
@@ -155,7 +167,13 @@ public sealed class SimulationEngine
                     .ToList());
 
         var balancePoints = new List<AccountBalancePoint>();
-        var warnings = new List<SimulationWarning>();
+
+        var warnings = new List<SimulationWarning>(mortgageGeneration.Warnings);
+
+        // One warning per overdrawn account per DAY meant 7'305 warnings for a
+        // single overdrawn account over 20 years -- a list nobody can read, and
+        // it drowned out the criticals. Collapsed to one per contiguous episode.
+        var negativeEpisodes = new Dictionary<Guid, NegativeBalanceEpisode>();
 
         for (var date = simulationStart; date <= simulationEnd; date = date.AddDays(1))
         {
@@ -185,19 +203,23 @@ public sealed class SimulationEngine
                     Currency = account.Currency
                 });
 
-                if (settings.WarnOnNegativeBankBalance &&
-                    IsLiquidityAccount(account) &&
-                    balance < 0)
-                {
-                    warnings.Add(new SimulationWarning
-                    {
-                        Code = "NEGATIVE_BALANCE",
-                        Message = $"Account '{account.Name}' has a negative balance of {balance:N2} {account.Currency} on {date:yyyy-MM-dd}.",
-                        Severity = WarningSeverity.Warning,
-                        Date = date,
-                        AccountId = account.Id
-                    });
-                }
+                TrackNegativeBalance(
+                    settings,
+                    account,
+                    balance,
+                    date,
+                    negativeEpisodes,
+                    warnings);
+            }
+        }
+
+        // Episodes still open on the last simulated day never got a closing day
+        // to report them.
+        foreach (var account in accounts)
+        {
+            if (negativeEpisodes.Remove(account.Id, out var episode))
+            {
+                warnings.Add(NegativeBalanceWarning(account, episode));
             }
         }
 
@@ -269,10 +291,24 @@ public sealed class SimulationEngine
             }
 
             if (!balances.ContainsKey(leg.AccountId.Value) ||
-                !accountById.ContainsKey(leg.AccountId.Value))
+                !accountById.TryGetValue(leg.AccountId.Value, out var account))
             {
                 warnings.Add(UnknownAccountWarning(cashFlowEvent, leg.AccountId.Value));
                 continue;
+            }
+
+            // H7: the last line of defence. CashFlowPlan.Validate() already
+            // rejects a cross-currency transaction or Pillar 3a schedule, but
+            // contract-derived events -- mortgage, credit-card payment -- get
+            // their currency from the contract, not from the account they land
+            // on, so a mismatch can still reach here.
+            //
+            // The posting is still applied: dropping it would silently make money
+            // disappear, which is harder to notice than a critical warning next
+            // to a number that is visibly in the wrong currency.
+            if (!Money.IsSameCurrency(cashFlowEvent.Currency, account.Currency))
+            {
+                warnings.Add(CurrencyMismatchWarning(cashFlowEvent, account));
             }
 
             balances[leg.AccountId.Value] += leg.SignedAmount;
@@ -308,10 +344,107 @@ public sealed class SimulationEngine
         };
     }
 
+    private static SimulationWarning CurrencyMismatchWarning(
+        CashFlowEvent cashFlowEvent,
+        Account account)
+    {
+        return new SimulationWarning
+        {
+            Code = "CURRENCY_MISMATCH",
+            Message =
+                $"Event '{cashFlowEvent.Name}' on {cashFlowEvent.Date:yyyy-MM-dd} is in " +
+                $"{cashFlowEvent.Currency} but account '{account.Name}' is in {account.Currency}. " +
+                "The amount was posted unconverted.",
+            Severity = WarningSeverity.Critical,
+            Date = cashFlowEvent.Date,
+            AccountId = account.Id,
+            SourceId = cashFlowEvent.SourceTransactionId
+        };
+    }
+
     private static bool IsLiquidityAccount(Account account)
     {
         return account.Type is AccountType.BankAccount
             or AccountType.SavingsAccount
             or AccountType.Cash;
+    }
+
+    /// <summary>
+    /// Opens, extends or closes the account's current overdraft episode.
+    /// A warning is raised once, when the episode ends.
+    /// </summary>
+    private static void TrackNegativeBalance(
+        SimulationSettings settings,
+        Account account,
+        decimal balance,
+        DateOnly date,
+        Dictionary<Guid, NegativeBalanceEpisode> episodes,
+        List<SimulationWarning> warnings)
+    {
+        var isOverdrawn =
+            settings.WarnOnNegativeBankBalance &&
+            IsLiquidityAccount(account) &&
+            balance < 0m;
+
+        if (isOverdrawn)
+        {
+            if (episodes.TryGetValue(account.Id, out var openEpisode))
+            {
+                openEpisode.LastDate = date;
+
+                if (balance < openEpisode.MinimumBalance)
+                {
+                    openEpisode.MinimumBalance = balance;
+                    openEpisode.MinimumDate = date;
+                }
+
+                return;
+            }
+
+            episodes[account.Id] = new NegativeBalanceEpisode
+            {
+                FirstDate = date,
+                LastDate = date,
+                MinimumBalance = balance,
+                MinimumDate = date
+            };
+
+            return;
+        }
+
+        if (episodes.Remove(account.Id, out var finishedEpisode))
+        {
+            warnings.Add(NegativeBalanceWarning(account, finishedEpisode));
+        }
+    }
+
+    private static SimulationWarning NegativeBalanceWarning(
+        Account account,
+        NegativeBalanceEpisode episode)
+    {
+        var days = episode.LastDate.DayNumber - episode.FirstDate.DayNumber + 1;
+
+        return new SimulationWarning
+        {
+            Code = "NEGATIVE_BALANCE",
+            Message =
+                $"Account '{account.Name}' is overdrawn from {episode.FirstDate:yyyy-MM-dd} " +
+                $"to {episode.LastDate:yyyy-MM-dd} ({days} day(s)), reaching " +
+                $"{episode.MinimumBalance:N2} {account.Currency} on {episode.MinimumDate:yyyy-MM-dd}.",
+            Severity = WarningSeverity.Warning,
+            Date = episode.FirstDate,
+            AccountId = account.Id
+        };
+    }
+
+    private sealed class NegativeBalanceEpisode
+    {
+        public required DateOnly FirstDate { get; init; }
+
+        public required DateOnly LastDate { get; set; }
+
+        public required decimal MinimumBalance { get; set; }
+
+        public required DateOnly MinimumDate { get; set; }
     }
 }
