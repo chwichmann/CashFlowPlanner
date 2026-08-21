@@ -271,6 +271,128 @@ public sealed class AccountInterestEventGeneratorTests
         Assert.Equal(expectedInterest, interestEvent.Amount);
     }
 
+    /// <summary>
+    /// Pins the two compounding rules the balance walk has to reproduce, because
+    /// the O(N + D) cursor replaced a full re-scan of every event in the plan:
+    ///
+    /// 1. A contract sees its OWN previously posted interest (Feb accrues on
+    ///    100'000 + 86.11, not on 100'000).
+    /// 2. A later contract on the SAME account additionally sees the interest the
+    ///    earlier contracts already posted (the second contract's Feb accrues on
+    ///    100'000 + 86.11 + 86.11).
+    ///
+    /// Both amounts must stay different -- if they ever become equal the second
+    /// contract has stopped seeing the first one's postings.
+    /// </summary>
+    [Fact]
+    public void GenerateEvents_TwoContractsOnOneAccount_EachSeesTheInterestPostedBefore()
+    {
+        var account = CreateSavingsAccount(
+            openingBalance: 100_000m,
+            interestContracts:
+            [
+                CreateFlatInterestContract(
+                    postingFrequency: InterestPostingFrequency.Monthly,
+                    annualRatePercent: 1m),
+
+                CreateFlatInterestContract(
+                    postingFrequency: InterestPostingFrequency.Monthly,
+                    annualRatePercent: 1m)
+            ]);
+
+        var generator = new AccountInterestEventGenerator();
+
+        var result = generator.GenerateEvents(
+            [account],
+            [],
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 2, 28));
+
+        Assert.Equal(4, result.Count);
+
+        // January: nothing posted yet, so both contracts accrue on 100'000.
+        // 100'000 * 1% * 31 / 360 = 86.111... => 86.11
+        var januaryAmounts = result
+            .Where(x => x.Date == new DateOnly(2026, 1, 31))
+            .Select(x => x.Amount)
+            .ToList();
+
+        Assert.Equal([86.11m, 86.11m], januaryAmounts);
+
+        // February, first contract:  100'086.11 * 1% * 28 / 360 = 77.844... => 77.84
+        // February, second contract: 100'172.22 * 1% * 28 / 360 = 77.911... => 77.91
+        var februaryAmounts = result
+            .Where(x => x.Date == new DateOnly(2026, 2, 28))
+            .Select(x => x.Amount)
+            .ToList();
+
+        Assert.Equal([77.84m, 77.91m], februaryAmounts);
+    }
+
+    /// <summary>
+    /// The balance walk must only ever count events dated strictly BEFORE the
+    /// accrual day, and must count them exactly once no matter how many posting
+    /// periods the walk crosses.
+    /// </summary>
+    [Fact]
+    public void GenerateEvents_ExistingEventsAreCountedOncePerAccrualDay()
+    {
+        var account = CreateSavingsAccount(
+            openingBalance: 0m,
+            interestContracts:
+            [
+                CreateFlatInterestContract(
+                    postingFrequency: InterestPostingFrequency.Monthly,
+                    annualRatePercent: 1m)
+            ]);
+
+        // Two deposits of 50'000, one before the range and one mid-February.
+        var existingEvents = new List<CashFlowEvent>
+        {
+            new()
+            {
+                SourceTransactionId = Guid.NewGuid(),
+                Name = "Deposit A",
+                Date = new DateOnly(2025, 12, 20),
+                Kind = TransactionKind.ExternalIncome,
+                ToAccountId = account.Id,
+                Amount = 50_000m,
+                Currency = "CHF"
+            },
+            new()
+            {
+                SourceTransactionId = Guid.NewGuid(),
+                Name = "Deposit B",
+                Date = new DateOnly(2026, 2, 15),
+                Kind = TransactionKind.ExternalIncome,
+                ToAccountId = account.Id,
+                Amount = 50_000m,
+                Currency = "CHF"
+            }
+        };
+
+        var generator = new AccountInterestEventGenerator();
+
+        var result = generator.GenerateEvents(
+            [account],
+            existingEvents,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 2, 28));
+
+        // January: 50'000 for all 31 days => 50'000 * 1% * 31 / 360 = 43.055... => 43.06
+        var january = result.Single(x => x.Date == new DateOnly(2026, 1, 31));
+        Assert.Equal(43.06m, january.Amount);
+
+        // February: deposit B is only visible from the day AFTER it is dated, so
+        // Feb 1..15 accrue on 50'043.06 (15 days) and Feb 16..28 on 100'043.06
+        // (13 days).
+        //   50'043.06 * 1% * 15 / 360 = 20.8513...
+        //  100'043.06 * 1% * 13 / 360 = 36.1266...
+        //  total 56.9779... => 56.98
+        var february = result.Single(x => x.Date == new DateOnly(2026, 2, 28));
+        Assert.Equal(56.98m, february.Amount);
+    }
+
     private static Account CreateSavingsAccount(
         decimal openingBalance,
         List<AccountInterestContract> interestContracts,
