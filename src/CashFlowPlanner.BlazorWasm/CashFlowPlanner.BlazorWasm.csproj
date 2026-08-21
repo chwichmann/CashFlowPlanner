@@ -3,7 +3,24 @@
   <!-- TargetFramework / Nullable / ImplicitUsings come from ../../Directory.Build.props -->
   <PropertyGroup>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
-    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+    <!--
+      B6 - BlazorWebAssemblyLoadAllGlobalizationData was true, which forces the
+      full 1.53 MB icudt.dat on every visitor. The app ships only `en` and `de`
+      resources (Resources/SharedResource.resx + SharedResource.de.resx). With
+      the property removed the runtime falls back to the sharded ICU and picks
+      one shard per culture:
+
+        en, de, de-DE, fr, it, es  -> icudt_EFIGS.dat     550'832 B
+        zh, ko, ja                 -> icudt_CJK.dat       956'416 B
+        everything else, incl de-CH-> icudt_no_CJK.dat  1'107'168 B
+
+      so a German visitor downloads 550 KB or 1.11 MB instead of 1.53 MB. All
+      three shards must stay in the artifact because the choice is made in the
+      browser, not at build time - do not try to publish only EFIGS.
+
+      Do NOT set InvariantGlobalization: the app formats CHF/EUR amounts and
+      parses localised dates.
+    -->
   </PropertyGroup>
 
   <!--
@@ -32,6 +49,21 @@
     <Content Include="Pages\HouseBuySimulator.razor.css">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <!--
+    B6 - prune wwwroot/lib from the published artifact.
+
+    Bootstrap ships ~11 MB under wwwroot/lib: source maps, RTL variants,
+    unminified builds and six JavaScript bundles. index.html loads exactly one
+    of those files (bootstrap.min.css) and no Bootstrap JavaScript at all - the
+    navbar toggle is hand-rolled. Everything else is excluded from *publish*
+    only; the files stay on disk and are still served by `dotnet run`, so
+    source maps remain available while debugging locally.
+  -->
+  <ItemGroup>
+    <Content Update="wwwroot\lib\**" CopyToPublishDirectory="Never" />
+    <Content Update="wwwroot\lib\bootstrap\dist\css\bootstrap.min.css" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
