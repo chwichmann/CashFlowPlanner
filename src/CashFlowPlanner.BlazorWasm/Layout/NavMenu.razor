@@ -250,12 +250,25 @@
 
             AppState.LoadDocument(document);
 
-            await BrowserCache.SaveAsync(json);
+            var cacheWrite = await BrowserCache.SaveAsync(json);
             await RefreshCachedAtTextAsync();
 
             _loadedSource = "file";
-            _statusMessage = $"Loaded '{file.Name}' successfully.";
-            _isError = false;
+
+            if (cacheWrite.Success)
+            {
+                _statusMessage = $"Loaded '{file.Name}' successfully.";
+                _isError = false;
+            }
+            else
+            {
+                // The plan is loaded and usable; only the working copy is missing, so a
+                // reload would lose it. Say so rather than reporting a clean load.
+                _statusMessage =
+                    $"Loaded '{file.Name}', but the browser working copy could not be "
+                    + $"written: {cacheWrite.Message}";
+                _isError = true;
+            }
         }
         catch (Exception ex)
         {
@@ -303,11 +316,26 @@
                 json,
                 "application/json");
 
-            await BrowserCache.SaveAsync(json);
+            // The file on disk now matches what is in memory, so the plan is no longer
+            // dirty. Without this the "unexported changes" indicator never clears (P1c).
+            AppState.MarkExported(json);
+
+            var cacheWrite = await BrowserCache.SaveAsync(json);
             await RefreshCachedAtTextAsync();
 
-            _statusMessage = $"Exported '{fileName}' and updated browser working copy.";
-            _isError = false;
+            if (cacheWrite.Success)
+            {
+                _statusMessage = $"Exported '{fileName}' and updated browser working copy.";
+                _isError = false;
+            }
+            else
+            {
+                // The export itself succeeded - only the working copy failed to update.
+                _statusMessage =
+                    $"Exported '{fileName}', but the browser working copy could not be "
+                    + $"updated: {cacheWrite.Message}";
+                _isError = true;
+            }
         }
         catch (Exception ex)
         {
