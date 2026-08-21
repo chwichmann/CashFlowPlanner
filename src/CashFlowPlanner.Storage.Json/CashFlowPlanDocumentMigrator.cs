@@ -1,3 +1,4 @@
+using CashFlowPlanner.Storage.Json.Migrations;
 using System.Text.Json.Nodes;
 
 namespace CashFlowPlanner.Storage.Json;
@@ -24,7 +25,10 @@ public static class CashFlowPlanDocumentMigrator
     /// <summary>
     /// The migration chain, oldest first. Order is significant.
     /// </summary>
-    private static readonly ICashFlowPlanDocumentMigration[] Migrations = [];
+    private static readonly ICashFlowPlanDocumentMigration[] Migrations =
+    [
+        new ExplicitDateRangeMigration()
+    ];
 
     public static IReadOnlyList<ICashFlowPlanDocumentMigration> Chain => Migrations;
 
