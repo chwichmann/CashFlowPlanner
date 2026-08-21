@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <!-- TargetFramework / Nullable / ImplicitUsings come from ../../Directory.Build.props -->
   <PropertyGroup>
@@ -21,24 +21,6 @@
       Do NOT set InvariantGlobalization: the app formats CHF/EUR amounts and
       parses localised dates.
     -->
-  </PropertyGroup>
-
-  <!--
-    B5 - TreatWarningsAsErrors is on repo-wide (../../Directory.Build.props).
-    These two diagnostics are demoted back to warnings *for this project only*
-    because three genuine occurrences pre-date the gate:
-
-      CS8602  Pages/Transactions.razor:600  dereference of a possibly null reference
-      CS8620  Pages/BankImport.razor:746    object?[] -> object[] for IStringLocalizer
-      CS8620  Pages/Accounts.razor:820      object?[] -> object[] for IStringLocalizer
-
-    TODO(B5): fix those three call sites, then delete this WarningsNotAsErrors
-    line so CS8602/CS8620 fail the build here too. Tracked in
-    docs/STABILIZATION-PLAN.md finding B5. Every other warning, in every
-    project including this one, is already an error.
-  -->
-  <PropertyGroup>
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8602;CS8620</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
