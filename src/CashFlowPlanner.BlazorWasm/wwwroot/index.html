@@ -74,6 +74,13 @@
                 return window.cashFlowPlanner.lastStorageError;
             },
 
+            // Set from .NET whenever CashFlowAppState.IsDirty flips (finding P1c).
+            hasUnsavedChanges: false,
+
+            setUnsavedChanges: function (hasUnsavedChanges) {
+                window.cashFlowPlanner.hasUnsavedChanges = !!hasUnsavedChanges;
+            },
+
             getLocalStorageItem: function (key) {
                 try {
                     return localStorage.getItem(key);
@@ -90,6 +97,19 @@
                 }
             }
         };
+
+        // The plan file is the source of truth; localStorage is only a working copy that a
+        // cleared site-data wipes. Warn before the tab closes on unexported edits (finding P1c).
+        window.addEventListener("beforeunload", function (event) {
+            if (!window.cashFlowPlanner.hasUnsavedChanges) {
+                return undefined;
+            }
+
+            event.preventDefault();
+            event.returnValue = "";
+
+            return "";
+        });
     </script>
 </body>
 

@@ -25,7 +25,17 @@ builder.Services.AddSingleton<DashboardSummaryService>();
 builder.Services.AddSingleton<MonthlyCashflowSummaryService>();
 builder.Services.AddSingleton<BrowserPlanCacheService>();
 builder.Services.AddSingleton<IBrowserPlanCache>(sp => sp.GetRequiredService<BrowserPlanCacheService>());
-builder.Services.AddSingleton<PlanCacheCoordinator>();
+builder.Services.AddSingleton<IUnsavedChangesGuard, BrowserUnsavedChangesGuard>();
+
+// Constructed explicitly: PlanCacheCoordinator has a constructor taking the debounce window, which
+// DI cannot supply, so the wiring is spelled out rather than left to constructor selection.
+builder.Services.AddSingleton(sp => new PlanCacheCoordinator(
+    sp.GetRequiredService<CashFlowAppState>(),
+    sp.GetRequiredService<CashFlowPlanJsonSerializer>(),
+    sp.GetRequiredService<IBrowserPlanCache>(),
+    sp.GetRequiredService<UiFeedbackService>(),
+    PlanCacheCoordinator.DefaultDebounceDelay,
+    sp.GetRequiredService<IUnsavedChangesGuard>()));
 builder.Services.AddScoped<EnumLocalizer>();
 builder.Services.AddScoped<Pillar3aProjectionEngine>();
 builder.Services.AddScoped<Pillar3aTaxYearSimulator>();
