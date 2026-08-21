@@ -127,13 +127,67 @@
             window.addEventListener("load", function () {
                 navigator.serviceWorker
                     .register(new URL("service-worker.js", document.baseURI))
+                    .then(function (registration) {
+                        window.cashFlowPlanner.__swRegistration = registration;
+
+                        // A worker sitting in "waiting" means a newer deploy is downloaded
+                        // and ready but deliberately not activated yet. Without surfacing
+                        // this, the user silently runs one release behind until they happen
+                        // to close every tab.
+                        var notify = function () {
+                            // navigator.serviceWorker.controller is null on a FIRST install.
+                            // Without this guard every first-time visitor is told an update
+                            // is ready: a brand-new worker passes transiently through the
+                            // "installed" state, where registration.waiting is briefly set,
+                            // before it auto-activates because nothing is controlling the
+                            // page yet. Only a page already under a worker can be stale.
+                            if (!navigator.serviceWorker.controller) { return; }
+
+                            if (registration.waiting) {
+                                window.cashFlowPlanner.__updateReady = true;
+                                if (window.cashFlowPlanner.__onUpdateReady) {
+                                    window.cashFlowPlanner.__onUpdateReady.invokeMethodAsync("OnUpdateReady");
+                                }
+                            }
+                        };
+
+                        notify();
+                        registration.addEventListener("updatefound", function () {
+                            var installing = registration.installing;
+                            if (!installing) { return; }
+                            installing.addEventListener("statechange", notify);
+                        });
+                    })
                     .catch(function (error) {
                         // Offline support is an enhancement: the app works without it, so a
                         // failed registration must never block startup.
                         console.warn("Service worker registration failed:", error);
                     });
+
+                // Reload once the new worker actually takes control, so the page and the
+                // framework files it loaded always come from the same build.
+                var reloading = false;
+                navigator.serviceWorker.addEventListener("controllerchange", function () {
+                    if (reloading) { return; }
+                    reloading = true;
+                    window.location.reload();
+                });
             });
         }
+
+        window.cashFlowPlanner.registerUpdateHandler = function (dotNetRef) {
+            window.cashFlowPlanner.__onUpdateReady = dotNetRef;
+            return !!window.cashFlowPlanner.__updateReady;
+        };
+
+        window.cashFlowPlanner.applyUpdate = function () {
+            var registration = window.cashFlowPlanner.__swRegistration;
+            if (registration && registration.waiting) {
+                registration.waiting.postMessage("cashflowplanner:skipWaiting");
+            } else {
+                window.location.reload();
+            }
+        };
     </script>
 </body>
 

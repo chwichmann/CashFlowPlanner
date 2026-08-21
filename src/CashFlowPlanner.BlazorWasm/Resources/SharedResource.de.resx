@@ -2277,4 +2277,16 @@
   <data name="Nav_ExportNeededHint" xml:space="preserve">
     <value>Es gibt Änderungen, die nur in diesem Browser existieren. Exportiere den Plan in eine Datei, um sie zu behalten.</value>
   </data>
+  <data name="Update_Available" xml:space="preserve">
+    <value>Eine neue Version von CashFlow Planner ist bereit.</value>
+  </data>
+  <data name="Update_ExportFirst" xml:space="preserve">
+    <value>Exportiere zuerst deinen Plan - beim Neuladen gehen nicht exportierte Änderungen verloren.</value>
+  </data>
+  <data name="Update_Reload" xml:space="preserve">
+    <value>Jetzt neu laden</value>
+  </data>
+  <data name="Update_Later" xml:space="preserve">
+    <value>Später</value>
+  </data>
 </root>

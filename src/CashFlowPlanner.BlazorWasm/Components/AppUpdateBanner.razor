@@ -1,0 +1,108 @@
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using Microsoft.Extensions.Localization
+@using Microsoft.JSInterop
+
+@implements IAsyncDisposable
+
+@inject IJSRuntime JsRuntime
+@inject CashFlowAppState AppState
+@inject IStringLocalizer<SharedResource> L
+
+@*
+    The service worker deliberately does not activate a new build mid-session -
+    swapping framework files under a running WebAssembly app means mismatched
+    .wasm and a hard failure. The cost of that safety is that a user keeps running
+    the previous release until every tab is closed, with nothing on screen saying
+    so. This is that missing signal.
+*@
+
+@if (_updateReady)
+{
+    <div class="alert alert-info d-flex align-items-center justify-content-between mb-0 rounded-0 py-2"
+         role="status">
+        <span>
+            @L["Update_Available"]
+            @if (AppState.IsDirty)
+            {
+                <strong class="ms-1">@L["Update_ExportFirst"]</strong>
+            }
+        </span>
+
+        <span class="ms-3 text-nowrap">
+            <button type="button" class="btn btn-sm btn-primary" @onclick="ApplyAsync">
+                @L["Update_Reload"]
+            </button>
+            <button type="button" class="btn btn-sm btn-link" @onclick="() => _dismissed = true">
+                @L["Update_Later"]
+            </button>
+        </span>
+    </div>
+}
+
+@code {
+    private DotNetObjectReference<AppUpdateBanner>? _selfRef;
+    private bool _updateAvailable;
+    private bool _dismissed;
+
+    private bool _updateReady => _updateAvailable && !_dismissed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _selfRef = DotNetObjectReference.Create(this);
+
+        try
+        {
+            // Returns true when a worker was already waiting before this component
+            // rendered, which is the common case on a slow first paint.
+            var alreadyWaiting = await JsRuntime.InvokeAsync<bool>(
+                "cashFlowPlanner.registerUpdateHandler", _selfRef);
+
+            if (alreadyWaiting)
+            {
+                await OnUpdateReady();
+            }
+        }
+        catch (JSException)
+        {
+            // No service worker (unsupported browser, or the dev build). Nothing to show.
+        }
+    }
+
+    [JSInvokable]
+    public Task OnUpdateReady()
+    {
+        _updateAvailable = true;
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyAsync()
+    {
+        // The page reloads on controllerchange, so unexported edits in memory would be
+        // lost. The badge above says so; the beforeunload guard is the backstop.
+        await JsRuntime.InvokeVoidAsync("cashFlowPlanner.applyUpdate");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_selfRef is not null)
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("cashFlowPlanner.registerUpdateHandler", null);
+            }
+            catch (JSException)
+            {
+                // Page is going away; nothing to clean up on the JS side.
+            }
+
+            _selfRef.Dispose();
+        }
+    }
+}

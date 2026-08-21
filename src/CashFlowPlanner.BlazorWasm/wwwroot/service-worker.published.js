@@ -18,6 +18,16 @@ self.addEventListener('install', event => event.waitUntil(onInstall(event)));
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
 self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 
+// Take over immediately, but ONLY when the user asks for it by clicking the
+// update banner. That is the difference between a controlled reload and calling
+// skipWaiting() on install, which would swap framework files underneath a
+// running WebAssembly app and fail with mismatched .wasm mid-session.
+self.addEventListener('message', event => {
+    if (event.data === 'cashflowplanner:skipWaiting') {
+        self.skipWaiting();
+    }
+});
+
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 const offlineAssetsInclude = [
