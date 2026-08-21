@@ -9,6 +9,11 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  # The URL the site is served from. The base href assertion below is derived
+  # from this, so there is exactly one place to change it.
+  PAGES_BASE_HREF: "/CashFlowPlanner/"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,37 +33,82 @@ jobs:
       - name: Publish Blazor
         run: dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj -c Release
 
-      - name: Set GitHub Pages base href
+      # ------------------------------------------------------------------
+      # B2 - THE highest-risk line in the repo.
+      #
+      # `sed` exits 0 whether or not it matched anything. The previous version
+      # of this step rewrote <base href="/"> to /CashFlowPlanner/ and then only
+      # *printed* the result. If a future SDK emitted the tag differently -
+      # single quotes, no space, self-closing variations, an importmap-injected
+      # base - the rewrite would silently no-op, CI would go green, and every
+      # asset on the deployed site would 404: a blank page with an eternal
+      # spinner and no failing build anywhere.
+      #
+      # The rewrite is now asserted three ways: exactly one <base> tag must
+      # exist going in, the expected href must be present coming out, and no
+      # root-relative base may survive.
+      # ------------------------------------------------------------------
+      - name: Set and assert GitHub Pages base href
         run: |
-          INDEX_FILE="src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/index.html"
-      
+          set -euo pipefail
+
+          PUBLISH_WWWROOT="src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot"
+          INDEX_FILE="$PUBLISH_WWWROOT/index.html"
+
           if [ ! -f "$INDEX_FILE" ]; then
-            echo "index.html not found at $INDEX_FILE"
-            echo "Available index.html files:"
-            find . -name index.html
+            echo "::error::index.html not found at $INDEX_FILE"
+            echo "Publish output tree:"
+            find . -name 'index.html' -print
             exit 1
           fi
-      
-          sed -i 's|<base href="[^"]*"|<base href="/CashFlowPlanner/"|' "$INDEX_FILE"
-      
-          echo "Base href after rewrite:"
-          grep '<base' "$INDEX_FILE"
-      
+
+          # Pre-condition: the file must contain exactly one <base> tag. Zero
+          # means the SDK stopped emitting it; more than one means the rewrite
+          # would be ambiguous.
+          base_count=$(grep -c -i '<base[[:space:]]' "$INDEX_FILE" || true)
+          if [ "$base_count" -ne 1 ]; then
+            echo "::error::expected exactly one <base> tag in index.html, found ${base_count}."
+            echo "::error::The base href rewrite cannot be applied safely. Inspect index.html:"
+            grep -n -i '<base' "$INDEX_FILE" || echo "  (no <base> tag at all)"
+            exit 1
+          fi
+
+          echo "Base href before rewrite: $(grep -o -i '<base[^>]*>' "$INDEX_FILE")"
+
+          sed -i "s|<base href=\"[^\"]*\"|<base href=\"${PAGES_BASE_HREF}\"|" "$INDEX_FILE"
+
+          # Post-condition 1: the expected base href is actually present.
+          # This is the assertion whose absence made a silent blank deploy
+          # possible. Do not remove it.
+          if ! grep -q "<base href=\"${PAGES_BASE_HREF}\"" "$INDEX_FILE"; then
+            echo "::error::base href rewrite FAILED - '<base href=\"${PAGES_BASE_HREF}\"' is not present in index.html after sed."
+            echo "::error::The published site would load every asset from the wrong origin and render a blank page."
+            echo "Actual <base> tag:"
+            grep -n -i '<base' "$INDEX_FILE" || echo "  (none)"
+            exit 1
+          fi
+
+          # Post-condition 2: no root-relative base survived the rewrite.
+          if grep -q '<base href="/"' "$INDEX_FILE"; then
+            echo "::error::a root-relative '<base href=\"/\">' is still present after the rewrite."
+            grep -n -i '<base' "$INDEX_FILE"
+            exit 1
+          fi
+
+          echo "Base href after rewrite:  $(grep -o -i '<base[^>]*>' "$INDEX_FILE")"
+
+      # The SPA fallback is a copy of the rewritten index.html, so it inherits
+      # the asserted base href rather than needing its own rewrite.
       - name: Create GitHub Pages SPA fallback
         run: |
-          cp src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/index.html src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/404.html
+          set -euo pipefail
+          PUBLISH_WWWROOT="src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot"
+          cp "$PUBLISH_WWWROOT/index.html" "$PUBLISH_WWWROOT/404.html"
+          grep -q "<base href=\"${PAGES_BASE_HREF}\"" "$PUBLISH_WWWROOT/404.html"
+          echo "404.html SPA fallback written and verified."
 
       - name: Add .nojekyll
         run: touch src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/.nojekyll
-
-      - name: Show publish output
-        run: |
-          echo "Publish wwwroot:"
-          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
-          echo "Framework folder:"
-          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/_framework
-          echo "Blazor bootstrap files:"
-          ls -la src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/_framework/blazor.webassembly*
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
