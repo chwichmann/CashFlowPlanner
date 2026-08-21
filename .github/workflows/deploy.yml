@@ -4,10 +4,12 @@ on:
   push:
     branches: [ master ]
 
+# B4 - least privilege. The workflow default is read-only; `pages: write` and
+# `id-token: write` are granted to the deploy job ONLY. The build job runs
+# `dotnet restore`, which executes arbitrary MSBuild from NuGet packages, and
+# must never hold a token that can publish a deployment or mint an OIDC token.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # B3 - one deployment at a time. Without this, back-to-back pushes race the
 # github-pages environment and the older build can land last, publishing stale
@@ -26,9 +28,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -152,6 +159,12 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
+    # B4 - the only job that holds deployment credentials. It runs no project
+    # code: it only claims the artifact the build job produced.
+    permissions:
+      pages: write
+      id-token: write
 
     environment:
       name: github-pages
