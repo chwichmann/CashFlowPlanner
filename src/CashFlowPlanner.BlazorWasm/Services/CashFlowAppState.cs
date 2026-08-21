@@ -97,16 +97,6 @@ public sealed class CashFlowAppState
             throw new InvalidOperationException("No cashflow plan is loaded.");
         }
 
-        var isUsedByTransaction = CurrentPlan.Transactions.Any(x =>
-            x.FromAccountId == accountId ||
-            x.ToAccountId == accountId);
-
-        if (isUsedByTransaction)
-        {
-            throw new InvalidOperationException(
-                "The account cannot be deleted because it is used by one or more transactions.");
-        }
-
         var account = CurrentPlan.Accounts.SingleOrDefault(x => x.Id == accountId);
 
         if (account is null)
@@ -114,11 +104,24 @@ public sealed class CashFlowAppState
             return;
         }
 
+        // Finding P1a: this delete used to check transactions only. Deleting an account that a
+        // mortgage, a credit card or a Pillar 3a schedule still points at left a plan that neither
+        // validates nor serializes, so every later autosave and every export threw and the session
+        // could not be recovered.
+        var usages = DescribeAccountUsages(CurrentPlan, accountId);
+
+        if (usages.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"The account '{account.Name}' cannot be deleted because it is still used by " +
+                $"{FormatUsages(usages)}. Remove or repoint those first.");
+        }
+
         var accounts = CurrentPlan.Accounts
             .Where(x => x.Id != accountId)
             .ToList();
 
-        CurrentPlan = new CashFlowPlan
+        var candidatePlan = new CashFlowPlan
         {
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
@@ -141,10 +144,89 @@ public sealed class CashFlowAppState
             SimulationSettings = CurrentPlan.SimulationSettings
         };
 
+        // The last line of defence: never commit a plan that cannot be saved, exactly like every
+        // other delete on this type does.
+        candidatePlan.Validate();
+
+        CurrentPlan = candidatePlan;
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
         NotifyChanged();
+    }
+
+    /// <summary>
+    /// Every reference to <paramref name="accountId"/> that would survive the account's deletion,
+    /// phrased for the user. Plan validation does not cover mortgage and credit-card account
+    /// references, so these checks are the only thing standing between the user and a plan that
+    /// cannot be written back.
+    /// </summary>
+    public static IReadOnlyList<string> DescribeAccountUsages(CashFlowPlan plan, Guid accountId)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+
+        var usages = new List<string>();
+
+        var transactionCount = plan.Transactions.Count(x =>
+            x.FromAccountId == accountId ||
+            x.ToAccountId == accountId);
+
+        if (transactionCount > 0)
+        {
+            usages.Add(transactionCount == 1
+                ? "1 transaction"
+                : $"{transactionCount} transactions");
+        }
+
+        foreach (var mortgage in plan.Mortgages)
+        {
+            if (mortgage.PaymentAccountId == accountId)
+            {
+                usages.Add($"the mortgage '{mortgage.Name}' (payment account)");
+            }
+
+            if (mortgage.IndirectAmortisationAccountId == accountId)
+            {
+                usages.Add($"the mortgage '{mortgage.Name}' (indirect amortisation account)");
+            }
+        }
+
+        foreach (var creditCard in plan.CreditCards)
+        {
+            if (creditCard.CreditCardAccountId == accountId)
+            {
+                usages.Add($"the credit card '{creditCard.Name}' (card account)");
+            }
+
+            if (creditCard.PaymentAccountId == accountId)
+            {
+                usages.Add($"the credit card '{creditCard.Name}' (payment account)");
+            }
+        }
+
+        foreach (var contract in plan.Pillar3aContracts)
+        {
+            if (contract.ContributionSchedules.Any(x => x.PaymentAccountId == accountId))
+            {
+                usages.Add(
+                    $"the Pillar 3a contract '{contract.Name}' (contribution payment account)");
+            }
+
+            if (contract.Withdrawals.Any(x => x.TargetAccountId == accountId))
+            {
+                usages.Add(
+                    $"the Pillar 3a contract '{contract.Name}' (withdrawal target account)");
+            }
+        }
+
+        return usages;
+    }
+
+    private static string FormatUsages(IReadOnlyList<string> usages)
+    {
+        return usages.Count == 1
+            ? usages[0]
+            : string.Join("; ", usages);
     }
 
     public void AddOrUpdateTransaction(TransactionDefinition transaction)
