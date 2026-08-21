@@ -54,7 +54,14 @@ internal sealed class FakeBrowserPlanCache : IBrowserPlanCache
 
         Writes.Add(json);
 
-        _previous = _current;
+        // Mirrors BrowserPlanCacheService: the recovery copy only rotates on a real change, so
+        // rewriting identical content does not throw the previous good copy away.
+        if (!string.IsNullOrEmpty(_current) &&
+            !string.Equals(_current, json, StringComparison.Ordinal))
+        {
+            _previous = _current;
+        }
+
         _current = json;
         _cachedAt = DateTimeOffset.UtcNow.ToString("O");
 

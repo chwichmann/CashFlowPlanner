@@ -121,11 +121,26 @@ public sealed class CashFlowAppState
         DirtyStateChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Hashes the JSON content, not its formatting. The exported file is indented and the browser
+    /// working copy is compact, so the two would never compare equal without normalizing first.
+    /// </summary>
     private static string ComputeContentHash(string json)
     {
+        string normalized;
+
+        try
+        {
+            normalized = System.Text.Json.Nodes.JsonNode.Parse(json)?.ToJsonString() ?? json;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            normalized = json;
+        }
+
         return Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(
-                System.Text.Encoding.UTF8.GetBytes(json)));
+                System.Text.Encoding.UTF8.GetBytes(normalized)));
     }
 
     public void SetPlan(CashFlowPlan plan)
