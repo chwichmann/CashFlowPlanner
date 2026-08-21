@@ -64,6 +64,7 @@ public sealed class CashFlowPlan
 
         var accountIds = Accounts.Select(x => x.Id).ToHashSet();
         var personIds = Persons.Select(x => x.Id).ToHashSet();
+        var accountsById = Accounts.ToDictionary(x => x.Id);
 
         if (DefaultPaymentAccountId is not null &&
             !accountIds.Contains(DefaultPaymentAccountId.Value))
@@ -90,6 +91,18 @@ public sealed class CashFlowPlan
                 transaction.ToAccountId,
                 $"Transaction '{transaction.Name}'",
                 "target account");
+
+            AssertSameCurrency(
+                accountsById,
+                transaction.FromAccountId,
+                transaction.Currency,
+                $"Transaction '{transaction.Name}'");
+
+            AssertSameCurrency(
+                accountsById,
+                transaction.ToAccountId,
+                transaction.Currency,
+                $"Transaction '{transaction.Name}'");
         }
 
         foreach (var mortgage in Mortgages)
@@ -143,6 +156,12 @@ public sealed class CashFlowPlan
                     throw new InvalidOperationException(
                         $"Pillar 3a contract '{pillar3a.Name}' references unknown payment account '{schedule.PaymentAccountId}'.");
                 }
+
+                AssertSameCurrency(
+                    accountsById,
+                    schedule.PaymentAccountId,
+                    schedule.Currency,
+                    $"Pillar 3a contract '{pillar3a.Name}' contribution schedule");
             }
 
             foreach (var withdrawal in pillar3a.Withdrawals)
@@ -203,6 +222,35 @@ public sealed class CashFlowPlan
             throw new InvalidOperationException(
                 $"{ownerDescription} references unknown {roleDescription} '{accountId.Value}'.");
         }
+    }
+
+    /// <summary>
+    /// H7: nothing anywhere compared currencies, so a USD 1'000 income into a CHF
+    /// account moved the CHF balance by 1'000. Every balance in the engine is a
+    /// bare decimal, so a cross-currency posting is not a rounding problem, it is
+    /// a wrong number -- and there is no FX rate in the domain to convert with.
+    /// A plan that contains one is rejected rather than simulated.
+    /// </summary>
+    private static void AssertSameCurrency(
+        IReadOnlyDictionary<Guid, Account> accountsById,
+        Guid? accountId,
+        string currency,
+        string ownerDescription)
+    {
+        if (accountId is null ||
+            !accountsById.TryGetValue(accountId.Value, out var account))
+        {
+            return;
+        }
+
+        if (Money.IsSameCurrency(currency, account.Currency))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"{ownerDescription} is in {currency} but account '{account.Name}' is in " +
+            $"{account.Currency}. Cross-currency postings are not supported.");
     }
 
     /// <summary>

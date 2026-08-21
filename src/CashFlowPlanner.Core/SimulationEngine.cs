@@ -101,7 +101,8 @@ public sealed class SimulationEngine
         var mortgageGeneration = _mortgageEventGenerator.Generate(
             plan.Mortgages,
             simulationStart,
-            simulationEnd);
+            simulationEnd,
+            plan.BaseCurrency);
 
         var mortgageEvents = mortgageGeneration.Events;
 
@@ -270,10 +271,24 @@ public sealed class SimulationEngine
             }
 
             if (!balances.ContainsKey(leg.AccountId.Value) ||
-                !accountById.ContainsKey(leg.AccountId.Value))
+                !accountById.TryGetValue(leg.AccountId.Value, out var account))
             {
                 warnings.Add(UnknownAccountWarning(cashFlowEvent, leg.AccountId.Value));
                 continue;
+            }
+
+            // H7: the last line of defence. CashFlowPlan.Validate() already
+            // rejects a cross-currency transaction or Pillar 3a schedule, but
+            // contract-derived events -- mortgage, credit-card payment -- get
+            // their currency from the contract, not from the account they land
+            // on, so a mismatch can still reach here.
+            //
+            // The posting is still applied: dropping it would silently make money
+            // disappear, which is harder to notice than a critical warning next
+            // to a number that is visibly in the wrong currency.
+            if (!Money.IsSameCurrency(cashFlowEvent.Currency, account.Currency))
+            {
+                warnings.Add(CurrencyMismatchWarning(cashFlowEvent, account));
             }
 
             balances[leg.AccountId.Value] += leg.SignedAmount;
@@ -305,6 +320,24 @@ public sealed class SimulationEngine
             Severity = WarningSeverity.Critical,
             Date = cashFlowEvent.Date,
             AccountId = accountId,
+            SourceId = cashFlowEvent.SourceTransactionId
+        };
+    }
+
+    private static SimulationWarning CurrencyMismatchWarning(
+        CashFlowEvent cashFlowEvent,
+        Account account)
+    {
+        return new SimulationWarning
+        {
+            Code = "CURRENCY_MISMATCH",
+            Message =
+                $"Event '{cashFlowEvent.Name}' on {cashFlowEvent.Date:yyyy-MM-dd} is in " +
+                $"{cashFlowEvent.Currency} but account '{account.Name}' is in {account.Currency}. " +
+                "The amount was posted unconverted.",
+            Severity = WarningSeverity.Critical,
+            Date = cashFlowEvent.Date,
+            AccountId = account.Id,
             SourceId = cashFlowEvent.SourceTransactionId
         };
     }

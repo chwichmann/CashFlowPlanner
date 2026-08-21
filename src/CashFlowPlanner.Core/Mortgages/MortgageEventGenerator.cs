@@ -14,10 +14,16 @@ public sealed class MortgageEventGenerator
         _billingPeriodGenerator = billingPeriodGenerator;
     }
 
+    /// <summary>
+    /// H7: a mortgage carries no currency of its own -- it is denominated in the
+    /// plan's base currency. Every event and principal point used to be stamped
+    /// with a hard-coded "CHF" regardless of what the plan actually said.
+    /// </summary>
     public MortgageGenerationResult Generate(
     IEnumerable<MortgageContract> mortgages,
     DateOnly simulationStart,
-    DateOnly simulationEnd)
+    DateOnly simulationEnd,
+    string baseCurrency = "CHF")
     {
         var events = new List<CashFlowEvent>();
         var principalPoints = new List<MortgagePrincipalPoint>();
@@ -30,7 +36,8 @@ public sealed class MortgageEventGenerator
             var result = GenerateForMortgage(
                 mortgage,
                 simulationStart,
-                simulationEnd);
+                simulationEnd,
+                baseCurrency);
 
             events.AddRange(result.Events);
             principalPoints.AddRange(result.PrincipalPoints);
@@ -57,7 +64,8 @@ public sealed class MortgageEventGenerator
     private MortgageGenerationResult GenerateForMortgage(
     MortgageContract mortgage,
     DateOnly simulationStart,
-    DateOnly simulationEnd)
+    DateOnly simulationEnd,
+    string baseCurrency)
     {
         if (mortgage.PaymentInterval != MortgagePaymentInterval.Quarterly)
         {
@@ -134,7 +142,7 @@ public sealed class MortgageEventGenerator
             MortgageId = mortgage.Id,
             MortgageName = mortgage.Name,
             Principal = principal,
-            Currency = "CHF"
+            Currency = baseCurrency
         });
 
         var periods = _billingPeriodGenerator.GenerateBankQuarterPeriods(
@@ -172,7 +180,8 @@ public sealed class MortgageEventGenerator
                 events.Add(CreateInterestEvent(
                     mortgage,
                     period.PaymentDate,
-                    interestAmount));
+                    interestAmount,
+                    baseCurrency));
             }
 
             var amortisationAmount = CalculatePeriodAmortisation(
@@ -187,7 +196,8 @@ public sealed class MortgageEventGenerator
                         events.Add(CreateDirectAmortisationEvent(
                             mortgage,
                             period.PaymentDate,
-                            amortisationAmount));
+                            amortisationAmount,
+                            baseCurrency));
 
                         principal -= amortisationAmount;
 
@@ -202,7 +212,7 @@ public sealed class MortgageEventGenerator
                             MortgageId = mortgage.Id,
                             MortgageName = mortgage.Name,
                             Principal = principal,
-                            Currency = "CHF"
+                            Currency = baseCurrency
                         });
 
                         break;
@@ -211,7 +221,8 @@ public sealed class MortgageEventGenerator
                         events.Add(CreateIndirectAmortisationEvent(
                             mortgage,
                             period.PaymentDate,
-                            amortisationAmount));
+                            amortisationAmount,
+                            baseCurrency));
 
                         principalPoints.Add(new MortgagePrincipalPoint
                         {
@@ -219,7 +230,7 @@ public sealed class MortgageEventGenerator
                             MortgageId = mortgage.Id,
                             MortgageName = mortgage.Name,
                             Principal = principal,
-                            Currency = "CHF"
+                            Currency = baseCurrency
                         });
 
                         break;
@@ -231,7 +242,7 @@ public sealed class MortgageEventGenerator
                             MortgageId = mortgage.Id,
                             MortgageName = mortgage.Name,
                             Principal = principal,
-                            Currency = "CHF"
+                            Currency = baseCurrency
                         });
 
                         break;
@@ -249,7 +260,7 @@ public sealed class MortgageEventGenerator
                     MortgageId = mortgage.Id,
                     MortgageName = mortgage.Name,
                     Principal = principal,
-                    Currency = "CHF"
+                    Currency = baseCurrency
                 });
             }
         }
@@ -432,7 +443,8 @@ public sealed class MortgageEventGenerator
     private static CashFlowEvent CreateInterestEvent(
         MortgageContract mortgage,
         DateOnly paymentDate,
-        decimal amount)
+        decimal amount,
+        string baseCurrency)
     {
         return new CashFlowEvent
         {
@@ -443,7 +455,7 @@ public sealed class MortgageEventGenerator
             FromAccountId = mortgage.PaymentAccountId,
             ToAccountId = null,
             Amount = amount,
-            Currency = "CHF",
+            Currency = baseCurrency,
             Priority = 80,
             Category = "Mortgage Interest",
             Counterparty = "Bank",
@@ -455,7 +467,8 @@ public sealed class MortgageEventGenerator
     private static CashFlowEvent CreateDirectAmortisationEvent(
     MortgageContract mortgage,
     DateOnly paymentDate,
-    decimal amount)
+    decimal amount,
+    string baseCurrency)
     {
         return new CashFlowEvent
         {
@@ -466,7 +479,7 @@ public sealed class MortgageEventGenerator
             FromAccountId = mortgage.PaymentAccountId,
             ToAccountId = null,
             Amount = amount,
-            Currency = "CHF",
+            Currency = baseCurrency,
             Priority = 81,
             Category = "Mortgage Amortisation",
             Counterparty = "Bank",
@@ -478,7 +491,8 @@ public sealed class MortgageEventGenerator
     private static CashFlowEvent CreateIndirectAmortisationEvent(
         MortgageContract mortgage,
         DateOnly paymentDate,
-        decimal amount)
+        decimal amount,
+        string baseCurrency)
     {
         if (mortgage.IndirectAmortisationAccountId is null)
         {
@@ -495,7 +509,7 @@ public sealed class MortgageEventGenerator
             FromAccountId = mortgage.PaymentAccountId,
             ToAccountId = mortgage.IndirectAmortisationAccountId,
             Amount = amount,
-            Currency = "CHF",
+            Currency = baseCurrency,
             Priority = 81,
             Category = "Mortgage Indirect Amortisation",
             Counterparty = "Pillar 3a",

@@ -34,9 +34,29 @@ public sealed record Money
     public Money Negate()
         => this with { Amount = -Amount };
 
+    /// <summary>
+    /// The single rule for deciding whether two currency codes are the same one.
+    /// Case-insensitive, and a missing code counts as "unspecified" and therefore
+    /// matches anything rather than raising a false alarm.
+    ///
+    /// Lives here so the guard inside this type and the plan-level and
+    /// posting-level checks in the engine cannot drift apart. The rest of the
+    /// domain still carries plain decimals plus a currency string; migrating it
+    /// to <see cref="Money"/> is a separate, much larger change.
+    /// </summary>
+    public static bool IsSameCurrency(string? left, string? right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+        {
+            return true;
+        }
+
+        return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void EnsureSameCurrency(Money other)
     {
-        if (!string.Equals(Currency, other.Currency, StringComparison.OrdinalIgnoreCase))
+        if (!IsSameCurrency(Currency, other.Currency))
         {
             throw new InvalidOperationException(
                 $"Currency mismatch: {Currency} != {other.Currency}");
