@@ -155,7 +155,8 @@ public sealed class SimulationEngine
                     .ToList());
 
         var balancePoints = new List<AccountBalancePoint>();
-        var warnings = new List<SimulationWarning>();
+
+        var warnings = new List<SimulationWarning>(mortgageGeneration.Warnings);
 
         for (var date = simulationStart; date <= simulationEnd; date = date.AddDays(1))
         {

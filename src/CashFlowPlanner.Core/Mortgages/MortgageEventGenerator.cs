@@ -21,6 +21,7 @@ public sealed class MortgageEventGenerator
     {
         var events = new List<CashFlowEvent>();
         var principalPoints = new List<MortgagePrincipalPoint>();
+        var warnings = new List<SimulationWarning>();
 
         foreach (var mortgage in mortgages.Where(x => x.IsActive))
         {
@@ -33,6 +34,7 @@ public sealed class MortgageEventGenerator
 
             events.AddRange(result.Events);
             principalPoints.AddRange(result.PrincipalPoints);
+            warnings.AddRange(result.Warnings);
         }
 
         return new MortgageGenerationResult
@@ -46,7 +48,9 @@ public sealed class MortgageEventGenerator
             PrincipalPoints = principalPoints
                 .OrderBy(x => x.Date)
                 .ThenBy(x => x.MortgageName)
-                .ToList()
+                .ToList(),
+
+            Warnings = warnings
         };
     }
 
@@ -69,11 +73,60 @@ public sealed class MortgageEventGenerator
 
         var events = new List<CashFlowEvent>();
         var principalPoints = new List<MortgagePrincipalPoint>();
+        var warnings = new List<SimulationWarning>();
 
         var calculationPrincipalDate = mortgage.GetCalculationPrincipalDate();
-        var principal = mortgage.GetCalculationPrincipal();
 
-        var effectiveSimulationStart = Max(simulationStart, calculationPrincipalDate);
+        // H1/H2: CalculationPrincipalDate is the date the principal is KNOWN on,
+        // not the date the mortgage starts existing. Anchoring the whole
+        // generation on it -- Max(simulationStart, calculationPrincipalDate) --
+        // was wrong in both directions: a date in the future left the mortgage
+        // with no principal point and no billing periods before it, so it read as
+        // zero debt and its interest was never charged, and a date in the past
+        // was taken verbatim at the simulation start, ignoring every instalment
+        // paid in between.
+        //
+        // Anchor on the first date the mortgage can exist inside the range
+        // instead, and roll the known principal along the billing calendar to
+        // get there.
+        var effectiveSimulationStart = Max(simulationStart, mortgage.InitialDate);
+
+        var principal = RollPrincipal(
+            mortgage,
+            mortgage.GetCalculationPrincipal(),
+            calculationPrincipalDate,
+            effectiveSimulationStart,
+            out var rolledInstalments);
+
+        if (calculationPrincipalDate > effectiveSimulationStart)
+        {
+            warnings.Add(new SimulationWarning
+            {
+                Code = "MORTGAGE_PRINCIPAL_DATE_IN_FUTURE",
+                Message =
+                    $"Mortgage '{mortgage.Name}' states its principal as of {calculationPrincipalDate:yyyy-MM-dd}, " +
+                    $"which is after the simulated start {effectiveSimulationStart:yyyy-MM-dd}. " +
+                    $"The principal before that date was extrapolated backwards over {rolledInstalments} amortisation instalment(s).",
+                Severity = WarningSeverity.Warning,
+                Date = effectiveSimulationStart,
+                SourceId = mortgage.Id
+            });
+        }
+        else if (calculationPrincipalDate < effectiveSimulationStart && rolledInstalments > 0)
+        {
+            warnings.Add(new SimulationWarning
+            {
+                Code = "MORTGAGE_PRINCIPAL_ROLLED_FORWARD",
+                Message =
+                    $"Mortgage '{mortgage.Name}' states its principal as of {calculationPrincipalDate:yyyy-MM-dd}. " +
+                    $"{rolledInstalments} amortisation instalment(s) fall between that date and the simulated start " +
+                    $"{effectiveSimulationStart:yyyy-MM-dd}; the principal was amortised forward to {principal:N2}. " +
+                    "Enter a more recent known principal to remove this assumption.",
+                Severity = WarningSeverity.Warning,
+                Date = effectiveSimulationStart,
+                SourceId = mortgage.Id
+            });
+        }
 
         principalPoints.Add(new MortgagePrincipalPoint
         {
@@ -204,8 +257,106 @@ public sealed class MortgageEventGenerator
         return new MortgageGenerationResult
         {
             Events = events,
-            PrincipalPoints = principalPoints
+            PrincipalPoints = principalPoints,
+            Warnings = warnings
         };
+    }
+
+    /// <summary>
+    /// Moves a known principal along the billing calendar from the date it was
+    /// known on to <paramref name="targetDate"/>.
+    ///
+    /// Forward (the known date is in the past) replays the instalments that were
+    /// already paid, exactly the way the generation loop below pays them.
+    /// Backward (the known date is in the future) undoes the instalments that
+    /// are still to be paid before it, so the figure the user typed is still the
+    /// principal in force on the date they typed it against.
+    /// </summary>
+    private decimal RollPrincipal(
+        MortgageContract mortgage,
+        decimal knownPrincipal,
+        DateOnly knownAtDate,
+        DateOnly targetDate,
+        out int rolledInstalments)
+    {
+        rolledInstalments = 0;
+
+        if (knownAtDate == targetDate)
+        {
+            return knownPrincipal;
+        }
+
+        // Only direct amortisation moves the principal. Indirect pays into a
+        // separate account and None does not amortise at all, so for both the
+        // principal is the same on every date and there is nothing to roll.
+        if (mortgage.AmortisationMode != AmortisationMode.Direct ||
+            mortgage.AnnualAmortisationAmount <= 0)
+        {
+            return knownPrincipal;
+        }
+
+        var periodsPerYear = 12m / (int)mortgage.PaymentInterval;
+        var instalment = mortgage.AnnualAmortisationAmount / periodsPerYear;
+
+        var fromInclusive = Min(knownAtDate, targetDate);
+        var toExclusive = Max(knownAtDate, targetDate);
+
+        var billedPaymentDates = _billingPeriodGenerator
+            .GenerateBankQuarterPeriods(fromInclusive, toExclusive)
+            .Where(x => x.PaymentDate < toExclusive)
+            .Where(x => IsBilledPeriod(mortgage, x))
+            .ToList();
+
+        rolledInstalments = billedPaymentDates.Count;
+
+        if (rolledInstalments == 0)
+        {
+            return knownPrincipal;
+        }
+
+        if (targetDate > knownAtDate)
+        {
+            var principal = knownPrincipal;
+
+            foreach (var _ in billedPaymentDates)
+            {
+                principal -= Math.Min(instalment, principal);
+
+                if (principal < 0)
+                {
+                    principal = 0;
+                }
+            }
+
+            return principal;
+        }
+
+        // Rolling backwards only ever increases the principal, so the
+        // Math.Min clamp the forward direction needs cannot bite here.
+        return knownPrincipal + (instalment * rolledInstalments);
+    }
+
+    /// <summary>
+    /// Whether the generation loop below would actually bill
+    /// <paramref name="period"/> for this mortgage -- same two guards, so the
+    /// roll counts exactly the instalments the loop pays.
+    /// </summary>
+    private static bool IsBilledPeriod(
+        MortgageContract mortgage,
+        MortgageBillingPeriod period)
+    {
+        if (mortgage.EndDate is not null && period.PeriodStart > mortgage.EndDate.Value)
+        {
+            return false;
+        }
+
+        var effectivePeriodStart = Max(period.PeriodStart, mortgage.InitialDate);
+
+        var effectivePeriodEndExclusive = mortgage.EndDate is null
+            ? period.PeriodEndExclusive
+            : Min(period.PeriodEndExclusive, mortgage.EndDate.Value.AddDays(1));
+
+        return effectivePeriodEndExclusive > effectivePeriodStart;
     }
 
     public static decimal CalculateInterestForPeriod(
