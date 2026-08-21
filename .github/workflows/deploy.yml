@@ -76,8 +76,19 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      - name: Publish Blazor
-        run: dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj -c Release
+      # The publish location is defined once, here, instead of the
+      # bin/Release/net10.0/publish/wwwroot path being repeated seven times
+      # (which also hardcoded the target framework into the workflow).
+      - name: Resolve publish directory
+        run: |
+          echo "PUBLISH_DIR=${RUNNER_TEMP}/publish" >> "$GITHUB_ENV"
+          echo "PUBLISH_WWWROOT=${RUNNER_TEMP}/publish/wwwroot" >> "$GITHUB_ENV"
+
+      - name: Publish Blazor WebAssembly
+        run: |
+          dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj \
+            -c Release \
+            -o "$PUBLISH_DIR"
 
       # ------------------------------------------------------------------
       # B2 - THE highest-risk line in the repo.
@@ -98,13 +109,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          PUBLISH_WWWROOT="src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot"
           INDEX_FILE="$PUBLISH_WWWROOT/index.html"
 
           if [ ! -f "$INDEX_FILE" ]; then
             echo "::error::index.html not found at $INDEX_FILE"
             echo "Publish output tree:"
-            find . -name 'index.html' -print
+            find "$PUBLISH_DIR" -maxdepth 3 -name 'index.html' -print
             exit 1
           fi
 
@@ -148,19 +158,21 @@ jobs:
       - name: Create GitHub Pages SPA fallback
         run: |
           set -euo pipefail
-          PUBLISH_WWWROOT="src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot"
           cp "$PUBLISH_WWWROOT/index.html" "$PUBLISH_WWWROOT/404.html"
           grep -q "<base href=\"${PAGES_BASE_HREF}\"" "$PUBLISH_WWWROOT/404.html"
           echo "404.html SPA fallback written and verified."
 
-      - name: Add .nojekyll
-        run: touch src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/.nojekyll
+      - name: Ensure .nojekyll
+        run: |
+          set -euo pipefail
+          touch "$PUBLISH_WWWROOT/.nojekyll"
+          test -f "$PUBLISH_WWWROOT/.nojekyll"
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
+          path: ${{ env.PUBLISH_WWWROOT }}
           include-hidden-files: true
 
   deploy:
