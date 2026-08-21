@@ -152,5 +152,4 @@ This is a personal project, but issues and pull requests are welcome. Please run
 
 ## License
 
-Not yet licensed. Until a licence is added, all rights are reserved and the code
-may not be reused. See *Known issues*.
+[MIT](LICENSE) © 2026 Christian Wichmann
