@@ -113,14 +113,139 @@ Ships correct numbers, no silent loss, a real deploy gate, a usable first run.
 
 ### Wave 2 — Encryption and disk auto-save
 
-Scope fixed by the feasibility study. Format change lands on a stable base, never
-before it. Includes `[JsonExtensionData]` + a real migration chain (P2a/P2b/P2c)
-because the envelope change is a schema change.
+Ordered so the PWA layer lands first (it is a prerequisite, not a nice-to-have),
+then encryption, then disk writes — so the first byte ever written to the user's
+disk is already ciphertext.
 
-### Wave 3 — UI system and PWA
+**2.0 — PWA layer (~1 day).** `manifest.webmanifest`, service worker, 192/512/
+maskable icons, real `<title>`, `theme-color`, `<html lang>` bound to culture.
+Unlocks persistent file permissions, storage persistence and file handling.
 
-Token layer, the six shared components, retirement of the second design system on
-`HouseBuySimulator`, manifest + service worker, payload reduction (B6).
+**2.1 — Encryption (4–7 days).**
+
+Hard constraint, verified against the .NET 10.0.11 reference assemblies:
+**WASM has no symmetric cipher.** `AesGcm`, `AesCcm`, `ChaCha20Poly1305`,
+`Aes.Create`, `RSA.Create`, `ECDsa.Create` all carry
+`[UnsupportedOSPlatform("browser")]`. `Rfc2898DeriveBytes`/`Pbkdf2`, `HKDF`,
+SHA-2, HMAC and `RandomNumberGenerator` DO work. Net effect: a key can be derived
+in C# but nothing can be encrypted with it. Managed crypto is also 20–40× slower
+in WASM (OWASP-grade PBKDF2 ≈ 2.5–5 s). **All crypto goes through Web Crypto via
+JS interop.**
+
+Format: **adopt `age` v1** (`age-encryption.org/v1`), not a bespoke envelope.
+Self-describing, versioned, header authenticated by HMAC, payload under
+ChaCha20-Poly1305 STREAM with a spec-mandated fresh file key and nonce per
+encryption. Browser implementation: `typage` (~92 KB bundled). Files decrypt with
+the standard `age` CLI — the independent-tool property.
+
+Key design (this is what makes autosave viable at all):
+
+| When | Operation | Cost |
+|---|---|---|
+| Setup, once | generate X25519 identity; wrap it with the passphrase via age-scrypt; store wrapped blob; offer `identity.txt` download | one-time |
+| Unlock, per session | scrypt once to unwrap the identity; hold in memory only | ~0.5–2 s |
+| **Every autosave** | encrypt to the public recipient | **milliseconds, no KDF** |
+
+Do NOT use age's passphrase recipient for the plan file — it re-runs scrypt at
+2^18 (~256 MiB) per encryption with a fresh salt, so it cannot be cached.
+
+UX requirements: setup blocks on passphrase-twice + `identity.txt` download +
+explicit "no reset" acknowledgement; wrong passphrase fails fast via the header
+MAC; idle-lock timer drops the key. Optional later: WebAuthn PRF (passkey unlock).
+
+**Also in scope:** the localStorage working copy is plaintext financial data today
+(`cashflowplanner.currentPlanJson`) — encrypt it with the same recipient and move
+it to IndexedDB (localStorage is ~5 MB, synchronous, string-only). Call
+`navigator.storage.persist()`; without it Safari's ITP evicts after 7 days of no
+interaction.
+
+Includes `[JsonExtensionData]` and the migration chain (P2a/P2b/P2c) if wave 1 has
+not already landed them — the envelope change is a schema change.
+
+**2.2 — Auto-save to a user folder (4–6 days). CONFIRMED POSSIBLE.**
+
+File System Access API. Handle from `showSaveFilePicker`, persisted in IndexedDB
+(in JS — a handle can never leave the JS heap as anything but an opaque
+reference). Only the picker and `requestPermission()` need a user gesture;
+**writing to an already-permitted handle does not**, so background autosave is
+genuinely unattended. Chrome 122+ persistent permissions add "Allow on every
+visit", and an **installed PWA persists permissions automatically with no prompt**.
+
+`createWritable()` writes to a swap file and atomically replaces the original only
+on `close()` — a crash mid-write leaves the original intact.
+
+| Tier | Browsers | Experience |
+|---|---|---|
+| 1 | Chrome/Edge desktop, installed as PWA | pick once, silent autosave forever |
+| 2 | Chrome/Edge/Opera in-tab; Chrome Android 132+ | one "Reconnect" click per session (Android: no atomic writes) |
+| 3 | Firefox, Safari desktop/iOS | OPFS + IndexedDB autosave, manual export, "unsaved to disk" badge |
+
+Firefox (negative) and Safari (oppose) hold **formal standards positions**. Do not
+plan for them to change. OPFS is complementary, not a substitute — it is not
+user-visible and is deleted when site data is cleared; use it as a crash journal
+and a rolling backup ring.
+
+Consequence worth stating to the user: because the file is ciphertext, the target
+folder can be **OneDrive/iCloud/Dropbox** — sync and off-site backup for free,
+without the provider ever seeing the finances.
+
+Optionally add the File Handling API (`file_handlers` + `launchQueue`) so
+double-clicking a plan file opens the PWA with the handle already granted.
+
+### Wave 3 — UI system
+
+Token layer (`tokens.css` overriding Bootstrap's own `--bs-*`), the six shared
+components (`PageScaffold`, `DataTable<T>`, `FormField`, `MoneyInput`, `AppModal`,
+`ConfirmDialog`), an `AppFormatter` service replacing 21 duplicated helpers,
+retirement of the second design system on `HouseBuySimulator` (882 lines, 34
+colors), payload reduction (B6).
+
+Migration order matters: the quick wins (U3, U5, `::deep` for U1) land first,
+then tokens, then the components — after which a new page *cannot* get its header,
+table alignment or field labels wrong, because it no longer writes that markup.
+
+### Wave 4 — Bank import (CAMT.053) and domain gaps
+
+**Bank API access is permanently out of scope** — blocked by identity, not
+technology. No PSD2 equivalent; the Federal Council confirmed on 2025-12-12 that
+no regulatory requirement for open interfaces is coming. SIX bLink requires a
+commercial-register legal entity with audited accounts and criminal-record
+extracts of management (CHF 5,000 + CHF 200/month), and mandates mutual TLS with
+an **OV/EV certificate issued to organisations, not natural persons** — which a
+browser cannot present to `fetch()` under any circumstances. PKCE does not help.
+Any secret in a WASM app is public (assemblies ship as `.wasm`, readable in
+ILSpy).
+
+**The real path is CAMT.053** (ISO 20022 XML, `camt.053.001.08` per Swiss Payment
+Standards 2026 v2.3, tolerating `.001.04` until Nov 2026). bLink's own API returns
+camt.053, so file import targets the identical shape.
+
+The existing `Banking/Import` pipeline already provides ~80% of this — dedup key
+builder, merger, fingerprinting, account matching, reconciliation. The MT940 test
+fixture IBAN carries clearing number `00210` (UBS Switzerland), so the path is
+proven against a real Swiss retail bank. Keep the MT940 parser; build CAMT.053
+next rather than investing further in a format being retired.
+
+Take **no NuGet dependency**: no mature, Swiss-aware, trim-safe camt package
+exists, and `XmlSerializer` is a WASM trap that works in `dotnet run` and fails
+only after `dotnet publish`. Hand-roll ~300–500 lines with **namespace-agnostic
+`LocalName` matching**, so `.04`/`.08`/future versions share one code path.
+
+Parser rules: `Ntry` is first-class, `TxDtls` optional enrichment — never sum
+across levels (internal vs external batch bookings will double-count); `Ccy` is an
+attribute; sign from `CdtDbtInd`, never a negative amount; check both
+`Prtry == "QRR"` and `Cd == "SCOR"` for references; assert
+`CLBD − OPBD == Σ signed Ntry.Amt` on every import; dedup on
+`(IBAN, Ntry/AcctSvcrRef)` with content-hash fallback.
+
+**CSV must be a first-class path**, not an afterthought: camt.053 behaves as a
+business-banking feature at most Swiss retail banks and does not exist at the
+neobanks (neon, Yuh, Zak). Build declarative per-bank column-mapping profiles with
+a preview/confirm screen, not one class per bank.
+
+Then the domain gaps, ranked by value: net worth consolidation, inflation, taxes
+(Eigenmietwert, wealth tax, the Pillar 3a deduction the app already computes and
+discards), scenarios/what-if, salary progression, mortgage rollover.
 
 ### Wave 4 — Domain gaps
 
