@@ -1,0 +1,45 @@
+<Project>
+
+  <!--
+    Repository-wide build properties.
+    Individual projects may override any of these; keep project-local overrides
+    to the minimum and prefer changing them here.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!--
+    B5 - warnings are errors.
+
+    Nullable is enabled everywhere but nothing enforced it, so a genuine
+    CS8602 (possible null dereference) shipped to production. Every warning
+    now fails the build, in CI and locally alike.
+  -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>9999</WarningLevel>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <!--
+      NuGet audit advisories (NU1901-NU1904) stay warnings on purpose: a new
+      CVE published against a transitive dependency must not turn every deploy
+      red on a day nobody touched the code. Dependabot (.github/dependabot.yml)
+      raises the PR instead, and `dotnet restore` still prints the advisory.
+    -->
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <!--
+    Deterministic, reproducible CI builds.
+  -->
+  <PropertyGroup Condition="'$(ContinuousIntegrationBuild)' == '' AND '$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>

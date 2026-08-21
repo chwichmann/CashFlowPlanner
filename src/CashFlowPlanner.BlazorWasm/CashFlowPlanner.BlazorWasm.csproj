@@ -1,11 +1,44 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
+  <!-- TargetFramework / Nullable / ImplicitUsings come from ../../Directory.Build.props -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
-	<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+    <!--
+      B6 - BlazorWebAssemblyLoadAllGlobalizationData was true, which forces the
+      full 1.53 MB icudt.dat on every visitor. The app ships only `en` and `de`
+      resources (Resources/SharedResource.resx + SharedResource.de.resx). With
+      the property removed the runtime falls back to the sharded ICU and picks
+      one shard per culture:
+
+        en, de, de-DE, fr, it, es  -> icudt_EFIGS.dat     550'832 B
+        zh, ko, ja                 -> icudt_CJK.dat       956'416 B
+        everything else, incl de-CH-> icudt_no_CJK.dat  1'107'168 B
+
+      so a German visitor downloads 550 KB or 1.11 MB instead of 1.53 MB. All
+      three shards must stay in the artifact because the choice is made in the
+      browser, not at build time - do not try to publish only EFIGS.
+
+      Do NOT set InvariantGlobalization: the app formats CHF/EUR amounts and
+      parses localised dates.
+    -->
+  </PropertyGroup>
+
+  <!--
+    B5 - TreatWarningsAsErrors is on repo-wide (../../Directory.Build.props).
+    These two diagnostics are demoted back to warnings *for this project only*
+    because three genuine occurrences pre-date the gate:
+
+      CS8602  Pages/Transactions.razor:600  dereference of a possibly null reference
+      CS8620  Pages/BankImport.razor:746    object?[] -> object[] for IStringLocalizer
+      CS8620  Pages/Accounts.razor:820      object?[] -> object[] for IStringLocalizer
+
+    TODO(B5): fix those three call sites, then delete this WarningsNotAsErrors
+    line so CS8602/CS8620 fail the build here too. Tracked in
+    docs/STABILIZATION-PLAN.md finding B5. Every other warning, in every
+    project including this one, is already an error.
+  -->
+  <PropertyGroup>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8602;CS8620</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,10 +51,25 @@
     </Content>
   </ItemGroup>
 
+  <!--
+    B6 - prune wwwroot/lib from the published artifact.
+
+    Bootstrap ships ~11 MB under wwwroot/lib: source maps, RTL variants,
+    unminified builds and six JavaScript bundles. index.html loads exactly one
+    of those files (bootstrap.min.css) and no Bootstrap JavaScript at all - the
+    navbar toggle is hand-rolled. Everything else is excluded from *publish*
+    only; the files stay on disk and are still served by `dotnet run`, so
+    source maps remain available while debugging locally.
+  -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.6" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.6" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.8" />
+    <Content Update="wwwroot\lib\**" CopyToPublishDirectory="Never" />
+    <Content Update="wwwroot\lib\bootstrap\dist\css\bootstrap.min.css" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Localization" />
   </ItemGroup>
 
   <ItemGroup>
