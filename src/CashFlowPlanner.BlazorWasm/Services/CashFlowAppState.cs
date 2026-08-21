@@ -38,13 +38,94 @@ public sealed class CashFlowAppState
     /// </summary>
     public event Action? SimulationChanged;
 
+    /// <summary>
+    /// Raised whenever <see cref="IsDirty"/> flips.
+    /// </summary>
+    public event Action? DirtyStateChanged;
+
+    /// <summary>
+    /// True when the plan holds edits that have not been exported to a file.
+    ///
+    /// The plan file is the source of truth and localStorage is only a working copy, so "saved"
+    /// means "exported", not "cached". Before finding P1c there was no dirty tracking at all and
+    /// closing the tab discarded work in silence.
+    /// </summary>
+    public bool IsDirty { get; private set; }
+
+    /// <summary>
+    /// When the plan was last exported to a file, or <see langword="null"/> if it never was in
+    /// this session.
+    /// </summary>
+    public DateTimeOffset? LastExportedAt { get; private set; }
+
+    // Hash of the JSON the user last exported. CashFlowPlanDocumentMapper assigns collections by
+    // reference, so CurrentDocument shares its lists with CurrentPlan and is a snapshot of
+    // nothing - comparing against it would always report "clean". A content hash is the only
+    // reliable baseline.
+    private string? _exportedContentHash;
+
     public void LoadDocument(CashFlowPlanDocument document)
     {
         CurrentDocument = document;
         CurrentPlan = document.ToPlan();
         CurrentSimulationResult = null;
 
-        NotifyPlanChanged();
+        // A freshly loaded plan matches whatever it was loaded from; edits start from here.
+        _exportedContentHash = null;
+        LastExportedAt = null;
+
+        NotifyPlanChanged(markDirty: false);
+    }
+
+    /// <summary>
+    /// Records that the plan was exported to a file. The hash of the exported JSON becomes the
+    /// clean baseline, so undoing back to exactly that content reports clean again.
+    /// </summary>
+    public void MarkExported(string exportedJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(exportedJson);
+
+        _exportedContentHash = ComputeContentHash(exportedJson);
+        LastExportedAt = DateTimeOffset.UtcNow;
+
+        SetDirty(false);
+    }
+
+    /// <summary>
+    /// Called with the JSON that was just written to the browser working copy. Serializing the
+    /// plan is the expensive part of a save, so the dirty flag is re-evaluated here, where the
+    /// JSON already exists, rather than on every mutation.
+    /// </summary>
+    public void NotifyPersistedContent(string json)
+    {
+        if (_exportedContentHash is null || string.IsNullOrWhiteSpace(json))
+        {
+            return;
+        }
+
+        SetDirty(!string.Equals(
+            ComputeContentHash(json),
+            _exportedContentHash,
+            StringComparison.Ordinal));
+    }
+
+    private void SetDirty(bool isDirty)
+    {
+        if (IsDirty == isDirty)
+        {
+            return;
+        }
+
+        IsDirty = isDirty;
+
+        DirtyStateChanged?.Invoke();
+    }
+
+    private static string ComputeContentHash(string json)
+    {
+        return Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(json)));
     }
 
     public void SetPlan(CashFlowPlan plan)
@@ -884,15 +965,22 @@ public sealed class CashFlowAppState
         CurrentPlan = null;
         CurrentSimulationResult = null;
 
-        NotifyPlanChanged();
+        _exportedContentHash = null;
+        LastExportedAt = null;
+
+        NotifyPlanChanged(markDirty: false);
     }
 
     /// <summary>
     /// The plan changed and has to be written back. Also raises <see cref="Changed"/> so that the
     /// UI still re-renders on a single subscription.
     /// </summary>
-    private void NotifyPlanChanged()
+    private void NotifyPlanChanged(bool markDirty = true)
     {
+        // Pessimistic and cheap: the plan moved, so assume it no longer matches the exported file.
+        // NotifyPersistedContent corrects this the moment the JSON actually exists.
+        SetDirty(markDirty && CurrentPlan is not null);
+
         PlanChanged?.Invoke();
         Changed?.Invoke();
     }

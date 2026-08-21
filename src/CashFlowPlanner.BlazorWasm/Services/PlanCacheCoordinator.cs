@@ -26,6 +26,7 @@ public sealed class PlanCacheCoordinator : IDisposable
     private readonly IBrowserPlanCache _browserCache;
     private readonly UiFeedbackService _feedback;
     private readonly TimeSpan _debounceDelay;
+    private readonly IUnsavedChangesGuard _unsavedChangesGuard;
 
     // One save at a time, with a pending flag so the trailing edge always lands. The old code
     // returned early while a save was running, which discarded that change entirely.
@@ -42,7 +43,7 @@ public sealed class PlanCacheCoordinator : IDisposable
         CashFlowPlanJsonSerializer jsonSerializer,
         IBrowserPlanCache browserCache,
         UiFeedbackService feedback)
-        : this(appState, jsonSerializer, browserCache, feedback, DefaultDebounceDelay)
+        : this(appState, jsonSerializer, browserCache, feedback, DefaultDebounceDelay, null)
     {
     }
 
@@ -51,13 +52,15 @@ public sealed class PlanCacheCoordinator : IDisposable
         CashFlowPlanJsonSerializer jsonSerializer,
         IBrowserPlanCache browserCache,
         UiFeedbackService feedback,
-        TimeSpan debounceDelay)
+        TimeSpan debounceDelay,
+        IUnsavedChangesGuard? unsavedChangesGuard = null)
     {
         _appState = appState;
         _jsonSerializer = jsonSerializer;
         _browserCache = browserCache;
         _feedback = feedback;
         _debounceDelay = debounceDelay;
+        _unsavedChangesGuard = unsavedChangesGuard ?? new NullUnsavedChangesGuard();
     }
 
     /// <summary>
@@ -84,8 +87,11 @@ public sealed class PlanCacheCoordinator : IDisposable
         // PlanChanged, not Changed: running a simulation leaves the plan untouched and must not
         // trigger a write.
         _appState.PlanChanged += OnPlanChanged;
+        _appState.DirtyStateChanged += OnDirtyStateChanged;
 
         await RestoreAsync();
+
+        await _unsavedChangesGuard.SetUnsavedChangesAsync(_appState.IsDirty);
     }
 
     private async Task RestoreAsync()
@@ -259,6 +265,10 @@ public sealed class PlanCacheCoordinator : IDisposable
 
             if (write.Success)
             {
+                // The JSON already exists here, so re-evaluating the dirty flag is free. This is
+                // what lets an undo back to the exported content report clean again.
+                _appState.NotifyPersistedContent(json);
+
                 return PlanSaveResult.Saved(write.Message);
             }
 
@@ -302,6 +312,11 @@ public sealed class PlanCacheCoordinator : IDisposable
         ScheduleSave();
     }
 
+    private void OnDirtyStateChanged()
+    {
+        _ = _unsavedChangesGuard.SetUnsavedChangesAsync(_appState.IsDirty);
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -312,6 +327,7 @@ public sealed class PlanCacheCoordinator : IDisposable
         _disposed = true;
 
         _appState.PlanChanged -= OnPlanChanged;
+        _appState.DirtyStateChanged -= OnDirtyStateChanged;
 
         CancelPendingDebounce();
 
