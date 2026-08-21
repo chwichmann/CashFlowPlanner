@@ -248,7 +248,9 @@ public sealed class PlanCacheCoordinator : IDisposable
 
             try
             {
-                json = _jsonSerializer.SerializeDocument(document);
+                // Compact: the working copy competes for the localStorage quota, and indentation
+                // is roughly a quarter of the payload. The exported file stays indented.
+                json = _jsonSerializer.SerializeDocumentCompact(document);
             }
             catch (Exception exception) when (
                 exception is InvalidOperationException or NotSupportedException)

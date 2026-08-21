@@ -13,6 +13,7 @@ public sealed class CashFlowPlanJsonSerializer
     public const int CurrentSchemaVersion = 1;
 
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly JsonSerializerOptions _compactJsonOptions;
 
     public CashFlowPlanJsonSerializer()
         : this(CashFlowPlanJsonOptions.Create())
@@ -22,6 +23,10 @@ public sealed class CashFlowPlanJsonSerializer
     public CashFlowPlanJsonSerializer(JsonSerializerOptions jsonOptions)
     {
         _jsonOptions = jsonOptions;
+
+        _compactJsonOptions = jsonOptions.WriteIndented
+            ? new JsonSerializerOptions(jsonOptions) { WriteIndented = false }
+            : jsonOptions;
     }
 
     public string SerializeDocument(CashFlowPlanDocument document)
@@ -32,6 +37,20 @@ public sealed class CashFlowPlanJsonSerializer
         ValidateDocument(document);
 
         return JsonSerializer.Serialize(document, _jsonOptions);
+    }
+
+    /// <summary>
+    /// Identical JSON without the indentation, for the browser working copy where every byte is
+    /// quota. The file the user exports keeps its indentation so it stays readable and diffable.
+    /// </summary>
+    public string SerializeDocumentCompact(CashFlowPlanDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        StampCurrentSchemaVersion(document);
+        ValidateDocument(document);
+
+        return JsonSerializer.Serialize(document, _compactJsonOptions);
     }
 
     public string SerializePlan(
