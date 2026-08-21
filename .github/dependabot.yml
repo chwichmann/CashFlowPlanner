@@ -1,0 +1,53 @@
+version: 2
+
+updates:
+  # NuGet packages. Versions are centrally managed in Directory.Packages.props,
+  # so Dependabot edits that one file rather than five csproj files.
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Zurich
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      include: scope
+    labels:
+      - dependencies
+      - nuget
+    groups:
+      # One PR for the whole ASP.NET Core / Blazor stack: these ship as a set
+      # and updating them piecemeal is what produced the 10.0.6 / 10.0.8 skew.
+      aspnetcore:
+        patterns:
+          - "Microsoft.AspNetCore.*"
+          - "Microsoft.Extensions.*"
+      # One PR for the test stack.
+      test-stack:
+        patterns:
+          - "coverlet.*"
+          - "Microsoft.NET.Test.Sdk"
+          - "xunit*"
+
+  # GitHub Actions. Actions in the workflow are pinned to commit SHAs with a
+  # version comment; Dependabot understands that form and bumps both together.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Zurich
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: scope
+    labels:
+      - dependencies
+      - github-actions
+    groups:
+      actions:
+        patterns:
+          - "*"
