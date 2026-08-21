@@ -1,33 +1,24 @@
-﻿using CashFlowPlanner.Core.Accounts;
+﻿namespace CashFlowPlanner.Core;
 
-namespace CashFlowPlanner.Core;
-
+/// <summary>
+/// Turns transaction definitions into dated cash-flow events.
+/// This type deliberately knows nothing about account interest: interest depends
+/// on the running balance, so it has to be generated exactly once and last, by
+/// <see cref="SimulationEngine"/>, after credit-card payments are known.
+/// </summary>
 public sealed class CashFlowEventGenerator
 {
     private readonly ScheduleOccurrenceGenerator _scheduleOccurrenceGenerator;
-    private readonly AccountInterestEventGenerator _accountInterestEventGenerator;
 
     public CashFlowEventGenerator()
-        : this(
-            new ScheduleOccurrenceGenerator(),
-            new AccountInterestEventGenerator())
+        : this(new ScheduleOccurrenceGenerator())
     {
     }
 
     public CashFlowEventGenerator(
         ScheduleOccurrenceGenerator scheduleOccurrenceGenerator)
-        : this(
-            scheduleOccurrenceGenerator,
-            new AccountInterestEventGenerator())
-    {
-    }
-
-    public CashFlowEventGenerator(
-        ScheduleOccurrenceGenerator scheduleOccurrenceGenerator,
-        AccountInterestEventGenerator accountInterestEventGenerator)
     {
         _scheduleOccurrenceGenerator = scheduleOccurrenceGenerator;
-        _accountInterestEventGenerator = accountInterestEventGenerator;
     }
 
     public IReadOnlyList<CashFlowEvent> GenerateEvents(
@@ -65,20 +56,6 @@ public sealed class CashFlowEventGenerator
             startDate,
             endDate,
             plan);
-
-        var hasInterestContracts = plan.Accounts.Any(account =>
-            account.InterestContracts.Any(contract => contract.IsActive));
-
-        if (hasInterestContracts)
-        {
-            var interestEvents = _accountInterestEventGenerator.GenerateEvents(
-                plan.Accounts,
-                events,
-                startDate,
-                endDate);
-
-            events.AddRange(interestEvents);
-        }
 
         return SortEvents(events);
     }
