@@ -56,10 +56,7 @@ public sealed class CreditCardPaymentEventGenerator
             simulationStart,
             simulationEnd))
         {
-            var paymentDate = CreateClampedDate(
-                closingDate.Year,
-                closingDate.Month,
-                creditCard.PaymentDayOfMonth);
+            var paymentDate = CreatePaymentDate(creditCard, closingDate);
 
             paymentDate = ApplyBusinessDayAdjustment(
                 paymentDate,
@@ -221,6 +218,27 @@ public sealed class CreditCardPaymentEventGenerator
 
             current = current.AddMonths(1);
         }
+    }
+
+    /// <summary>
+    /// A payment always settles a statement that has already closed.
+    /// When the payment day-of-month falls before the closing day-of-month the
+    /// payment therefore belongs to the month AFTER the closing date -- taking it
+    /// from the closing month would debit the bank account before the statement
+    /// it pays even exists.
+    /// </summary>
+    private static DateOnly CreatePaymentDate(
+        CreditCardContract creditCard,
+        DateOnly closingDate)
+    {
+        var paymentMonth = creditCard.PaymentDayOfMonth <= creditCard.ClosingDayOfMonth
+            ? closingDate.AddMonths(1)
+            : closingDate;
+
+        return CreateClampedDate(
+            paymentMonth.Year,
+            paymentMonth.Month,
+            creditCard.PaymentDayOfMonth);
     }
 
     private static DateOnly CreateClampedDate(
