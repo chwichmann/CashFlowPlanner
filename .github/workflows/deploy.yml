@@ -9,6 +9,14 @@ permissions:
   pages: write
   id-token: write
 
+# B3 - one deployment at a time. Without this, back-to-back pushes race the
+# github-pages environment and the older build can land last, publishing stale
+# content. cancel-in-progress is false so an in-flight deployment is allowed to
+# finish rather than leaving the site half-updated.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 env:
   # The URL the site is served from. The base href assertion below is derived
   # from this, so there is exactly one place to change it.
