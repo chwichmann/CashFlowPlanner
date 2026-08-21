@@ -4,23 +4,29 @@
   <PropertyGroup>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <!--
-      B6 - BlazorWebAssemblyLoadAllGlobalizationData was true, which forces the
-      full 1.53 MB icudt.dat on every visitor. The app ships only `en` and `de`
-      resources (Resources/SharedResource.resx + SharedResource.de.resx). With
-      the property removed the runtime falls back to the sharded ICU and picks
-      one shard per culture:
+      REQUIRED - do not remove without changing how the culture is set.
 
-        en, de, de-DE, fr, it, es  -> icudt_EFIGS.dat     550'832 B
-        zh, ko, ja                 -> icudt_CJK.dat       956'416 B
-        everything else, incl de-CH-> icudt_no_CJK.dat  1'107'168 B
+      Program.cs reads the user's saved language/region preference and applies it
+      with CultureInfo.DefaultThreadCurrentCulture *after* the runtime has
+      started. Blazor calls that "changing culture dynamically during startup",
+      and it is only supported when all globalization data is loaded. Removing
+      this property to save ICU bytes (finding B6) shipped a build that reached
+      100% and then died with:
 
-      so a German visitor downloads 550 KB or 1.11 MB instead of 1.53 MB. All
-      three shards must stay in the artifact because the choice is made in the
-      browser, not at build time - do not try to publish only EFIGS.
+        Blazor detected a change in the application's culture that is not
+        supported with the current project configuration.
 
-      Do NOT set InvariantGlobalization: the app formats CHF/EUR amounts and
-      parses localised dates.
+      The sharded-ICU saving is real (550 KB EFIGS / 1.11 MB no_CJK against
+      1.53 MB full) but it cannot be taken while the culture is chosen in
+      Program.cs. To claim it, the culture must instead be passed to
+      blazor.start({ applicationCulture: ... }) in wwwroot/index.html before the
+      runtime boots, so no dynamic switch ever happens. Tracked in
+      docs/STABILIZATION-PLAN.md.
+
+      Do NOT set InvariantGlobalization either: the app formats CHF/EUR amounts
+      and parses localised dates.
     -->
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
   </PropertyGroup>
 
   <ItemGroup>
