@@ -57,16 +57,21 @@ The design is deliberately file-first:
 - **Nothing is uploaded, ever.** The app has no server component. Hosting it on
   GitHub Pages is just static file delivery.
 
-> **Export your plan regularly.** The current build does not yet warn you about
-> unexported changes — see *Known issues* below.
+> **Export your plan regularly.** The app shows an "export needed" badge while
+> you have changes that exist only in this browser, and warns before you close
+> the tab — but clearing site data still discards them. The file is the backup.
 
 ## Getting started
 
 ### Use it
 
-Open the live app, then use the folder icon in the top-right of the navigation to
-open a plan file. `samples/private-cashflow.sample.json` is a small synthetic plan
-you can load to look around.
+Open the live app. With no plan loaded you are offered three ways to start:
+create an empty plan, open a plan file you already have, or load a small
+made-up example household to look around.
+
+To install it as an app, use your browser's install action (Chrome and Edge show
+one in the address bar). Installed, it works offline and remembers the folder you
+save to.
 
 ### Run it locally
 
@@ -124,13 +129,11 @@ for the full assessment, severity ledger and roadmap.
 
 The ones worth knowing before you rely on the numbers:
 
-- **Simulation figures are being corrected.** Account interest is currently
-  posted twice, interest ignores account opening dates, and credit-card payments
-  can be dated one billing cycle early. Fixes are in progress.
-- **No unsaved-changes warning.** Closing the tab can discard work that was never
-  exported.
-- **Long horizons are slow.** A 10-year plan with interest contracts takes many
-  seconds to simulate and will block the browser tab.
+- **Cross-currency plans are only partly modelled.** Mismatched currencies are
+  now rejected or flagged rather than silently added together, but there is no
+  FX conversion: keep one currency per plan.
+- **No inflation or tax modelling yet.** Over a long horizon, projected expenses
+  are understated in real terms.
 
 ## Roadmap
 
@@ -138,7 +141,7 @@ The ones worth knowing before you rely on the numbers:
 |---|---|
 | 1 | Correct simulation results, eliminate silent data loss, gate deploys on tests, usable first run |
 | 2 | Encrypted plan files (`age` format) and auto-save straight to a folder on disk |
-| 3 | Design-token layer and shared UI components; PWA install and offline support |
+| 3 | Design-token layer and shared UI components |
 | 4 | CAMT.053 bank-statement import; net worth, inflation and tax modelling |
 
 Bank *API* access is deliberately out of scope: Switzerland has no PSD2
