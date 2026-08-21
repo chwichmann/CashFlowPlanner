@@ -1,5 +1,6 @@
 ﻿using CashFlowPlanner.Core;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace CashFlowPlanner.Storage.Json;
 
@@ -27,6 +28,7 @@ public sealed class CashFlowPlanJsonSerializer
     {
         ArgumentNullException.ThrowIfNull(document);
 
+        StampCurrentSchemaVersion(document);
         ValidateDocument(document);
 
         return JsonSerializer.Serialize(document, _jsonOptions);
@@ -52,18 +54,20 @@ public sealed class CashFlowPlanJsonSerializer
             throw new InvalidOperationException("JSON content is empty.");
         }
 
-        var document = JsonSerializer.Deserialize<CashFlowPlanDocument>(
-            json,
-            _jsonOptions);
+        JsonObject? root;
 
-        if (document is null)
+        try
         {
-            throw new InvalidOperationException("Could not deserialize cashflow plan document.");
+            root = JsonSerializer.Deserialize<JsonObject>(json, _jsonOptions);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"The cashflow plan file is not valid JSON: {exception.Message}",
+                exception);
         }
 
-        ValidateDocument(document);
-
-        return document;
+        return MigrateAndBind(root);
     }
 
     public CashFlowPlan DeserializePlan(string json)
@@ -82,6 +86,7 @@ public sealed class CashFlowPlanJsonSerializer
     {
         ArgumentNullException.ThrowIfNull(document);
 
+        StampCurrentSchemaVersion(document);
         ValidateDocument(document);
 
         await using var stream = new MemoryStream();
@@ -104,19 +109,23 @@ public sealed class CashFlowPlanJsonSerializer
     {
         ArgumentNullException.ThrowIfNull(stream);
 
-        var document = await JsonSerializer.DeserializeAsync<CashFlowPlanDocument>(
-            stream,
-            _jsonOptions,
-            cancellationToken);
+        JsonObject? root;
 
-        if (document is null)
+        try
         {
-            throw new InvalidOperationException("Could not deserialize cashflow plan document.");
+            root = await JsonSerializer.DeserializeAsync<JsonObject>(
+                stream,
+                _jsonOptions,
+                cancellationToken);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"The cashflow plan file is not valid JSON: {exception.Message}",
+                exception);
         }
 
-        ValidateDocument(document);
-
-        return document;
+        return MigrateAndBind(root);
     }
 
     public async Task<CashFlowPlan> DeserializePlanAsync(
@@ -131,13 +140,51 @@ public sealed class CashFlowPlanJsonSerializer
         return plan;
     }
 
+    /// <summary>
+    /// Runs the migration chain over the raw JSON tree and binds the result to a document. The
+    /// migrations have to see the raw tree: after binding, an absent property and a property that
+    /// happens to carry the .NET default are indistinguishable.
+    /// </summary>
+    private CashFlowPlanDocument MigrateAndBind(JsonObject? root)
+    {
+        if (root is null)
+        {
+            throw new InvalidOperationException("Could not deserialize cashflow plan document.");
+        }
+
+        CashFlowPlanDocumentMigrator.Migrate(root);
+
+        CashFlowPlanDocument? document;
+
+        try
+        {
+            document = root.Deserialize<CashFlowPlanDocument>(_jsonOptions);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"The cashflow plan file could not be read: {exception.Message}",
+                exception);
+        }
+
+        if (document is null)
+        {
+            throw new InvalidOperationException("Could not deserialize cashflow plan document.");
+        }
+
+        ValidateDocument(document);
+
+        return document;
+    }
+
+    private static void StampCurrentSchemaVersion(CashFlowPlanDocument document)
+    {
+        document.SchemaVersion = CurrentSchemaVersion;
+    }
+
     private static void ValidateDocument(CashFlowPlanDocument document)
     {
-        if (document.SchemaVersion != 1)
-        {
-            throw new NotSupportedException(
-                $"Unsupported cashflow plan schema version '{document.SchemaVersion}'. Supported version is 1.");
-        }
+        CashFlowPlanDocumentMigrator.EnsureSupported(document.SchemaVersion);
 
         if (document.PlanId == Guid.Empty)
         {
