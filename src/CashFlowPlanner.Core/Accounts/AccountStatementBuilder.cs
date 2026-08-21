@@ -38,7 +38,7 @@ public static class AccountStatementBuilder
                 ref balance,
                 ref openingBalanceApplied);
 
-            ApplyEventToBalance(account.Id, cashFlowEvent, ref balance);
+            balance += AccountPosting.GetSignedAmount(account.Id, cashFlowEvent);
         }
 
         var rows = new List<AccountStatementRow>();
@@ -73,15 +73,17 @@ public static class AccountStatementBuilder
                 ref balance,
                 ref openingBalanceApplied);
 
-            var incoming = cashFlowEvent.ToAccountId == account.Id
-                ? cashFlowEvent.Amount
+            var signedAmount = AccountPosting.GetSignedAmount(account.Id, cashFlowEvent);
+
+            var incoming = signedAmount > 0m
+                ? signedAmount
                 : (decimal?)null;
 
-            var outgoing = cashFlowEvent.FromAccountId == account.Id
-                ? cashFlowEvent.Amount
+            var outgoing = signedAmount < 0m
+                ? -signedAmount
                 : (decimal?)null;
 
-            ApplyEventToBalance(account.Id, cashFlowEvent, ref balance);
+            balance += signedAmount;
 
             rows.Add(new AccountStatementRow
             {
@@ -98,10 +100,11 @@ public static class AccountStatementBuilder
             });
         }
 
-        return rows
-            .OrderBy(x => x.ValutaDate)
-            .ThenBy(x => x.Title)
-            .ToList();
+        // No re-sort here. The running balance was accumulated in
+        // (Date, Priority, Name) order -- the same order the simulation engine
+        // applies events in -- so re-sorting by (ValutaDate, Title) afterwards left
+        // the balance column not reconciling with the rows it sits next to.
+        return rows;
     }
 
     private static void ApplyOpeningBalanceIfNeeded(
@@ -119,22 +122,6 @@ public static class AccountStatementBuilder
         {
             balance += account.OpeningBalance;
             openingBalanceApplied = true;
-        }
-    }
-
-    private static void ApplyEventToBalance(
-        Guid accountId,
-        CashFlowEvent cashFlowEvent,
-        ref decimal balance)
-    {
-        if (cashFlowEvent.ToAccountId == accountId)
-        {
-            balance += cashFlowEvent.Amount;
-        }
-
-        if (cashFlowEvent.FromAccountId == accountId)
-        {
-            balance -= cashFlowEvent.Amount;
         }
     }
 }

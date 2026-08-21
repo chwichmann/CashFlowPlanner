@@ -137,15 +137,7 @@ public sealed class AccountInterestEventGenerator
                      .ThenBy(x => x.Priority)
                      .ThenBy(x => x.Name))
         {
-            if (cashFlowEvent.ToAccountId == account.Id)
-            {
-                balance += cashFlowEvent.Amount;
-            }
-
-            if (cashFlowEvent.FromAccountId == account.Id)
-            {
-                balance -= cashFlowEvent.Amount;
-            }
+            balance += AccountPosting.GetSignedAmount(account.Id, cashFlowEvent);
         }
 
         return balance;

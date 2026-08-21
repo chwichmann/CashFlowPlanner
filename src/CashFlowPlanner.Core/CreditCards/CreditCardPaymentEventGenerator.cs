@@ -134,53 +134,7 @@ public sealed class CreditCardPaymentEventGenerator
 
         foreach (var cashFlowEvent in relevantEvents)
         {
-            switch (cashFlowEvent.Kind)
-            {
-                case TransactionKind.ExternalIncome:
-                    if (cashFlowEvent.ToAccountId == creditCardAccountId)
-                    {
-                        balance += cashFlowEvent.Amount;
-                    }
-                    break;
-
-                case TransactionKind.ExternalExpense:
-                    if (cashFlowEvent.FromAccountId == creditCardAccountId)
-                    {
-                        balance -= cashFlowEvent.Amount;
-                    }
-                    break;
-
-                case TransactionKind.InternalTransfer:
-                    if (cashFlowEvent.FromAccountId == creditCardAccountId)
-                    {
-                        balance -= cashFlowEvent.Amount;
-                    }
-
-                    if (cashFlowEvent.ToAccountId == creditCardAccountId)
-                    {
-                        balance += cashFlowEvent.Amount;
-                    }
-                    break;
-
-                case TransactionKind.DebtIncrease:
-                    if (cashFlowEvent.ToAccountId == creditCardAccountId)
-                    {
-                        balance -= cashFlowEvent.Amount;
-                    }
-                    break;
-
-                case TransactionKind.DebtPayment:
-                    if (cashFlowEvent.FromAccountId == creditCardAccountId)
-                    {
-                        balance -= cashFlowEvent.Amount;
-                    }
-
-                    if (cashFlowEvent.ToAccountId == creditCardAccountId)
-                    {
-                        balance += cashFlowEvent.Amount;
-                    }
-                    break;
-            }
+            balance += AccountPosting.GetSignedAmount(creditCardAccountId, cashFlowEvent);
         }
 
         return balance;
