@@ -48,6 +48,16 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # B6 - without the wasm-tools workload the SDK prints
+      # "Publishing without optimizations. Although it's optional for Blazor, we
+      # strongly recommend using `wasm-tools` workload!" and ships
+      # dotnet.native.wasm unrelinked.
+      # --skip-manifest-update keeps the workload pinned to the manifest that
+      # ships with the SDK band, so the publish output is reproducible instead
+      # of drifting whenever a new manifest is released.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools --skip-manifest-update
+
       - name: Restore
         run: dotnet restore CashFlowPlanner.slnx
 
@@ -89,6 +99,20 @@ jobs:
           dotnet publish src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj \
             -c Release \
             -o "$PUBLISH_DIR"
+
+      # B6 - GitHub Pages negotiates compression itself and never serves these
+      # sidecars, so they are 9.6 MB of dead weight in the artifact. They are
+      # also written BEFORE the base href rewrite below, which means every
+      # index.html.gz / index.html.br still contains <base href="/"> - a latent
+      # trap if anything ever did serve them. Delete them before the rewrite so
+      # no stale copy can survive it. Verified: nothing in index.html,
+      # dotnet.js or blazor.webassembly.js references a .gz or .br URL.
+      - name: Strip precompressed sidecars from artifact
+        run: |
+          set -euo pipefail
+          before=$(find "$PUBLISH_WWWROOT" -type f \( -name '*.gz' -o -name '*.br' \) | wc -l | tr -d ' ')
+          find "$PUBLISH_WWWROOT" -type f \( -name '*.gz' -o -name '*.br' \) -delete
+          echo "Removed $before precompressed sidecar files."
 
       # ------------------------------------------------------------------
       # B2 - THE highest-risk line in the repo.
@@ -167,6 +191,26 @@ jobs:
           set -euo pipefail
           touch "$PUBLISH_WWWROOT/.nojekyll"
           test -f "$PUBLISH_WWWROOT/.nojekyll"
+
+      - name: Artifact size report
+        run: |
+          set -euo pipefail
+          {
+            echo "### Published artifact"
+            echo
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| Total size | $(du -sh "$PUBLISH_WWWROOT" | cut -f1) |"
+            echo "| File count | $(find "$PUBLISH_WWWROOT" -type f | wc -l | tr -d ' ') |"
+            echo "| \`_framework\` | $(du -sh "$PUBLISH_WWWROOT/_framework" | cut -f1) |"
+            echo "| Base href | \`$(grep -o -i '<base[^>]*>' "$PUBLISH_WWWROOT/index.html")\` |"
+            echo
+            echo "Ten largest files:"
+            echo
+            echo '```'
+            find "$PUBLISH_WWWROOT" -type f -exec du -k {} + | sort -rn | head -10
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
