@@ -235,139 +235,48 @@ public sealed class SimulationEngine
         }
     }
 
+    /// <summary>
+    /// Applies one event to the running balances. The arithmetic itself lives in
+    /// <see cref="AccountPosting"/> so the engine, the account statement, the
+    /// interest generator and the credit-card generator cannot drift apart again.
+    /// </summary>
     private static void ApplyEvent(
         CashFlowEvent cashFlowEvent,
         Dictionary<Guid, decimal> balances,
         IReadOnlyDictionary<Guid, Account> accountById,
         List<SimulationWarning> warnings)
     {
-        switch (cashFlowEvent.Kind)
+        if (!AccountPosting.TryGetLegs(cashFlowEvent, out var legs))
         {
-            case TransactionKind.ExternalIncome:
-                IncreaseAccount(
-                    cashFlowEvent.ToAccountId,
-                    cashFlowEvent.Amount,
-                    cashFlowEvent,
-                    balances,
-                    accountById,
-                    warnings);
-                break;
+            warnings.Add(new SimulationWarning
+            {
+                Code = "UNSUPPORTED_EVENT_KIND",
+                Message = $"Unsupported event kind '{cashFlowEvent.Kind}' for event '{cashFlowEvent.Name}'.",
+                Severity = WarningSeverity.Critical,
+                Date = cashFlowEvent.Date,
+                SourceId = cashFlowEvent.SourceTransactionId
+            });
 
-            case TransactionKind.ExternalExpense:
-                DecreaseAccount(
-                    cashFlowEvent.FromAccountId,
-                    cashFlowEvent.Amount,
-                    cashFlowEvent,
-                    balances,
-                    accountById,
-                    warnings);
-                break;
-
-            case TransactionKind.InternalTransfer:
-                DecreaseAccount(
-                    cashFlowEvent.FromAccountId,
-                    cashFlowEvent.Amount,
-                    cashFlowEvent,
-                    balances,
-                    accountById,
-                    warnings);
-
-                IncreaseAccount(
-                    cashFlowEvent.ToAccountId,
-                    cashFlowEvent.Amount,
-                    cashFlowEvent,
-                    balances,
-                    accountById,
-                    warnings);
-                break;
-
-            case TransactionKind.DebtIncrease:
-                DecreaseAccount(
-                    cashFlowEvent.ToAccountId,
-                    cashFlowEvent.Amount,
-                    cashFlowEvent,
-                    balances,
-                    accountById,
-                    warnings);
-                break;
-
-            case TransactionKind.DebtPayment:
-                DecreaseAccount(
-                    cashFlowEvent.FromAccountId,
-                    cashFlowEvent.Amount,
-                    cashFlowEvent,
-                    balances,
-                    accountById,
-                    warnings);
-
-                IncreaseAccount(
-                    cashFlowEvent.ToAccountId,
-                    cashFlowEvent.Amount,
-                    cashFlowEvent,
-                    balances,
-                    accountById,
-                    warnings);
-                break;
-
-            default:
-                warnings.Add(new SimulationWarning
-                {
-                    Code = "UNSUPPORTED_EVENT_KIND",
-                    Message = $"Unsupported event kind '{cashFlowEvent.Kind}' for event '{cashFlowEvent.Name}'.",
-                    Severity = WarningSeverity.Critical,
-                    Date = cashFlowEvent.Date,
-                    SourceId = cashFlowEvent.SourceTransactionId
-                });
-                break;
-        }
-    }
-
-    private static void IncreaseAccount(
-        Guid? accountId,
-        decimal amount,
-        CashFlowEvent cashFlowEvent,
-        Dictionary<Guid, decimal> balances,
-        IReadOnlyDictionary<Guid, Account> accountById,
-        List<SimulationWarning> warnings)
-    {
-        if (accountId is null)
-        {
-            warnings.Add(MissingAccountWarning(cashFlowEvent, "increase"));
             return;
         }
 
-        if (!balances.ContainsKey(accountId.Value) ||
-            !accountById.ContainsKey(accountId.Value))
+        foreach (var leg in legs)
         {
-            warnings.Add(UnknownAccountWarning(cashFlowEvent, accountId.Value));
-            return;
+            if (leg.AccountId is null)
+            {
+                warnings.Add(MissingAccountWarning(cashFlowEvent, leg.OperationName));
+                continue;
+            }
+
+            if (!balances.ContainsKey(leg.AccountId.Value) ||
+                !accountById.ContainsKey(leg.AccountId.Value))
+            {
+                warnings.Add(UnknownAccountWarning(cashFlowEvent, leg.AccountId.Value));
+                continue;
+            }
+
+            balances[leg.AccountId.Value] += leg.SignedAmount;
         }
-
-        balances[accountId.Value] += amount;
-    }
-
-    private static void DecreaseAccount(
-        Guid? accountId,
-        decimal amount,
-        CashFlowEvent cashFlowEvent,
-        Dictionary<Guid, decimal> balances,
-        IReadOnlyDictionary<Guid, Account> accountById,
-        List<SimulationWarning> warnings)
-    {
-        if (accountId is null)
-        {
-            warnings.Add(MissingAccountWarning(cashFlowEvent, "decrease"));
-            return;
-        }
-
-        if (!balances.ContainsKey(accountId.Value) ||
-            !accountById.ContainsKey(accountId.Value))
-        {
-            warnings.Add(UnknownAccountWarning(cashFlowEvent, accountId.Value));
-            return;
-        }
-
-        balances[accountId.Value] -= amount;
     }
 
     private static SimulationWarning MissingAccountWarning(

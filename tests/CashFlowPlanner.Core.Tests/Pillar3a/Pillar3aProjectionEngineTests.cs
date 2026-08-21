@@ -1,291 +1,324 @@
-﻿namespace CashFlowPlanner.Core.Pillar3a;
+using CashFlowPlanner.Core.Accounts;
+using CashFlowPlanner.Core.People;
+using CashFlowPlanner.Core.Pillar3a;
 
-public sealed class Pillar3aProjectionEngine
+namespace CashFlowPlanner.Core.Tests.Pillar3a;
+
+/// <summary>
+/// Real coverage for <see cref="Pillar3aProjectionEngine"/>.
+///
+/// This file previously contained zero tests: it was a stale verbatim copy of the
+/// production class, in the production namespace, so it shadowed the real type
+/// inside the test assembly while looking like a test suite.
+/// </summary>
+public sealed class Pillar3aProjectionEngineTests
 {
-    private readonly ScheduleOccurrenceGenerator _scheduleOccurrenceGenerator;
+    private static readonly Guid PaymentAccountId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+    private static readonly Guid PersonId = Guid.Parse("20000000-0000-0000-0000-000000000001");
 
-    public Pillar3aProjectionEngine()
-        : this(new ScheduleOccurrenceGenerator())
+    [Theory]
+    // 12'000 over January (31 days) at 3% net:
+    // 12'000 * 3% * 31 / 365 = 30.575... => 30.58
+    [InlineData(Pillar3aProjectionMethod.FixedInterest, 3, 0, 30.58)]
+    // FixedInterest deliberately ignores the annual fee.
+    [InlineData(Pillar3aProjectionMethod.FixedInterest, 3, 1, 30.58)]
+    // ExpectedReturn nets the fee off the return.
+    [InlineData(Pillar3aProjectionMethod.ExpectedReturn, 3, 0, 30.58)]
+    [InlineData(Pillar3aProjectionMethod.ExpectedReturn, 4, 1, 30.58)]
+    // These two methods never grow the value.
+    [InlineData(Pillar3aProjectionMethod.None, 5, 0, 0)]
+    [InlineData(Pillar3aProjectionMethod.InsuranceGuaranteedPayout, 5, 0, 0)]
+    public void Project_Growth_FollowsTheProjectionMethod(
+        Pillar3aProjectionMethod method,
+        decimal expectedAnnualReturnPercent,
+        decimal annualFeePercent,
+        decimal expectedGrowth)
     {
-    }
-
-    public Pillar3aProjectionEngine(ScheduleOccurrenceGenerator scheduleOccurrenceGenerator)
-    {
-        _scheduleOccurrenceGenerator = scheduleOccurrenceGenerator;
-    }
-
-    public IReadOnlyList<Pillar3aProjectionResult> Project(
-        CashFlowPlan plan,
-        DateOnly today)
-    {
-        plan.Validate();
-
-        var results = new List<Pillar3aProjectionResult>();
-
-        foreach (var contract in plan.Pillar3aContracts.Where(x => x.IsActive))
-        {
-            contract.Validate();
-
-            var person = plan.Persons.SingleOrDefault(x => x.Id == contract.OwnerPersonId);
-
-            if (person is null)
+        var contract = CreateContract(
+            openingValue: 12_000m,
+            assumption: new Pillar3aProjectionAssumption
             {
-                throw new InvalidOperationException(
-                    $"Pillar 3a contract '{contract.Name}' references unknown owner person '{contract.OwnerPersonId}'.");
-            }
-
-            var projectionStart = today < contract.OpeningDate
-                ? contract.OpeningDate
-                : today;
-
-            var projectionEnd = person.RetirementDate
-                ?? projectionStart.AddYears(30);
-
-            if (projectionEnd < projectionStart)
-            {
-                results.Add(new Pillar3aProjectionResult
-                {
-                    ContractId = contract.Id,
-                    ContractName = contract.Name,
-                    OwnerPersonId = contract.OwnerPersonId,
-                    Points = []
-                });
-
-                continue;
-            }
-
-            var points = ProjectContract(
-                contract,
-                projectionStart,
-                projectionEnd);
-
-            results.Add(new Pillar3aProjectionResult
-            {
-                ContractId = contract.Id,
-                ContractName = contract.Name,
-                OwnerPersonId = contract.OwnerPersonId,
-                Points = points
+                Method = method,
+                ExpectedAnnualReturnPercent = expectedAnnualReturnPercent,
+                AnnualFeePercent = annualFeePercent
             });
-        }
 
-        return results;
-    }
-
-    private IReadOnlyList<Pillar3aProjectionPoint> ProjectContract(
-        Pillar3aContract contract,
-        DateOnly startDate,
-        DateOnly endDate)
-    {
-        var contributionDates = GenerateContributionDates(
+        var points = ProjectSingleContract(
             contract,
-            startDate,
-            endDate);
+            today: new DateOnly(2026, 1, 1),
+            retirementDate: new DateOnly(2026, 1, 31));
 
-        var withdrawals = contract.Withdrawals
-            .OrderBy(x => x.Date)
-            .ToList();
+        var point = Assert.Single(points);
 
-        var points = new List<Pillar3aProjectionPoint>();
+        Assert.Equal(new DateOnly(2026, 1, 31), point.Date);
+        Assert.Equal(expectedGrowth, point.Growth);
+        Assert.Equal(12_000m + expectedGrowth, point.Value);
+    }
 
-        var currentValue = contract.OpeningValue;
-
-        var currentMonth = new DateOnly(startDate.Year, startDate.Month, 1);
-
-        while (currentMonth <= endDate)
-        {
-            var monthStart = currentMonth;
-            var monthEnd = EndOfMonth(currentMonth);
-
-            if (monthEnd < startDate)
+    [Fact]
+    public void Project_Growth_IsProRatedFromTheProjectionStart_NotTheMonthStart()
+    {
+        // The contract only opens on 15 June, so June must earn 16 days of growth,
+        // not 30.
+        // 12'000 * 3% * 16 / 365 = 15.780... => 15.78
+        var contract = CreateContract(
+            openingValue: 12_000m,
+            openingDate: new DateOnly(2026, 6, 15),
+            assumption: new Pillar3aProjectionAssumption
             {
-                currentMonth = currentMonth.AddMonths(1);
-                continue;
-            }
-
-            if (monthStart > endDate)
-            {
-                break;
-            }
-
-            var effectiveMonthStart = monthStart < startDate
-                ? startDate
-                : monthStart;
-
-            var effectiveMonthEnd = monthEnd > endDate
-                ? endDate
-                : monthEnd;
-
-            var contributions = contributionDates
-                .Where(x =>
-                    x.Date >= effectiveMonthStart &&
-                    x.Date <= effectiveMonthEnd)
-                .Sum(x => x.Amount);
-
-            var monthWithdrawals = CalculateWithdrawalsForMonth(
-                contract,
-                withdrawals,
-                effectiveMonthStart,
-                effectiveMonthEnd,
-                currentValue,
-                out var closesContract);
-
-            var growth = CalculateGrowth(
-                contract,
-                currentValue,
-                effectiveMonthStart,
-                effectiveMonthEnd.AddDays(1));
-
-            currentValue += contributions;
-            currentValue += growth;
-            currentValue -= monthWithdrawals;
-
-            if (currentValue < 0m)
-            {
-                currentValue = 0m;
-            }
-
-            if (closesContract)
-            {
-                currentValue = 0m;
-            }
-
-            points.Add(new Pillar3aProjectionPoint
-            {
-                Date = effectiveMonthEnd,
-                Contributions = Math.Round(contributions, 2, MidpointRounding.AwayFromZero),
-                Growth = Math.Round(growth, 2, MidpointRounding.AwayFromZero),
-                Withdrawals = Math.Round(monthWithdrawals, 2, MidpointRounding.AwayFromZero),
-                Value = Math.Round(currentValue, 2, MidpointRounding.AwayFromZero),
-                Currency = contract.Currency
+                Method = Pillar3aProjectionMethod.FixedInterest,
+                ExpectedAnnualReturnPercent = 3m
             });
 
-            if (closesContract)
-            {
-                break;
-            }
+        var points = ProjectSingleContract(
+            contract,
+            today: new DateOnly(2026, 1, 1),
+            retirementDate: new DateOnly(2026, 6, 30));
 
-            currentMonth = currentMonth.AddMonths(1);
-        }
+        var point = Assert.Single(points);
 
-        return points;
+        Assert.Equal(new DateOnly(2026, 6, 30), point.Date);
+        Assert.Equal(15.78m, point.Growth);
     }
 
-    private IReadOnlyList<ContributionOccurrence> GenerateContributionDates(
-        Pillar3aContract contract,
-        DateOnly startDate,
-        DateOnly endDate)
+    [Fact]
+    public void Project_Growth_IsCalculatedOnTheValueBeforeThisMonthsContribution()
     {
-        var result = new List<ContributionOccurrence>();
-
-        foreach (var contributionSchedule in contract.ContributionSchedules.Where(x => x.IsActive))
-        {
-            contributionSchedule.Validate(contract.Name);
-
-            var schedule = contributionSchedule.ToSchedule();
-
-            var occurrences = _scheduleOccurrenceGenerator.GenerateOccurrences(
-                schedule,
-                startDate,
-                endDate);
-
-            foreach (var occurrence in occurrences)
+        var contract = CreateContract(
+            openingValue: 0m,
+            assumption: new Pillar3aProjectionAssumption
             {
-                result.Add(new ContributionOccurrence(
-                    occurrence,
-                    contributionSchedule.Amount));
-            }
-        }
+                Method = Pillar3aProjectionMethod.ExpectedReturn,
+                ExpectedAnnualReturnPercent = 12m
+            },
+            contributionSchedules:
+            [
+                new Pillar3aContributionSchedule
+                {
+                    Id = Guid.NewGuid(),
+                    PaymentAccountId = PaymentAccountId,
+                    StartDate = new DateOnly(2026, 1, 1),
+                    Amount = 1_000m,
+                    Currency = "CHF",
+                    Frequency = ScheduleFrequency.Monthly,
+                    Interval = 1,
+                    DayOfMonth = 10,
+                    IsActive = true
+                }
+            ]);
 
-        return result
-            .OrderBy(x => x.Date)
-            .ToList();
+        var points = ProjectSingleContract(
+            contract,
+            today: new DateOnly(2026, 1, 1),
+            retirementDate: new DateOnly(2026, 3, 31));
+
+        Assert.Equal(3, points.Count);
+
+        // January starts at zero, so the January contribution earns nothing yet.
+        Assert.Equal(1_000m, points[0].Contributions);
+        Assert.Equal(0m, points[0].Growth);
+        Assert.Equal(1_000m, points[0].Value);
+
+        // February grows the 1'000 already there, for 28 days:
+        // 1'000 * 12% * 28 / 365 = 9.205... => 9.21
+        Assert.Equal(1_000m, points[1].Contributions);
+        Assert.Equal(9.21m, points[1].Growth);
+        Assert.Equal(2_009.21m, points[1].Value);
     }
 
-    private static decimal CalculateWithdrawalsForMonth(
-        Pillar3aContract contract,
-        IReadOnlyCollection<Pillar3aWithdrawalEvent> withdrawals,
-        DateOnly monthStart,
-        DateOnly monthEnd,
-        decimal currentValue,
-        out bool closesContract)
+    [Fact]
+    public void Project_Withdrawal_ReducesTheValue_AndIsReportedOnItsMonth()
     {
-        closesContract = false;
-        var total = 0m;
+        var contract = CreateContract(
+            openingValue: 10_000m,
+            assumption: NoGrowth(),
+            withdrawals:
+            [
+                new Pillar3aWithdrawalEvent
+                {
+                    Id = Guid.NewGuid(),
+                    Date = new DateOnly(2026, 2, 15),
+                    Reason = Pillar3aWithdrawalReason.OwnerOccupiedHome,
+                    Amount = 3_000m
+                }
+            ]);
 
-        foreach (var withdrawal in withdrawals.Where(x => x.Date >= monthStart && x.Date <= monthEnd))
-        {
-            withdrawal.Validate(contract.Name);
+        var points = ProjectSingleContract(
+            contract,
+            today: new DateOnly(2026, 1, 1),
+            retirementDate: new DateOnly(2026, 3, 31));
 
-            if (withdrawal.CloseContract)
-            {
-                total += currentValue;
-                closesContract = true;
-                continue;
-            }
+        Assert.Equal(3, points.Count);
 
-            total += withdrawal.Amount ?? 0m;
-        }
+        Assert.Equal(0m, points[0].Withdrawals);
+        Assert.Equal(10_000m, points[0].Value);
 
-        return total;
+        Assert.Equal(3_000m, points[1].Withdrawals);
+        Assert.Equal(7_000m, points[1].Value);
+
+        Assert.Equal(0m, points[2].Withdrawals);
+        Assert.Equal(7_000m, points[2].Value);
     }
 
-    private static decimal CalculateGrowth(
-        Pillar3aContract contract,
-        decimal currentValue,
-        DateOnly periodStart,
-        DateOnly periodEndExclusive)
+    [Fact]
+    public void Project_Withdrawal_LargerThanTheValue_FloorsTheValueAtZero()
     {
-        if (currentValue <= 0m)
+        var contract = CreateContract(
+            openingValue: 10_000m,
+            assumption: NoGrowth(),
+            withdrawals:
+            [
+                new Pillar3aWithdrawalEvent
+                {
+                    Id = Guid.NewGuid(),
+                    Date = new DateOnly(2026, 2, 15),
+                    Reason = Pillar3aWithdrawalReason.OwnerOccupiedHome,
+                    Amount = 25_000m
+                }
+            ]);
+
+        var points = ProjectSingleContract(
+            contract,
+            today: new DateOnly(2026, 1, 1),
+            retirementDate: new DateOnly(2026, 3, 31));
+
+        Assert.Equal(0m, points[1].Value);
+        Assert.Equal(0m, points[2].Value);
+    }
+
+    [Fact]
+    public void Project_ClosingWithdrawal_PaysOutTheWholeValue_AndEndsTheProjection()
+    {
+        var contract = CreateContract(
+            openingValue: 10_000m,
+            assumption: NoGrowth(),
+            withdrawals:
+            [
+                new Pillar3aWithdrawalEvent
+                {
+                    Id = Guid.NewGuid(),
+                    Date = new DateOnly(2026, 2, 15),
+                    Reason = Pillar3aWithdrawalReason.Retirement,
+                    CloseContract = true
+                }
+            ]);
+
+        var points = ProjectSingleContract(
+            contract,
+            today: new DateOnly(2026, 1, 1),
+            retirementDate: new DateOnly(2026, 12, 31));
+
+        // The projection stops in the month the contract closes.
+        Assert.Equal(2, points.Count);
+
+        Assert.Equal(new DateOnly(2026, 2, 28), points[1].Date);
+        Assert.Equal(10_000m, points[1].Withdrawals);
+        Assert.Equal(0m, points[1].Value);
+    }
+
+    [Fact]
+    public void Project_Should_ReturnNoPoints_WhenRetirementIsAlreadyInThePast()
+    {
+        var contract = CreateContract(
+            openingValue: 10_000m,
+            assumption: NoGrowth());
+
+        var points = ProjectSingleContract(
+            contract,
+            today: new DateOnly(2026, 6, 1),
+            retirementDate: new DateOnly(2026, 5, 1));
+
+        Assert.Empty(points);
+    }
+
+    [Fact]
+    public void Project_Should_SkipInactiveContracts()
+    {
+        var contract = CreateContract(
+            openingValue: 10_000m,
+            assumption: NoGrowth(),
+            isActive: false);
+
+        var plan = CreatePlan(contract, new DateOnly(2026, 12, 31));
+
+        var results = new Pillar3aProjectionEngine()
+            .Project(plan, new DateOnly(2026, 1, 1));
+
+        Assert.Empty(results);
+    }
+
+    private static Pillar3aProjectionAssumption NoGrowth()
+    {
+        return new Pillar3aProjectionAssumption
         {
-            return 0m;
-        }
-
-        if (periodEndExclusive <= periodStart)
-        {
-            return 0m;
-        }
-
-        var days = periodEndExclusive.DayNumber - periodStart.DayNumber;
-
-        if (days <= 0)
-        {
-            return 0m;
-        }
-
-        var assumption = contract.ProjectionAssumption;
-
-        return assumption.Method switch
-        {
-            Pillar3aProjectionMethod.FixedInterest =>
-                currentValue *
-                (assumption.ExpectedAnnualReturnPercent / 100m) *
-                days / 365m,
-
-            Pillar3aProjectionMethod.ExpectedReturn =>
-                currentValue *
-                ((assumption.ExpectedAnnualReturnPercent - assumption.AnnualFeePercent) / 100m) *
-                days / 365m,
-
-            Pillar3aProjectionMethod.InsuranceGuaranteedPayout =>
-                0m,
-
-            Pillar3aProjectionMethod.None =>
-                0m,
-
-            _ =>
-                0m
+            Method = Pillar3aProjectionMethod.None
         };
     }
 
-    private static DateOnly EndOfMonth(DateOnly date)
+    private static IReadOnlyList<Pillar3aProjectionPoint> ProjectSingleContract(
+        Pillar3aContract contract,
+        DateOnly today,
+        DateOnly retirementDate)
     {
-        return new DateOnly(
-            date.Year,
-            date.Month,
-            DateTime.DaysInMonth(date.Year, date.Month));
+        var plan = CreatePlan(contract, retirementDate);
+
+        var results = new Pillar3aProjectionEngine().Project(plan, today);
+
+        var result = Assert.Single(results);
+
+        Assert.Equal(contract.Id, result.ContractId);
+
+        return result.Points;
     }
 
-    private readonly record struct ContributionOccurrence(
-        DateOnly Date,
-        decimal Amount);
+    private static CashFlowPlan CreatePlan(
+        Pillar3aContract contract,
+        DateOnly retirementDate)
+    {
+        var paymentAccount = new Account
+        {
+            Id = PaymentAccountId,
+            Name = "Bank Account",
+            Type = AccountType.BankAccount,
+            Currency = "CHF",
+            OpeningBalance = 100_000m,
+            OpeningDate = new DateOnly(2026, 1, 1)
+        };
+
+        var person = new Person
+        {
+            Id = PersonId,
+            DisplayName = "Christian",
+            RetirementDate = retirementDate
+        };
+
+        return TestPlanBuilder.CreatePlan(
+            persons: [person],
+            accounts: [paymentAccount],
+            pillar3aContracts: [contract]);
+    }
+
+    private static Pillar3aContract CreateContract(
+        decimal openingValue,
+        Pillar3aProjectionAssumption assumption,
+        DateOnly? openingDate = null,
+        List<Pillar3aContributionSchedule>? contributionSchedules = null,
+        List<Pillar3aWithdrawalEvent>? withdrawals = null,
+        bool isActive = true)
+    {
+        return new Pillar3aContract
+        {
+            Id = Guid.Parse("30000000-0000-0000-0000-000000000001"),
+            Name = "VIAC",
+            OwnerPersonId = PersonId,
+            Type = Pillar3aContractType.Investment,
+            OpeningValue = openingValue,
+            OpeningDate = openingDate ?? new DateOnly(2026, 1, 1),
+            Currency = "CHF",
+            IsActive = isActive,
+            ProjectionAssumption = assumption,
+            ContributionSchedules = contributionSchedules ?? [],
+            Withdrawals = withdrawals ?? []
+        };
+    }
 }

@@ -124,7 +124,12 @@ public sealed class AccountInterestEventGenerator
         IReadOnlyCollection<CashFlowEvent> eventsForBalance,
         DateOnly date)
     {
-        var balance = account.OpeningBalance;
+        // Same rule as SimulationEngine and AccountStatementBuilder: the opening
+        // balance is only known from the account's opening date onwards. Without
+        // this guard an account opened on 01.12 earned a full year of interest.
+        var balance = account.OpeningDate <= date
+            ? account.OpeningBalance
+            : 0m;
 
         foreach (var cashFlowEvent in eventsForBalance
                      .Where(x => x.Date < date)
@@ -132,15 +137,7 @@ public sealed class AccountInterestEventGenerator
                      .ThenBy(x => x.Priority)
                      .ThenBy(x => x.Name))
         {
-            if (cashFlowEvent.ToAccountId == account.Id)
-            {
-                balance += cashFlowEvent.Amount;
-            }
-
-            if (cashFlowEvent.FromAccountId == account.Id)
-            {
-                balance -= cashFlowEvent.Amount;
-            }
+            balance += AccountPosting.GetSignedAmount(account.Id, cashFlowEvent);
         }
 
         return balance;

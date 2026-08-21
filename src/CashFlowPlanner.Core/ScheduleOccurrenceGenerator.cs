@@ -86,7 +86,10 @@ public sealed class ScheduleOccurrenceGenerator
             }
         }
 
-        return result.Distinct().Order().ToList();
+        // No Distinct(): when the business-day adjustment maps several nominal
+        // dates onto the same business day those are collisions, not duplicates.
+        // A daily expense that falls on Sat/Sun/Mon is still three payments.
+        return result.Order().ToList();
     }
 
     private static IReadOnlyList<DateOnly> GenerateWeekly(
@@ -129,7 +132,10 @@ public sealed class ScheduleOccurrenceGenerator
             }
         }
 
-        return result.Distinct().Order().ToList();
+        // No Distinct(): when the business-day adjustment maps several nominal
+        // dates onto the same business day those are collisions, not duplicates.
+        // A daily expense that falls on Sat/Sun/Mon is still three payments.
+        return result.Order().ToList();
     }
 
     private static IReadOnlyList<DateOnly> GenerateMonthly(
@@ -181,7 +187,10 @@ public sealed class ScheduleOccurrenceGenerator
             current = current.AddMonths(effectiveMonthStep);
         }
 
-        return result.Distinct().Order().ToList();
+        // No Distinct(): when the business-day adjustment maps several nominal
+        // dates onto the same business day those are collisions, not duplicates.
+        // A daily expense that falls on Sat/Sun/Mon is still three payments.
+        return result.Order().ToList();
     }
 
     private static IReadOnlyList<DateOnly> GenerateYearly(
@@ -219,7 +228,10 @@ public sealed class ScheduleOccurrenceGenerator
             }
         }
 
-        return result.Distinct().Order().ToList();
+        // No Distinct(): when the business-day adjustment maps several nominal
+        // dates onto the same business day those are collisions, not duplicates.
+        // A daily expense that falls on Sat/Sun/Mon is still three payments.
+        return result.Order().ToList();
     }
 
     private static DateOnly ApplyBusinessDayAdjustment(

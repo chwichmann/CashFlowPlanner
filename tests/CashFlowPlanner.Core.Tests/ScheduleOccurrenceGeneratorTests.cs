@@ -329,6 +329,44 @@ public sealed class ScheduleOccurrenceGeneratorTests
         Assert.Equal(new DateOnly(2026, 8, 1), dates[0]);
     }
 
+    [Fact]
+    public void DailySchedule_Should_KeepEveryOccurrence_WhenBusinessDayAdjustmentCollides()
+    {
+        // Arrange
+        // January 2026 has 31 nominal daily occurrences. NextBusinessDay maps each
+        // weekend day onto the following Monday, so several nominal dates share one
+        // business day. Those are collisions, not duplicates: a daily expense still
+        // happens 31 times and every occurrence has to be kept.
+        var generator = new ScheduleOccurrenceGenerator();
+
+        var schedule = new Schedule
+        {
+            Frequency = ScheduleFrequency.Daily,
+            StartDate = new DateOnly(2026, 1, 1),
+            EndDate = new DateOnly(2026, 1, 31),
+            Interval = 1,
+            BusinessDayAdjustment = BusinessDayAdjustment.NextBusinessDay
+        };
+
+        // Act
+        // The range reaches into February so that Saturday 2026-01-31, which moves
+        // to Monday 2026-02-02, is not clipped away by the range instead.
+        var dates = generator.GenerateOccurrences(
+            schedule,
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 2, 2));
+
+        // Assert
+        Assert.Equal(31, dates.Count);
+
+        // Saturday 2026-01-03 and Sunday 2026-01-04 both move to Monday 2026-01-05,
+        // which is itself a nominal occurrence: three occurrences on one day.
+        Assert.Equal(3, dates.Count(x => x == new DateOnly(2026, 1, 5)));
+
+        // Still ordered.
+        Assert.Equal(dates.Order().ToList(), dates);
+    }
+
     private static CashFlowPlan CreatePlanWithBankOffDays(
         List<BankOffDay> bankOffDays)
     {
