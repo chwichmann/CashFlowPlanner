@@ -19,14 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\samples\private-cashflow.sample.json"
-          Link="Samples\private-cashflow.sample.json"
-          CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\CashFlowPlanner.Core\CashFlowPlanner.Core.csproj" />
-    <ProjectReference Include="..\..\src\CashFlowPlanner.Storage.Json\CashFlowPlanner.Storage.Json.csproj" />
+    <ProjectReference Include="..\..\src\CashFlowPlanner.BlazorWasm\CashFlowPlanner.BlazorWasm.csproj" />
   </ItemGroup>
 
 </Project>

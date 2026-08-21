@@ -19,7 +19,50 @@ public sealed class CashFlowAppState
 
     public bool HasPlan => CurrentPlan is not null;
 
+    /// <summary>
+    /// Raised whenever anything the UI renders changed - plan data or simulation results.
+    /// Components re-render on this.
+    /// </summary>
     public event Action? Changed;
+
+    /// <summary>
+    /// Raised only when the plan itself changed, so it needs to be written back.
+    /// Persistence listens to this and not to <see cref="Changed"/>, because running a simulation
+    /// leaves the plan byte-for-byte identical and used to force a redundant full re-serialize and
+    /// localStorage write on every run (finding P3b).
+    /// </summary>
+    public event Action? PlanChanged;
+
+    /// <summary>
+    /// Raised when only the simulation result changed.
+    /// </summary>
+    public event Action? SimulationChanged;
+
+    /// <summary>
+    /// Raised whenever <see cref="IsDirty"/> flips.
+    /// </summary>
+    public event Action? DirtyStateChanged;
+
+    /// <summary>
+    /// True when the plan holds edits that have not been exported to a file.
+    ///
+    /// The plan file is the source of truth and localStorage is only a working copy, so "saved"
+    /// means "exported", not "cached". Before finding P1c there was no dirty tracking at all and
+    /// closing the tab discarded work in silence.
+    /// </summary>
+    public bool IsDirty { get; private set; }
+
+    /// <summary>
+    /// When the plan was last exported to a file, or <see langword="null"/> if it never was in
+    /// this session.
+    /// </summary>
+    public DateTimeOffset? LastExportedAt { get; private set; }
+
+    // Hash of the JSON the user last exported. CashFlowPlanDocumentMapper assigns collections by
+    // reference, so CurrentDocument shares its lists with CurrentPlan and is a snapshot of
+    // nothing - comparing against it would always report "clean". A content hash is the only
+    // reliable baseline.
+    private string? _exportedContentHash;
 
     public void LoadDocument(CashFlowPlanDocument document)
     {
@@ -27,7 +70,77 @@ public sealed class CashFlowAppState
         CurrentPlan = document.ToPlan();
         CurrentSimulationResult = null;
 
-        NotifyChanged();
+        // A freshly loaded plan matches whatever it was loaded from; edits start from here.
+        _exportedContentHash = null;
+        LastExportedAt = null;
+
+        NotifyPlanChanged(markDirty: false);
+    }
+
+    /// <summary>
+    /// Records that the plan was exported to a file. The hash of the exported JSON becomes the
+    /// clean baseline, so undoing back to exactly that content reports clean again.
+    /// </summary>
+    public void MarkExported(string exportedJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(exportedJson);
+
+        _exportedContentHash = ComputeContentHash(exportedJson);
+        LastExportedAt = DateTimeOffset.UtcNow;
+
+        SetDirty(false);
+    }
+
+    /// <summary>
+    /// Called with the JSON that was just written to the browser working copy. Serializing the
+    /// plan is the expensive part of a save, so the dirty flag is re-evaluated here, where the
+    /// JSON already exists, rather than on every mutation.
+    /// </summary>
+    public void NotifyPersistedContent(string json)
+    {
+        if (_exportedContentHash is null || string.IsNullOrWhiteSpace(json))
+        {
+            return;
+        }
+
+        SetDirty(!string.Equals(
+            ComputeContentHash(json),
+            _exportedContentHash,
+            StringComparison.Ordinal));
+    }
+
+    private void SetDirty(bool isDirty)
+    {
+        if (IsDirty == isDirty)
+        {
+            return;
+        }
+
+        IsDirty = isDirty;
+
+        DirtyStateChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Hashes the JSON content, not its formatting. The exported file is indented and the browser
+    /// working copy is compact, so the two would never compare equal without normalizing first.
+    /// </summary>
+    private static string ComputeContentHash(string json)
+    {
+        string normalized;
+
+        try
+        {
+            normalized = System.Text.Json.Nodes.JsonNode.Parse(json)?.ToJsonString() ?? json;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            normalized = json;
+        }
+
+        return Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(normalized)));
     }
 
     public void SetPlan(CashFlowPlan plan)
@@ -36,7 +149,7 @@ public sealed class CashFlowAppState
         CurrentDocument = plan.ToDocument(CurrentDocument);
         CurrentSimulationResult = null;
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public SimulationResult RunSimulation()
@@ -49,7 +162,8 @@ public sealed class CashFlowAppState
         var engine = new SimulationEngine();
         CurrentSimulationResult = engine.Simulate(CurrentPlan);
 
-        NotifyChanged();
+        // Deliberately not NotifyPlanChanged: the plan is unchanged, so there is nothing to save.
+        NotifySimulationChanged();
 
         return CurrentSimulationResult;
     }
@@ -87,7 +201,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteAccount(Guid accountId)
@@ -97,16 +211,6 @@ public sealed class CashFlowAppState
             throw new InvalidOperationException("No cashflow plan is loaded.");
         }
 
-        var isUsedByTransaction = CurrentPlan.Transactions.Any(x =>
-            x.FromAccountId == accountId ||
-            x.ToAccountId == accountId);
-
-        if (isUsedByTransaction)
-        {
-            throw new InvalidOperationException(
-                "The account cannot be deleted because it is used by one or more transactions.");
-        }
-
         var account = CurrentPlan.Accounts.SingleOrDefault(x => x.Id == accountId);
 
         if (account is null)
@@ -114,11 +218,24 @@ public sealed class CashFlowAppState
             return;
         }
 
+        // Finding P1a: this delete used to check transactions only. Deleting an account that a
+        // mortgage, a credit card or a Pillar 3a schedule still points at left a plan that neither
+        // validates nor serializes, so every later autosave and every export threw and the session
+        // could not be recovered.
+        var usages = DescribeAccountUsages(CurrentPlan, accountId);
+
+        if (usages.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"The account '{account.Name}' cannot be deleted because it is still used by " +
+                $"{FormatUsages(usages)}. Remove or repoint those first.");
+        }
+
         var accounts = CurrentPlan.Accounts
             .Where(x => x.Id != accountId)
             .ToList();
 
-        CurrentPlan = new CashFlowPlan
+        var candidatePlan = new CashFlowPlan
         {
             Id = CurrentPlan.Id,
             Name = CurrentPlan.Name,
@@ -141,10 +258,89 @@ public sealed class CashFlowAppState
             SimulationSettings = CurrentPlan.SimulationSettings
         };
 
+        // The last line of defence: never commit a plan that cannot be saved, exactly like every
+        // other delete on this type does.
+        candidatePlan.Validate();
+
+        CurrentPlan = candidatePlan;
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
+    }
+
+    /// <summary>
+    /// Every reference to <paramref name="accountId"/> that would survive the account's deletion,
+    /// phrased for the user. Plan validation does not cover mortgage and credit-card account
+    /// references, so these checks are the only thing standing between the user and a plan that
+    /// cannot be written back.
+    /// </summary>
+    public static IReadOnlyList<string> DescribeAccountUsages(CashFlowPlan plan, Guid accountId)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+
+        var usages = new List<string>();
+
+        var transactionCount = plan.Transactions.Count(x =>
+            x.FromAccountId == accountId ||
+            x.ToAccountId == accountId);
+
+        if (transactionCount > 0)
+        {
+            usages.Add(transactionCount == 1
+                ? "1 transaction"
+                : $"{transactionCount} transactions");
+        }
+
+        foreach (var mortgage in plan.Mortgages)
+        {
+            if (mortgage.PaymentAccountId == accountId)
+            {
+                usages.Add($"the mortgage '{mortgage.Name}' (payment account)");
+            }
+
+            if (mortgage.IndirectAmortisationAccountId == accountId)
+            {
+                usages.Add($"the mortgage '{mortgage.Name}' (indirect amortisation account)");
+            }
+        }
+
+        foreach (var creditCard in plan.CreditCards)
+        {
+            if (creditCard.CreditCardAccountId == accountId)
+            {
+                usages.Add($"the credit card '{creditCard.Name}' (card account)");
+            }
+
+            if (creditCard.PaymentAccountId == accountId)
+            {
+                usages.Add($"the credit card '{creditCard.Name}' (payment account)");
+            }
+        }
+
+        foreach (var contract in plan.Pillar3aContracts)
+        {
+            if (contract.ContributionSchedules.Any(x => x.PaymentAccountId == accountId))
+            {
+                usages.Add(
+                    $"the Pillar 3a contract '{contract.Name}' (contribution payment account)");
+            }
+
+            if (contract.Withdrawals.Any(x => x.TargetAccountId == accountId))
+            {
+                usages.Add(
+                    $"the Pillar 3a contract '{contract.Name}' (withdrawal target account)");
+            }
+        }
+
+        return usages;
+    }
+
+    private static string FormatUsages(IReadOnlyList<string> usages)
+    {
+        return usages.Count == 1
+            ? usages[0]
+            : string.Join("; ", usages);
     }
 
     public void AddOrUpdateTransaction(TransactionDefinition transaction)
@@ -170,7 +366,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteTransaction(Guid transactionId)
@@ -192,7 +388,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void UpdateSimulationSettings(SimulationSettings settings)
@@ -227,7 +423,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void UpdatePlanDefaultsAndBankCalendar(
@@ -266,7 +462,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdateMortgage(MortgageContract mortgage)
@@ -316,7 +512,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteMortgage(Guid mortgageId)
@@ -356,7 +552,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdateCreditCard(CreditCardContract creditCard)
@@ -406,7 +602,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteCreditCard(Guid creditCardId)
@@ -446,7 +642,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdatePerson(Person person)
@@ -499,7 +695,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeletePerson(Guid personId)
@@ -566,7 +762,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void UpdatePlanName(string name)
@@ -603,7 +799,7 @@ public sealed class CashFlowAppState
 
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdatePillar3aContract(Pillar3aContract contract)
@@ -653,7 +849,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeletePillar3aContract(Guid contractId)
@@ -693,7 +889,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdateHouseBuyScenario(HouseBuySimulatorScenario scenario)
@@ -738,7 +934,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteHouseBuyScenario(Guid scenarioId)
@@ -775,7 +971,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void Clear()
@@ -784,11 +980,32 @@ public sealed class CashFlowAppState
         CurrentPlan = null;
         CurrentSimulationResult = null;
 
-        NotifyChanged();
+        _exportedContentHash = null;
+        LastExportedAt = null;
+
+        NotifyPlanChanged(markDirty: false);
     }
 
-    private void NotifyChanged()
+    /// <summary>
+    /// The plan changed and has to be written back. Also raises <see cref="Changed"/> so that the
+    /// UI still re-renders on a single subscription.
+    /// </summary>
+    private void NotifyPlanChanged(bool markDirty = true)
     {
+        // Pessimistic and cheap: the plan moved, so assume it no longer matches the exported file.
+        // NotifyPersistedContent corrects this the moment the JSON actually exists.
+        SetDirty(markDirty && CurrentPlan is not null);
+
+        PlanChanged?.Invoke();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Only the simulation result changed. The UI re-renders, persistence does not run.
+    /// </summary>
+    private void NotifySimulationChanged()
+    {
+        SimulationChanged?.Invoke();
         Changed?.Invoke();
     }
 }

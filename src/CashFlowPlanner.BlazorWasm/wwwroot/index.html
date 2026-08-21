@@ -43,18 +43,73 @@
                 URL.revokeObjectURL(url);
             },
 
+            // Diagnostics for the last failed localStorage write, read back by .NET so that a full
+            // quota can be reported to the user instead of being swallowed (finding P1b).
+            lastStorageError: null,
+
             setLocalStorageItem: function (key, value) {
-                localStorage.setItem(key, value);
+                try {
+                    localStorage.setItem(key, value);
+                    window.cashFlowPlanner.lastStorageError = null;
+                    return true;
+                } catch (error) {
+                    const isQuotaExceeded =
+                        error &&
+                        (error.name === "QuotaExceededError" ||
+                            error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+                            error.code === 22 ||
+                            error.code === 1014);
+
+                    window.cashFlowPlanner.lastStorageError = {
+                        name: (error && error.name) || "Error",
+                        message: (error && error.message) || String(error),
+                        isQuotaExceeded: !!isQuotaExceeded
+                    };
+
+                    return false;
+                }
+            },
+
+            getLastStorageError: function () {
+                return window.cashFlowPlanner.lastStorageError;
+            },
+
+            // Set from .NET whenever CashFlowAppState.IsDirty flips (finding P1c).
+            hasUnsavedChanges: false,
+
+            setUnsavedChanges: function (hasUnsavedChanges) {
+                window.cashFlowPlanner.hasUnsavedChanges = !!hasUnsavedChanges;
             },
 
             getLocalStorageItem: function (key) {
-                return localStorage.getItem(key);
+                try {
+                    return localStorage.getItem(key);
+                } catch (error) {
+                    return null;
+                }
             },
 
             removeLocalStorageItem: function (key) {
-                localStorage.removeItem(key);
+                try {
+                    localStorage.removeItem(key);
+                } catch (error) {
+                    // Storage is unavailable; there is nothing to remove and nothing to report.
+                }
             }
         };
+
+        // The plan file is the source of truth; localStorage is only a working copy that a
+        // cleared site-data wipes. Warn before the tab closes on unexported edits (finding P1c).
+        window.addEventListener("beforeunload", function (event) {
+            if (!window.cashFlowPlanner.hasUnsavedChanges) {
+                return undefined;
+            }
+
+            event.preventDefault();
+            event.returnValue = "";
+
+            return "";
+        });
     </script>
 </body>
 
