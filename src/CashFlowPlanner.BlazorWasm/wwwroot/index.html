@@ -4,12 +4,17 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BlazorWasm</title>
+    <title>CashFlow Planner</title>
+    <meta name="description"
+          content="Private Swiss household cashflow planner. Runs entirely in your browser; your data never leaves your machine." />
+    <meta name="theme-color" content="#0f213d" />
     <base href="/" />
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link href="CashFlowPlanner.BlazorWasm.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
 </head>
@@ -110,6 +115,21 @@
 
             return "";
         });
+
+        // Register the service worker that makes the app installable and offline-capable.
+        // Resolved against document.baseURI so it works both locally (/) and on GitHub
+        // Pages (/CashFlowPlanner/), where CI rewrites <base href>.
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", function () {
+                navigator.serviceWorker
+                    .register(new URL("service-worker.js", document.baseURI))
+                    .catch(function (error) {
+                        // Offline support is an enhancement: the app works without it, so a
+                        // failed registration must never block startup.
+                        console.warn("Service worker registration failed:", error);
+                    });
+            });
+        }
     </script>
 </body>
 

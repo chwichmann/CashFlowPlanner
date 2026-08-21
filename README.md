@@ -11,6 +11,9 @@ any kind. Your plan lives in a JSON file that you own and control.
 
 **Live app:** https://chwichmann.github.io/CashFlowPlanner/
 
+It installs as a desktop or mobile app and works fully offline — once loaded,
+you can plan on a plane with no connection at all.
+
 ---
 
 ## Why this exists
@@ -128,8 +131,6 @@ The ones worth knowing before you rely on the numbers:
   exported.
 - **Long horizons are slow.** A 10-year plan with interest contracts takes many
   seconds to simulate and will block the browser tab.
-- **Not yet installable or offline-capable.** Despite earlier documentation, the
-  app has no web manifest or service worker. Both are planned.
 
 ## Roadmap
 

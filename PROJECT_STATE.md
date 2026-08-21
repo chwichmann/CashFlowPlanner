@@ -12,10 +12,15 @@ Private Blazor WebAssembly cashflow simulator for Swiss household finances,
 using a JSON file as the source of truth. Fully client-side: no backend, no
 network calls, no telemetry.
 
-> **Not yet a PWA.** Earlier revisions of this file claimed PWA support. There is
-> no `manifest.json` and no service worker, so the app is neither installable nor
-> offline-capable. `wwwroot/icon-192.png` is an orphan awaiting the manifest.
-> Planned in wave 2, where it is a prerequisite for persistent file permissions.
+Installable and offline-capable as of 2026-08-22: `manifest.webmanifest` plus a
+content-hash-versioned service worker. Verified by publishing Release, loading
+it, stopping the server, and reloading a deep link. The icons are the app's own
+mark; the previous ones were the stock Blazor logo.
+
+The worker deliberately does **not** call `skipWaiting()`. A new deploy installs
+in the background and takes over on the next load, because swapping framework
+files underneath a running WebAssembly app means mismatched `.wasm` and a hard
+failure mid-session.
 
 ## Projects
 

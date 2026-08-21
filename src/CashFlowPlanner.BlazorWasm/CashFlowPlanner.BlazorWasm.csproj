@@ -27,7 +27,19 @@
       and parses localised dates.
     -->
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+
+    <!--
+      Makes the SDK generate service-worker-assets.js (the content-hashed asset
+      manifest the production worker caches against) and swap
+      service-worker.published.js in for service-worker.js on publish.
+    -->
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js"
+                   PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="Pages\HouseBuySimulator.razor.css" />
