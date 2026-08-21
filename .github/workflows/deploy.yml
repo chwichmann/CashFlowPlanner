@@ -43,10 +43,13 @@ jobs:
         with:
           persist-credentials: false
 
+      # Pinned via global.json (rollForward: latestFeature) instead of the
+      # floating 10.0.x, which drifted across SDK feature bands between local
+      # dev and CI.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       # B6 - without the wasm-tools workload the SDK prints
       # "Publishing without optimizations. Although it's optional for Blazor, we
