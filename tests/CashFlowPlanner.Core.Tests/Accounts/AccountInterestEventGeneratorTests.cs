@@ -223,9 +223,58 @@ public sealed class AccountInterestEventGeneratorTests
         Assert.Equal(116.60m, interestEvent.Amount);
     }
 
+    [Theory]
+    // Opening date on or before the simulation start: full year, 365 days.
+    // 100'000 * 1% * 365 / 360 = 1'013.888... => 1'013.89
+    [InlineData(2025, 6, 1, 1_013.89)]
+    [InlineData(2026, 1, 1, 1_013.89)]
+    // Opened mid-year: interest only from the opening date onwards.
+    // 2026-07-01 .. 2026-12-31 inclusive = 184 days.
+    // 100'000 * 1% * 184 / 360 = 511.111... => 511.11
+    [InlineData(2026, 7, 1, 511.11)]
+    // 2026-12-01 .. 2026-12-31 inclusive = 31 days.
+    // 100'000 * 1% * 31 / 360 = 86.111... => 86.11
+    [InlineData(2026, 12, 1, 86.11)]
+    // Opened after the simulated range: no interest at all.
+    [InlineData(2027, 1, 1, 0)]
+    public void GenerateEvents_OpeningBalanceOnlyCountsFromOpeningDate(
+        int openingYear,
+        int openingMonth,
+        int openingDay,
+        decimal expectedInterest)
+    {
+        var account = CreateSavingsAccount(
+            openingBalance: 100_000m,
+            interestContracts:
+            [
+                CreateFlatInterestContract(
+                    postingFrequency: InterestPostingFrequency.Yearly,
+                    annualRatePercent: 1m)
+            ],
+            openingDate: new DateOnly(openingYear, openingMonth, openingDay));
+
+        var generator = new AccountInterestEventGenerator();
+
+        var result = generator.GenerateEvents(
+            [account],
+            [],
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 12, 31));
+
+        if (expectedInterest == 0m)
+        {
+            Assert.Empty(result);
+            return;
+        }
+
+        var interestEvent = Assert.Single(result);
+        Assert.Equal(expectedInterest, interestEvent.Amount);
+    }
+
     private static Account CreateSavingsAccount(
         decimal openingBalance,
-        List<AccountInterestContract> interestContracts)
+        List<AccountInterestContract> interestContracts,
+        DateOnly? openingDate = null)
     {
         return new Account
         {
@@ -234,7 +283,7 @@ public sealed class AccountInterestEventGeneratorTests
             Type = AccountType.SavingsAccount,
             Currency = "CHF",
             OpeningBalance = openingBalance,
-            OpeningDate = new DateOnly(2026, 1, 1),
+            OpeningDate = openingDate ?? new DateOnly(2026, 1, 1),
             IsActive = true,
             InterestContracts = interestContracts
         };
