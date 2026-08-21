@@ -8,7 +8,20 @@
     <File Path="samples/private-cashflow.sample.json" />
   </Folder>
   <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
     <File Path="PROJECT_STATE.md" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution Items/ci/">
+    <File Path=".github/dependabot.yml" />
+    <File Path=".github/workflows/deploy.yml" />
+  </Folder>
+  <Folder Name="/docs/">
+    <File Path="docs/STABILIZATION-PLAN.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/CashFlowPlanner.BlazorWasm/CashFlowPlanner.BlazorWasm.csproj" />
