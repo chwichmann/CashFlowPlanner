@@ -118,7 +118,11 @@
 
         // Register the service worker that makes the app installable and offline-capable.
         // Resolved against document.baseURI so it works both locally (/) and on GitHub
-        // Pages (/CashFlowPlanner/), where CI rewrites <base href>.
+        // Pages (/CashFlowPlanner/), where CI rewrites the base href in this file.
+        //
+        // Keep the words "base" and "href" apart in this file outside the real tag: the
+        // deploy workflow asserts there is exactly one base element, and it counts text
+        // matches, so writing the tag name in a comment fails the build.
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", function () {
                 navigator.serviceWorker
