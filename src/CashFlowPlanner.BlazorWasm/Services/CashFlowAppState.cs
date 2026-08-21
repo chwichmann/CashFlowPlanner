@@ -19,7 +19,24 @@ public sealed class CashFlowAppState
 
     public bool HasPlan => CurrentPlan is not null;
 
+    /// <summary>
+    /// Raised whenever anything the UI renders changed - plan data or simulation results.
+    /// Components re-render on this.
+    /// </summary>
     public event Action? Changed;
+
+    /// <summary>
+    /// Raised only when the plan itself changed, so it needs to be written back.
+    /// Persistence listens to this and not to <see cref="Changed"/>, because running a simulation
+    /// leaves the plan byte-for-byte identical and used to force a redundant full re-serialize and
+    /// localStorage write on every run (finding P3b).
+    /// </summary>
+    public event Action? PlanChanged;
+
+    /// <summary>
+    /// Raised when only the simulation result changed.
+    /// </summary>
+    public event Action? SimulationChanged;
 
     public void LoadDocument(CashFlowPlanDocument document)
     {
@@ -27,7 +44,7 @@ public sealed class CashFlowAppState
         CurrentPlan = document.ToPlan();
         CurrentSimulationResult = null;
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void SetPlan(CashFlowPlan plan)
@@ -36,7 +53,7 @@ public sealed class CashFlowAppState
         CurrentDocument = plan.ToDocument(CurrentDocument);
         CurrentSimulationResult = null;
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public SimulationResult RunSimulation()
@@ -49,7 +66,8 @@ public sealed class CashFlowAppState
         var engine = new SimulationEngine();
         CurrentSimulationResult = engine.Simulate(CurrentPlan);
 
-        NotifyChanged();
+        // Deliberately not NotifyPlanChanged: the plan is unchanged, so there is nothing to save.
+        NotifySimulationChanged();
 
         return CurrentSimulationResult;
     }
@@ -87,7 +105,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteAccount(Guid accountId)
@@ -152,7 +170,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     /// <summary>
@@ -252,7 +270,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteTransaction(Guid transactionId)
@@ -274,7 +292,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void UpdateSimulationSettings(SimulationSettings settings)
@@ -309,7 +327,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void UpdatePlanDefaultsAndBankCalendar(
@@ -348,7 +366,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdateMortgage(MortgageContract mortgage)
@@ -398,7 +416,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteMortgage(Guid mortgageId)
@@ -438,7 +456,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdateCreditCard(CreditCardContract creditCard)
@@ -488,7 +506,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteCreditCard(Guid creditCardId)
@@ -528,7 +546,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdatePerson(Person person)
@@ -581,7 +599,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeletePerson(Guid personId)
@@ -648,7 +666,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void UpdatePlanName(string name)
@@ -685,7 +703,7 @@ public sealed class CashFlowAppState
 
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdatePillar3aContract(Pillar3aContract contract)
@@ -735,7 +753,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeletePillar3aContract(Guid contractId)
@@ -775,7 +793,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void AddOrUpdateHouseBuyScenario(HouseBuySimulatorScenario scenario)
@@ -820,7 +838,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void DeleteHouseBuyScenario(Guid scenarioId)
@@ -857,7 +875,7 @@ public sealed class CashFlowAppState
         CurrentSimulationResult = null;
         CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
     public void Clear()
@@ -866,11 +884,25 @@ public sealed class CashFlowAppState
         CurrentPlan = null;
         CurrentSimulationResult = null;
 
-        NotifyChanged();
+        NotifyPlanChanged();
     }
 
-    private void NotifyChanged()
+    /// <summary>
+    /// The plan changed and has to be written back. Also raises <see cref="Changed"/> so that the
+    /// UI still re-renders on a single subscription.
+    /// </summary>
+    private void NotifyPlanChanged()
     {
+        PlanChanged?.Invoke();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Only the simulation result changed. The UI re-renders, persistence does not run.
+    /// </summary>
+    private void NotifySimulationChanged()
+    {
+        SimulationChanged?.Invoke();
         Changed?.Invoke();
     }
 }
