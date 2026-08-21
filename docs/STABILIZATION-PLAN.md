@@ -192,6 +192,37 @@ without the provider ever seeing the finances.
 Optionally add the File Handling API (`file_handlers` + `launchQueue`) so
 double-clicking a plan file opens the PWA with the handle already granted.
 
+### Carried forward from wave 1
+
+**B6b — reclaim the ICU saving (~1 MB).** The payload work removed
+`BlazorWebAssemblyLoadAllGlobalizationData` to fall back to the sharded ICU data
+(550 KB EFIGS / 1.11 MB no_CJK against the full 1.53 MB). That shipped a build
+which reached 100% and then died before rendering:
+
+> Blazor detected a change in the application's culture that is not supported
+> with the current project configuration.
+
+`Program.cs` applies the saved language/region with
+`CultureInfo.DefaultThreadCurrentCulture` *after* the runtime has started, which
+Blazor treats as a dynamic culture change. The property was restored to fix the
+live site.
+
+**Why nothing caught it:** the build succeeded, all 353 tests passed, and the
+German resource assemblies were byte-identical. It fails only when the published
+app boots in a browser. This is the concrete argument for the Playwright layer in
+wave 3 — a single smoke test that loads the published output and asserts the app
+renders would have caught it before deploy.
+
+To take the saving, move culture selection ahead of the runtime: pass it to
+`blazor.start({ applicationCulture: … })` in `index.html` so no dynamic switch
+ever occurs, then remove the property again. Verify by publishing Release and
+loading it, not by building.
+
+**Also carried forward:** `wasm-tools` was measured at **−3.2% after Brotli** on
+`dotnet.native.wasm`, not the 30–40% the SDK message implies — .NET 10's prebuilt
+runtime is already close to a plain relink. It costs a workload install and an
+emcc relink on every CI run. Keep it only if AOT is planned; otherwise drop it.
+
 ### Wave 3 — UI system
 
 Token layer (`tokens.css` overriding Bootstrap's own `--bs-*`), the six shared
