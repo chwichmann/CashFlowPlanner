@@ -1,8 +1,14 @@
-name: Deploy Blazor WASM to GitHub Pages
+name: CI and Deploy to GitHub Pages
 
 on:
   push:
     branches: [ master ]
+  # Pull requests build and test but never deploy, so a change to this workflow
+  # can be validated without pushing to master.
+  pull_request:
+    branches: [ master ]
+  # Re-deploy the current master without an empty commit.
+  workflow_dispatch:
 
 # B4 - least privilege. The workflow default is read-only; `pages: write` and
 # `id-token: write` are granted to the deploy job ONLY. The build job runs
@@ -151,6 +157,7 @@ jobs:
         run: touch src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot/.nojekyll
 
       - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: src/CashFlowPlanner.BlazorWasm/bin/Release/net10.0/publish/wwwroot
@@ -158,6 +165,8 @@ jobs:
 
   deploy:
     needs: build
+    # Pull requests build and test above, then stop here.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     # B4 - the only job that holds deployment credentials. It runs no project
