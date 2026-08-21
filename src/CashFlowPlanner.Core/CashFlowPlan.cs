@@ -4,6 +4,7 @@ using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
 using CashFlowPlanner.Core.RealEstate;
+using CashFlowPlanner.Core.Validation;
 
 namespace CashFlowPlanner.Core;
 
@@ -54,6 +55,13 @@ public sealed class CashFlowPlan
             throw new InvalidOperationException("Base currency is required.");
         }
 
+        AssertUniqueIds("account", Accounts.Select(x => x.Id));
+        AssertUniqueIds("transaction", Transactions.Select(x => x.Id));
+        AssertUniqueIds("person", Persons.Select(x => x.Id));
+        AssertUniqueIds("mortgage", Mortgages.Select(x => x.Id));
+        AssertUniqueIds("credit card", CreditCards.Select(x => x.Id));
+        AssertUniqueIds("Pillar 3a contract", Pillar3aContracts.Select(x => x.Id));
+
         var accountIds = Accounts.Select(x => x.Id).ToHashSet();
         var personIds = Persons.Select(x => x.Id).ToHashSet();
 
@@ -65,15 +73,57 @@ public sealed class CashFlowPlan
         }
 
         ValidateBankOffDays();
+        ValidateAccounts();
+
+        foreach (var transaction in Transactions)
+        {
+            transaction.Validate();
+
+            AssertAccountExists(
+                accountIds,
+                transaction.FromAccountId,
+                $"Transaction '{transaction.Name}'",
+                "source account");
+
+            AssertAccountExists(
+                accountIds,
+                transaction.ToAccountId,
+                $"Transaction '{transaction.Name}'",
+                "target account");
+        }
 
         foreach (var mortgage in Mortgages)
         {
             mortgage.Validate();
+
+            AssertAccountExists(
+                accountIds,
+                mortgage.PaymentAccountId,
+                $"Mortgage '{mortgage.Name}'",
+                "payment account");
+
+            AssertAccountExists(
+                accountIds,
+                mortgage.IndirectAmortisationAccountId,
+                $"Mortgage '{mortgage.Name}'",
+                "indirect amortisation account");
         }
 
         foreach (var creditCard in CreditCards)
         {
             creditCard.Validate();
+
+            AssertAccountExists(
+                accountIds,
+                creditCard.CreditCardAccountId,
+                $"Credit card contract '{creditCard.Name}'",
+                "credit card account");
+
+            AssertAccountExists(
+                accountIds,
+                creditCard.PaymentAccountId,
+                $"Credit card contract '{creditCard.Name}'",
+                "payment account");
         }
 
         foreach (var pillar3a in Pillar3aContracts)
@@ -113,6 +163,65 @@ public sealed class CashFlowPlan
         }
 
         SimulationSettings.Validate();
+    }
+
+    /// <summary>
+    /// Duplicate Ids used to load cleanly and then break every lookup that assumes
+    /// a single match -- deleting an account by Id threw instead of deleting.
+    /// </summary>
+    private static void AssertUniqueIds(
+        string entityName,
+        IEnumerable<Guid> ids)
+    {
+        var duplicates = ids
+            .GroupBy(x => x)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .OrderBy(x => x)
+            .ToList();
+
+        if (duplicates.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Plan contains duplicate {entityName} ids: {string.Join(", ", duplicates)}.");
+        }
+    }
+
+    private static void AssertAccountExists(
+        HashSet<Guid> accountIds,
+        Guid? accountId,
+        string ownerDescription,
+        string roleDescription)
+    {
+        if (accountId is null || accountId.Value == Guid.Empty)
+        {
+            return;
+        }
+
+        if (!accountIds.Contains(accountId.Value))
+        {
+            throw new InvalidOperationException(
+                $"{ownerDescription} references unknown {roleDescription} '{accountId.Value}'.");
+        }
+    }
+
+    /// <summary>
+    /// Runs <see cref="AccountValidator"/>, which was complete but called from
+    /// nowhere. Errors abort the plan; warnings are advisory and do not.
+    /// </summary>
+    private void ValidateAccounts()
+    {
+        var messages = AccountValidator.Validate(Accounts, Persons);
+
+        var errors = messages
+            .Where(x => x.Severity == PlanValidationSeverity.Error)
+            .ToList();
+
+        if (errors.Count > 0)
+        {
+            throw new InvalidOperationException(
+                string.Join(" ", errors.Select(x => x.Message)));
+        }
     }
 
     private void ValidateBankOffDays()
