@@ -53,7 +53,10 @@ public sealed class HouseBuyScenarioManager
         IReadOnlyCollection<HouseBuySimulatorScenario> scenarios,
         Guid scenarioId)
     {
-        var scenario = scenarios.SingleOrDefault(x => x.Id == scenarioId);
+        // FirstOrDefault, not SingleOrDefault: a duplicate id must not turn a
+        // lookup into an unhandled "sequence contains more than one element".
+        // Uniqueness is asserted by CashFlowPlan.Validate; this is the safety net.
+        var scenario = scenarios.FirstOrDefault(x => x.Id == scenarioId);
 
         if (scenario is null)
         {
@@ -79,7 +82,7 @@ public sealed class HouseBuyScenarioManager
         IReadOnlyCollection<HouseBuySimulatorScenario> existingScenarios,
         Guid sourceScenarioId)
     {
-        var source = existingScenarios.SingleOrDefault(x => x.Id == sourceScenarioId);
+        var source = existingScenarios.FirstOrDefault(x => x.Id == sourceScenarioId);
 
         if (source is null)
         {
