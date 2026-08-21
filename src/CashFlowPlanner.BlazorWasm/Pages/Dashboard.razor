@@ -18,9 +18,7 @@
 
 @if (AppState.CurrentPlan is null)
 {
-    <div class="alert alert-info">
-        @L["Dashboard_NoPlanLoaded"]
-    </div>
+    <PlanEmptyState Message='@L["Dashboard_NoPlanLoaded"]' />
 }
 else if (AppState.CurrentSimulationResult is null)
 {

@@ -37,9 +37,7 @@
 
     @if (AppState.CurrentPlan is null)
     {
-        <div class="alert alert-warning">
-            @L["Settings_NoPlanLoaded"]
-        </div>
+        <PlanEmptyState Message='@L["Settings_NoPlanLoaded"]' />
     }
     else if (_editModel is not null)
     {

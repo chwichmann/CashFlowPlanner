@@ -33,9 +33,7 @@
 
 @if (AppState.CurrentPlan is null)
 {
-    <div class="alert alert-info">
-        @L["CreditCard_NoPlanLoaded"]
-    </div>
+    <PlanEmptyState Message='@L["CreditCard_NoPlanLoaded"]' />
 }
 else
 {

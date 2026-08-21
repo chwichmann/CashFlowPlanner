@@ -32,9 +32,7 @@
 
 @if (!AppState.HasPlan || AppState.CurrentPlan is null)
 {
-    <div class="alert alert-warning">
-        @L["Person_NoPlanLoaded"]
-    </div>
+    <PlanEmptyState Message='@L["Person_NoPlanLoaded"]' />
 }
 else
 {

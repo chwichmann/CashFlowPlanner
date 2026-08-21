@@ -2238,4 +2238,43 @@
   <data name="Transaction_TabRecurring" xml:space="preserve">
     <value>Recurring transactions</value>
   </data>
+  <data name="EmptyState_Title" xml:space="preserve">
+    <value>Start planning</value>
+  </data>
+  <data name="EmptyState_Lead" xml:space="preserve">
+    <value>No plan is loaded yet. Create an empty one, open a plan file you already have, or try the example.</value>
+  </data>
+  <data name="EmptyState_CreateTitle" xml:space="preserve">
+    <value>New plan</value>
+  </data>
+  <data name="EmptyState_CreateHint" xml:space="preserve">
+    <value>Start from scratch with no accounts or movements, and add your own.</value>
+  </data>
+  <data name="EmptyState_CreateAction" xml:space="preserve">
+    <value>Create empty plan</value>
+  </data>
+  <data name="EmptyState_OpenTitle" xml:space="preserve">
+    <value>Open a file</value>
+  </data>
+  <data name="EmptyState_OpenHint" xml:space="preserve">
+    <value>Load a cashflow JSON file you exported earlier.</value>
+  </data>
+  <data name="EmptyState_OpenAction" xml:space="preserve">
+    <value>Choose file...</value>
+  </data>
+  <data name="EmptyState_SampleTitle" xml:space="preserve">
+    <value>Example</value>
+  </data>
+  <data name="EmptyState_SampleHint" xml:space="preserve">
+    <value>A small made-up household so you can see how the app works. Replace it with your own data.</value>
+  </data>
+  <data name="EmptyState_SampleAction" xml:space="preserve">
+    <value>Load example</value>
+  </data>
+  <data name="Nav_ExportNeeded" xml:space="preserve">
+    <value>Export needed</value>
+  </data>
+  <data name="Nav_ExportNeededHint" xml:space="preserve">
+    <value>You have changes that exist only in this browser. Export the plan to a file to keep them.</value>
+  </data>
 </root>

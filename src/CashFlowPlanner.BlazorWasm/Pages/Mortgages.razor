@@ -25,9 +25,7 @@
 
 @if (AppState.CurrentPlan is null)
 {
-    <div class="alert alert-warning">
-        @L["Mortgages_NoPlanLoaded"]
-    </div>
+    <PlanEmptyState Message='@L["Mortgages_NoPlanLoaded"]' />
 }
 else
 {

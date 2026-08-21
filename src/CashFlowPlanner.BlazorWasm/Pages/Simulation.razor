@@ -20,9 +20,7 @@
 
 @if (AppState.CurrentPlan is null)
 {
-    <div class="alert alert-warning">
-        @L["Simulation_NoPlanLoaded"]
-    </div>
+    <PlanEmptyState Message='@L["Simulation_NoPlanLoaded"]' />
 }
 else
 {

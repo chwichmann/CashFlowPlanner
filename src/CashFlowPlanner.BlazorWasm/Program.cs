@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using CashFlowPlanner.BlazorWasm;
 using CashFlowPlanner.BlazorWasm.Models;
 using CashFlowPlanner.BlazorWasm.Services;
@@ -19,6 +19,7 @@ builder.Services.AddScoped<BrowserCultureService>();
 
 builder.Services.AddSingleton<CashFlowAppState>();
 builder.Services.AddSingleton<CashFlowPlanJsonSerializer>();
+builder.Services.AddSingleton<StarterPlanProvider>();
 builder.Services.AddSingleton<DashboardSummaryService>();
 builder.Services.AddSingleton<MonthlyCashflowSummaryService>();
 builder.Services.AddSingleton<BrowserPlanCacheService>();

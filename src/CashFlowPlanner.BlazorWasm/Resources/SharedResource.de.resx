@@ -2238,4 +2238,43 @@
   <data name="Transaction_TabRecurring" xml:space="preserve">
     <value>Wiederkehrende Transaktionen</value>
   </data>
+  <data name="EmptyState_Title" xml:space="preserve">
+    <value>Planung starten</value>
+  </data>
+  <data name="EmptyState_Lead" xml:space="preserve">
+    <value>Es ist noch kein Plan geladen. Erstelle einen leeren Plan, öffne eine vorhandene Plandatei oder probiere das Beispiel aus.</value>
+  </data>
+  <data name="EmptyState_CreateTitle" xml:space="preserve">
+    <value>Neuer Plan</value>
+  </data>
+  <data name="EmptyState_CreateHint" xml:space="preserve">
+    <value>Beginne mit einem leeren Plan ohne Konten und Bewegungen und füge deine eigenen hinzu.</value>
+  </data>
+  <data name="EmptyState_CreateAction" xml:space="preserve">
+    <value>Leeren Plan erstellen</value>
+  </data>
+  <data name="EmptyState_OpenTitle" xml:space="preserve">
+    <value>Datei öffnen</value>
+  </data>
+  <data name="EmptyState_OpenHint" xml:space="preserve">
+    <value>Lade eine Cashflow-JSON-Datei, die du zuvor exportiert hast.</value>
+  </data>
+  <data name="EmptyState_OpenAction" xml:space="preserve">
+    <value>Datei wählen...</value>
+  </data>
+  <data name="EmptyState_SampleTitle" xml:space="preserve">
+    <value>Beispiel</value>
+  </data>
+  <data name="EmptyState_SampleHint" xml:space="preserve">
+    <value>Ein kleiner erfundener Haushalt, damit du siehst, wie die App funktioniert. Ersetze ihn durch deine eigenen Daten.</value>
+  </data>
+  <data name="EmptyState_SampleAction" xml:space="preserve">
+    <value>Beispiel laden</value>
+  </data>
+  <data name="Nav_ExportNeeded" xml:space="preserve">
+    <value>Export nötig</value>
+  </data>
+  <data name="Nav_ExportNeededHint" xml:space="preserve">
+    <value>Es gibt Änderungen, die nur in diesem Browser existieren. Exportiere den Plan in eine Datei, um sie zu behalten.</value>
+  </data>
 </root>

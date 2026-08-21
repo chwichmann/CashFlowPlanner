@@ -107,6 +107,17 @@
                 {
                     <div class="navbar-plan-name" title="@AppState.CurrentPlan.Name">
                         @AppState.CurrentPlan.Name
+
+                        @if (AppState.IsDirty)
+                        {
+                            @* The visible half of P1c. The browser working copy is not a backup:
+                               it dies with the site data. Until the user exports, the only copy
+                               of these edits is inside this browser. *@
+                            <span class="badge text-bg-warning ms-2 align-middle"
+                                  title="@L["Nav_ExportNeededHint"]">
+                                @L["Nav_ExportNeeded"]
+                            </span>
+                        }
                     </div>
 
                     <div class="navbar-cache-status">
@@ -190,6 +201,8 @@
     protected override void OnInitialized()
     {
         AppState.Changed += OnAppStateChanged;
+        // The dirty flag can flip without the plan itself changing (e.g. on export).
+        AppState.DirtyStateChanged += OnAppStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -404,5 +417,6 @@
     public void Dispose()
     {
         AppState.Changed -= OnAppStateChanged;
+        AppState.DirtyStateChanged -= OnAppStateChanged;
     }
 }

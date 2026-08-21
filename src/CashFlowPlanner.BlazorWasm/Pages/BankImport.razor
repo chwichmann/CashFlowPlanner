@@ -35,7 +35,7 @@
 
 @if (AppState.CurrentPlan is null)
 {
-    <p>@L["BankImport_NoPlanLoaded"]</p>
+    <PlanEmptyState Message='@L["BankImport_NoPlanLoaded"]' />
 }
 else
 {

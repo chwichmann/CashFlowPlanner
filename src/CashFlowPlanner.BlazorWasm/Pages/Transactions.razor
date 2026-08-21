@@ -36,9 +36,7 @@
 
 @if (AppState.CurrentPlan is null)
 {
-    <div class="alert alert-warning">
-        @L["Transaction_NoPlanLoaded"]
-    </div>
+    <PlanEmptyState Message='@L["Transaction_NoPlanLoaded"]' />
 }
 else
 {

@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "planId": "5ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "name": "Starter Plan",
+  "baseCurrency": "CHF",
+  "notes": "A small example household. Everything here is made up - replace it with your own accounts and movements, or start over with an empty plan.",
+  "treatWeekendsAsBankOffDays": true,
+  "bankOffDays": [],
+  "defaultPaymentAccountId": "5ba7b811-0000-0000-0000-000000000001",
+  "persons": [
+    {
+      "id": "5ba7b813-0000-0000-0000-000000000001",
+      "name": "Alex Muster",
+      "annualEarnedIncome": 102000
+    }
+  ],
+  "accounts": [
+    {
+      "id": "5ba7b811-0000-0000-0000-000000000001",
+      "name": "Salary account",
+      "type": "BankAccount",
+      "currency": "CHF",
+      "openingBalance": 8500,
+      "openingDate": "2026-09-01",
+      "isActive": true,
+      "bankName": "Example Bank"
+    },
+    {
+      "id": "5ba7b811-0000-0000-0000-000000000002",
+      "name": "Savings",
+      "type": "SavingsAccount",
+      "currency": "CHF",
+      "openingBalance": 24000,
+      "openingDate": "2026-09-01",
+      "isActive": true,
+      "bankName": "Example Bank",
+      "interestContracts": [
+        {
+          "id": "5ba7b814-0000-0000-0000-000000000001",
+          "name": "Savings interest",
+          "calculationMethod": "TieredBalance",
+          "postingFrequency": "Yearly",
+          "dayCountConvention": "Actual360",
+          "startDate": "2026-09-01",
+          "isActive": true,
+          "tiers": [
+            { "fromAmount": 0, "toAmount": null, "annualRatePercent": 0.75 }
+          ]
+        }
+      ]
+    }
+  ],
+  "transactions": [
+    {
+      "id": "5ba7b812-0000-0000-0000-000000000001",
+      "name": "Salary",
+      "kind": "ExternalIncome",
+      "fromAccountId": null,
+      "toAccountId": "5ba7b811-0000-0000-0000-000000000001",
+      "incomePersonId": "5ba7b813-0000-0000-0000-000000000001",
+      "amount": 6800,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-09-25",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 25,
+        "businessDayAdjustment": "PreviousBusinessDay"
+      },
+      "category": "Income",
+      "counterparty": "Employer",
+      "paymentMethod": "BankTransfer",
+      "priority": 10,
+      "isActive": true
+    },
+    {
+      "id": "5ba7b812-0000-0000-0000-000000000002",
+      "name": "Rent",
+      "kind": "ExternalExpense",
+      "fromAccountId": "5ba7b811-0000-0000-0000-000000000001",
+      "toAccountId": null,
+      "amount": 1950,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-09-01",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 1,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Housing",
+      "counterparty": "Landlord",
+      "paymentMethod": "BankTransfer",
+      "priority": 100,
+      "isActive": true
+    },
+    {
+      "id": "5ba7b812-0000-0000-0000-000000000003",
+      "name": "Health insurance",
+      "kind": "ExternalExpense",
+      "fromAccountId": "5ba7b811-0000-0000-0000-000000000001",
+      "toAccountId": null,
+      "amount": 385,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-09-05",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 5,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Insurance",
+      "counterparty": "Health insurer",
+      "paymentMethod": "Lsv",
+      "priority": 100,
+      "isActive": true
+    },
+    {
+      "id": "5ba7b812-0000-0000-0000-000000000004",
+      "name": "Groceries and living",
+      "kind": "ExternalExpense",
+      "fromAccountId": "5ba7b811-0000-0000-0000-000000000001",
+      "toAccountId": null,
+      "amount": 1100,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-09-10",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 10,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Living",
+      "paymentMethod": "Cash",
+      "priority": 100,
+      "isActive": true
+    },
+    {
+      "id": "5ba7b812-0000-0000-0000-000000000005",
+      "name": "Transfer to savings",
+      "kind": "InternalTransfer",
+      "fromAccountId": "5ba7b811-0000-0000-0000-000000000001",
+      "toAccountId": "5ba7b811-0000-0000-0000-000000000002",
+      "amount": 800,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Monthly",
+        "startDate": "2026-09-26",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 26,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Saving",
+      "paymentMethod": "InternalTransfer",
+      "priority": 50,
+      "isActive": true
+    },
+    {
+      "id": "5ba7b812-0000-0000-0000-000000000006",
+      "name": "Annual tax bill",
+      "kind": "ExternalExpense",
+      "fromAccountId": "5ba7b811-0000-0000-0000-000000000001",
+      "toAccountId": null,
+      "amount": 7400,
+      "currency": "CHF",
+      "schedule": {
+        "frequency": "Yearly",
+        "startDate": "2026-09-30",
+        "endDate": null,
+        "interval": 1,
+        "dayOfMonth": 30,
+        "month": 9,
+        "businessDayAdjustment": "NextBusinessDay"
+      },
+      "category": "Tax",
+      "counterparty": "Tax office",
+      "paymentMethod": "BankTransfer",
+      "priority": 100,
+      "isActive": true
+    }
+  ],
+  "mortgages": [],
+  "creditCards": [],
+  "pillar3aContracts": [],
+  "houseBuyScenarios": [],
+  "simulationSettings": {
+    "startDate": "2026-09-01",
+    "endDate": "2029-12-31",
+    "dateMode": "ExplicitDateRange",
+    "granularity": "Daily",
+    "includeInactiveAccounts": false,
+    "warnOnNegativeBankBalance": true
+  }
+}

@@ -1,0 +1,154 @@
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.Core
+@using CashFlowPlanner.Storage.Json
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Localization
+
+@inject CashFlowAppState AppState
+@inject CashFlowPlanJsonSerializer JsonSerializer
+@inject StarterPlanProvider StarterPlan
+@inject PlanCacheCoordinator CacheCoordinator
+@inject IStringLocalizer<SharedResource> L
+
+@*
+    Shown wherever a page needs a plan and none is loaded.
+
+    Before this existed every page dead-ended on an alert saying "no plan loaded"
+    while the only way to get one was a folder icon in the navigation bar, so a
+    first-time user had nothing to click. Each route out is offered explicitly.
+*@
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">@L["EmptyState_Title"]</h5>
+
+        <p class="card-text text-body-secondary">
+            @(Message ?? L["EmptyState_Lead"].Value)
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
+        }
+
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-lg-4">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <strong>@L["EmptyState_CreateTitle"]</strong>
+                    <p class="small text-body-secondary flex-grow-1 mt-1 mb-2">
+                        @L["EmptyState_CreateHint"]
+                    </p>
+                    <button type="button"
+                            class="btn btn-primary"
+                            disabled="@_isBusy"
+                            @onclick="CreateEmptyPlanAsync">
+                        @L["EmptyState_CreateAction"]
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <strong>@L["EmptyState_OpenTitle"]</strong>
+                    <p class="small text-body-secondary flex-grow-1 mt-1 mb-2">
+                        @L["EmptyState_OpenHint"]
+                    </p>
+                    <label class="btn btn-outline-secondary mb-0">
+                        @L["EmptyState_OpenAction"]
+                        <InputFile OnChange="OpenFileAsync" accept=".json" hidden disabled="@_isBusy" />
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="border rounded p-3 h-100 d-flex flex-column">
+                    <strong>@L["EmptyState_SampleTitle"]</strong>
+                    <p class="small text-body-secondary flex-grow-1 mt-1 mb-2">
+                        @L["EmptyState_SampleHint"]
+                    </p>
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            disabled="@_isBusy"
+                            @onclick="LoadSampleAsync">
+                        @L["EmptyState_SampleAction"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>Page-specific lead sentence. Falls back to a generic one.</summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    private bool _isBusy;
+    private string? _errorMessage;
+
+    private async Task CreateEmptyPlanAsync()
+    {
+        await RunAsync(() =>
+        {
+            AppState.SetPlan(CashFlowPlanFactory.CreateEmpty());
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task LoadSampleAsync()
+    {
+        await RunAsync(() =>
+        {
+            // Goes through the normal deserialize path so the bundled plan gets the same
+            // migration and validation treatment as a user's own file.
+            var document = JsonSerializer.DeserializeDocument(StarterPlan.GetJson());
+            AppState.LoadDocument(document);
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task OpenFileAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file is null)
+        {
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+
+            var json = await reader.ReadToEndAsync();
+            var document = JsonSerializer.DeserializeDocument(json);
+
+            AppState.LoadDocument(document);
+        });
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        _isBusy = true;
+        _errorMessage = null;
+
+        try
+        {
+            await action();
+
+            // Write the working copy immediately: without this a newly created plan lives only
+            // in memory and a reload loses it before the user has done anything at all.
+            await CacheCoordinator.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}

@@ -16,9 +16,7 @@
 
 @if (AppState.CurrentPlan is null)
 {
-    <div class="alert alert-warning">
-        @L["AccountStatement_NoPlanLoaded"]
-    </div>
+    <PlanEmptyState Message='@L["AccountStatement_NoPlanLoaded"]' />
 }
 else if (Account is null)
 {
