@@ -743,6 +743,7 @@ else
 
     private string Text(string key, params object?[] arguments)
     {
-        return L[key, arguments].Value;
+        // IStringLocalizer forwards to string.Format, which renders null args as empty.
+        return L[key, arguments!].Value;
     }
 }
