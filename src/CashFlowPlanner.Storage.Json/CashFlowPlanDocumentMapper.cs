@@ -1,4 +1,5 @@
 ﻿using CashFlowPlanner.Core;
+using System.Text.Json;
 
 namespace CashFlowPlanner.Storage.Json;
 
@@ -34,7 +35,14 @@ public static class CashFlowPlanDocumentMapper
     {
         return new CashFlowPlanDocument
         {
-            SchemaVersion = existing?.SchemaVersion ?? 1,
+            SchemaVersion = CashFlowPlanJsonSerializer.CurrentSchemaVersion,
+
+            // Unknown fields captured on load are carried forward, otherwise every save would
+            // delete them (finding P2a).
+            ExtensionData = existing?.ExtensionData is null
+                ? null
+                : new Dictionary<string, JsonElement>(existing.ExtensionData),
+
             PlanId = plan.Id,
             Name = plan.Name,
             BaseCurrency = plan.BaseCurrency,
