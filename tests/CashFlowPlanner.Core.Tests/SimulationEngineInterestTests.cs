@@ -1,4 +1,5 @@
 using CashFlowPlanner.Core.Accounts;
+using CashFlowPlanner.Core.CreditCards;
 
 namespace CashFlowPlanner.Core.Tests;
 
@@ -55,7 +56,7 @@ public sealed class SimulationEngineInterestTests
             openingBalance: -12_000m,
             openingDate: new DateOnly(2026, 1, 1));
 
-        var creditCard = new CreditCards.CreditCardContract
+        var creditCard = new CreditCardContract
         {
             Id = Guid.NewGuid(),
             Name = "Visa",

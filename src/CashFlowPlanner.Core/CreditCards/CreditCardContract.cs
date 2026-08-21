@@ -53,6 +53,16 @@ public sealed class CreditCardContract
             throw new InvalidOperationException($"Credit card contract '{Name}' payment day must be between 1 and 31.");
         }
 
+        // The two day fields are not independent: the payment settles a statement
+        // that has already closed. Equal days would date the payment exactly on the
+        // next statement's closing date, so the settled amount would depend on the
+        // ordering of events within that single day.
+        if (PaymentDayOfMonth == ClosingDayOfMonth)
+        {
+            throw new InvalidOperationException(
+                $"Credit card contract '{Name}' must not use the same day of month for the closing day and the payment day.");
+        }
+
         if (EndDate is not null && EndDate < StartDate)
         {
             throw new InvalidOperationException($"Credit card contract '{Name}' end date must not be before start date.");
