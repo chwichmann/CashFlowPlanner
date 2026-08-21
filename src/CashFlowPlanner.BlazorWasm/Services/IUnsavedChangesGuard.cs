@@ -40,9 +40,12 @@ public sealed class BrowserUnsavedChangesGuard : IUnsavedChangesGuard
 
             _lastPushedValue = hasUnsavedChanges;
         }
-        catch (JSException)
+        catch (Exception exception) when (
+            exception is JSException or InvalidOperationException or TaskCanceledException)
         {
-            // Losing the unload warning must never break the app; retry on the next flip.
+            // Losing the unload warning must never break the app - and this runs from an event
+            // handler, so an escaping exception would land in an unobserved task. Retry on the
+            // next flip.
             _lastPushedValue = null;
         }
     }
