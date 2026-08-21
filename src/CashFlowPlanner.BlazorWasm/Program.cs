@@ -24,11 +24,16 @@ builder.Services.AddSingleton<CashFlowPlanJsonSerializer>();
 builder.Services.AddSingleton<DashboardSummaryService>();
 builder.Services.AddSingleton<MonthlyCashflowSummaryService>();
 builder.Services.AddSingleton<BrowserPlanCacheService>();
+builder.Services.AddSingleton<IBrowserPlanCache>(sp => sp.GetRequiredService<BrowserPlanCacheService>());
 builder.Services.AddSingleton<PlanCacheCoordinator>();
 builder.Services.AddScoped<EnumLocalizer>();
 builder.Services.AddScoped<Pillar3aProjectionEngine>();
 builder.Services.AddScoped<Pillar3aTaxYearSimulator>();
-builder.Services.AddScoped<UiFeedbackService>();
+
+// Singleton, not scoped: PlanCacheCoordinator is a singleton and reports autosave failures
+// through this service. Blazor WebAssembly only ever has one scope, so this is not a behaviour
+// change for the components that inject it.
+builder.Services.AddSingleton<UiFeedbackService>();
 builder.Services.AddScoped<IBankImportStore, BankImportStoreLocalStorage>();
 builder.Services.AddScoped<BankStatementImportService>();
 
