@@ -205,6 +205,79 @@ jobs:
           grep -q "<base href=\"${PAGES_BASE_HREF}\"" "$PUBLISH_WWWROOT/404.html"
           echo "404.html SPA fallback written and verified."
 
+      # The service worker caches every asset with a Subresource Integrity hash
+      # taken from service-worker-assets.js, which the SDK generates during
+      # publish - i.e. BEFORE the base href rewrite above. Rewriting index.html
+      # changes its bytes and therefore its hash, so cache.addAll() rejects with
+      # an integrity failure, the worker never installs, and the app silently
+      # loses offline support and installability.
+      #
+      # This only ever fails in production: locally there is no rewrite, so the
+      # hashes match and everything looks fine.
+      #
+      # Recompute the hash for every file this workflow touched after publish.
+      - name: Repair service worker asset hashes
+        run: |
+          set -euo pipefail
+
+          ASSETS_FILE="$PUBLISH_WWWROOT/service-worker-assets.js"
+
+          if [ ! -f "$ASSETS_FILE" ]; then
+            echo "::error::service-worker-assets.js not found - the PWA would ship without offline support."
+            exit 1
+          fi
+
+          python3 - "$PUBLISH_WWWROOT" "$ASSETS_FILE" <<'PY'
+          import base64, hashlib, pathlib, re, sys
+
+          wwwroot = pathlib.Path(sys.argv[1])
+          assets_file = pathlib.Path(sys.argv[2])
+          text = assets_file.read_text(encoding="utf-8")
+
+          # Files this workflow rewrites or creates after the SDK hashed them.
+          repaired, missing = [], []
+          for name in ("index.html", "404.html"):
+              path = wwwroot / name
+              if not path.exists():
+                  continue
+
+              digest = hashlib.sha256(path.read_bytes()).digest()
+              new_hash = "sha256-" + base64.b64encode(digest).decode("ascii")
+
+              # Match the hash belonging to this asset's entry, whichever order
+              # the "hash"/"url" keys appear in.
+              pattern = re.compile(
+                  r'("hash"\s*:\s*")([^"]+)("\s*,\s*"url"\s*:\s*"' + re.escape(name) + r'")')
+              text, n = pattern.subn(lambda m: m.group(1) + new_hash + m.group(3), text)
+
+              if n:
+                  repaired.append(f"{name} -> {new_hash} ({n} entr{'y' if n == 1 else 'ies'})")
+              else:
+                  missing.append(name)
+
+          if missing:
+              print(f"::error::no service-worker-assets.js entry found for: {', '.join(missing)}")
+              print("The worker would fail its integrity check on those files and never install.")
+              sys.exit(1)
+
+          if not repaired:
+              print("::error::nothing was repaired - the asset manifest format has changed.")
+              sys.exit(1)
+
+          assets_file.write_text(text, encoding="utf-8")
+          for line in repaired:
+              print("Repaired hash:", line)
+          PY
+
+          # Assert the repair actually landed: the served index.html hash must
+          # now be present in the manifest.
+          expected="sha256-$(openssl dgst -sha256 -binary "$PUBLISH_WWWROOT/index.html" | openssl base64 -A)"
+          if ! grep -q "$expected" "$ASSETS_FILE"; then
+            echo "::error::index.html hash ${expected} is still absent from service-worker-assets.js."
+            exit 1
+          fi
+          echo "Service worker asset hashes verified against the rewritten files."
+
       - name: Ensure .nojekyll
         run: |
           set -euo pipefail
