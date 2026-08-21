@@ -12,27 +12,52 @@ namespace CashFlowPlanner.BlazorWasm.Services;
 /// <see cref="PlanSaveResult"/>, and a failure is reported through
 /// <see cref="UiFeedbackService"/>.
 /// </summary>
-public sealed class PlanCacheCoordinator
+public sealed class PlanCacheCoordinator : IDisposable
 {
+    /// <summary>
+    /// Trailing debounce window. Every mutation used to trigger full plan validation plus a full
+    /// re-serialize across JS interop - about 288 KB for a realistic plan - so typing in a form
+    /// produced one of those per keystroke (finding P3b).
+    /// </summary>
+    public static readonly TimeSpan DefaultDebounceDelay = TimeSpan.FromMilliseconds(500);
+
     private readonly CashFlowAppState _appState;
     private readonly CashFlowPlanJsonSerializer _jsonSerializer;
     private readonly IBrowserPlanCache _browserCache;
     private readonly UiFeedbackService _feedback;
+    private readonly TimeSpan _debounceDelay;
 
+    // One save at a time, with a pending flag so the trailing edge always lands. The old code
+    // returned early while a save was running, which discarded that change entirely.
+    private readonly SemaphoreSlim _saveGate = new(1, 1);
+
+    private CancellationTokenSource? _debounceCts;
+    private bool _pendingSave;
     private bool _initialized;
     private bool _isRestoring;
-    private bool _isSaving;
+    private bool _disposed;
 
     public PlanCacheCoordinator(
         CashFlowAppState appState,
         CashFlowPlanJsonSerializer jsonSerializer,
         IBrowserPlanCache browserCache,
         UiFeedbackService feedback)
+        : this(appState, jsonSerializer, browserCache, feedback, DefaultDebounceDelay)
+    {
+    }
+
+    public PlanCacheCoordinator(
+        CashFlowAppState appState,
+        CashFlowPlanJsonSerializer jsonSerializer,
+        IBrowserPlanCache browserCache,
+        UiFeedbackService feedback,
+        TimeSpan debounceDelay)
     {
         _appState = appState;
         _jsonSerializer = jsonSerializer;
         _browserCache = browserCache;
         _feedback = feedback;
+        _debounceDelay = debounceDelay;
     }
 
     /// <summary>
@@ -56,7 +81,9 @@ public sealed class PlanCacheCoordinator
 
         _initialized = true;
 
-        _appState.Changed += OnAppStateChanged;
+        // PlanChanged, not Changed: running a simulation leaves the plan untouched and must not
+        // trigger a write.
+        _appState.PlanChanged += OnPlanChanged;
 
         await RestoreAsync();
     }
@@ -89,30 +116,113 @@ public sealed class PlanCacheCoordinator
     }
 
     /// <summary>
-    /// Writes the working copy. Never throws: every failure is returned as a
+    /// Queues a save and returns immediately. Repeated calls inside the debounce window collapse
+    /// into a single write; the last one always lands.
+    /// </summary>
+    public void ScheduleSave()
+    {
+        if (_isRestoring || _disposed)
+        {
+            return;
+        }
+
+        _pendingSave = true;
+
+        CancelPendingDebounce();
+
+        if (_debounceDelay <= TimeSpan.Zero)
+        {
+            _ = FlushAsync();
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _debounceCts = cts;
+
+        _ = RunDebouncedSaveAsync(cts.Token);
+    }
+
+    private async Task RunDebouncedSaveAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(_debounceDelay, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer change; that call owns the trailing save.
+            return;
+        }
+
+        await FlushAsync();
+    }
+
+    /// <summary>
+    /// Writes the working copy now, and keeps writing while further changes arrive during the
+    /// write, so the last change is never discarded. Never throws: every failure is returned as a
     /// <see cref="PlanSaveResult"/> and reported to the user.
     /// </summary>
-    public async Task<PlanSaveResult> SaveCurrentPlanAsync()
+    public async Task<PlanSaveResult> FlushAsync()
     {
-        if (_isRestoring || _isSaving)
+        if (_isRestoring)
         {
             return PlanSaveResult.Skipped();
         }
 
+        await _saveGate.WaitAsync();
+
         try
         {
-            _isSaving = true;
+            var result = PlanSaveResult.Skipped();
 
-            var result = await WriteWorkingCopyAsync();
+            // The trailing edge: a change that arrived while the previous write was in flight
+            // sets the flag again and is written by the next turn of this loop.
+            while (_pendingSave)
+            {
+                _pendingSave = false;
 
-            Report(result);
+                result = await WriteWorkingCopyAsync();
+
+                Report(result);
+            }
 
             return result;
         }
         finally
         {
-            _isSaving = false;
+            _saveGate.Release();
         }
+    }
+
+    /// <summary>
+    /// Writes the working copy immediately, bypassing the debounce window.
+    /// </summary>
+    public Task<PlanSaveResult> SaveCurrentPlanAsync()
+    {
+        if (_isRestoring)
+        {
+            return Task.FromResult(PlanSaveResult.Skipped());
+        }
+
+        _pendingSave = true;
+
+        CancelPendingDebounce();
+
+        return FlushAsync();
+    }
+
+    private void CancelPendingDebounce()
+    {
+        var pending = _debounceCts;
+        _debounceCts = null;
+
+        if (pending is null)
+        {
+            return;
+        }
+
+        pending.Cancel();
+        pending.Dispose();
     }
 
     private async Task<PlanSaveResult> WriteWorkingCopyAsync()
@@ -187,10 +297,24 @@ public sealed class PlanCacheCoordinator
         SaveStateChanged?.Invoke();
     }
 
-    private void OnAppStateChanged()
+    private void OnPlanChanged()
     {
-        // The event is synchronous, so the task cannot be awaited here. SaveCurrentPlanAsync
-        // catches everything, so nothing escapes into an unobserved task.
-        _ = SaveCurrentPlanAsync();
+        ScheduleSave();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        _appState.PlanChanged -= OnPlanChanged;
+
+        CancelPendingDebounce();
+
+        _saveGate.Dispose();
     }
 }
