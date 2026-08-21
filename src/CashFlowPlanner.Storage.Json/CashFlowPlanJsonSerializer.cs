@@ -5,6 +5,12 @@ namespace CashFlowPlanner.Storage.Json;
 
 public sealed class CashFlowPlanJsonSerializer
 {
+    /// <summary>
+    /// The schema version this build writes. Documents at or below this version are accepted and
+    /// upgraded through the ordered migration chain; anything above is rejected.
+    /// </summary>
+    public const int CurrentSchemaVersion = 1;
+
     private readonly JsonSerializerOptions _jsonOptions;
 
     public CashFlowPlanJsonSerializer()
