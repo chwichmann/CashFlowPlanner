@@ -33,6 +33,12 @@ builder.Services.AddSingleton<IDiskAutoSave>(sp => sp.GetRequiredService<DiskAut
 builder.Services.AddSingleton<DiskAutoSaveCoordinator>();
 builder.Services.AddSingleton<DashboardSummaryService>();
 builder.Services.AddSingleton<MonthlyCashflowSummaryService>();
+
+// Encrypts the localStorage working copy with a device key. Registered as a concrete singleton so
+// the same instance - and therefore the same imported JS module and the same one-time fallback
+// warning - is shared by everything that stores a working copy.
+builder.Services.AddSingleton<WorkingCopyCipher>();
+builder.Services.AddSingleton<IWorkingCopyCipher>(sp => sp.GetRequiredService<WorkingCopyCipher>());
 builder.Services.AddSingleton<BrowserPlanCacheService>();
 builder.Services.AddSingleton<IBrowserPlanCache>(sp => sp.GetRequiredService<BrowserPlanCacheService>());
 builder.Services.AddSingleton<IUnsavedChangesGuard, BrowserUnsavedChangesGuard>();
