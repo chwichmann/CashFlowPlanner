@@ -37,16 +37,25 @@ public abstract class ComponentTestBase : BunitContext
     /// </summary>
     protected static void WithCulture(string cultureName, Action action)
     {
-        var previous = CultureInfo.CurrentCulture;
+        var previousCurrent = CultureInfo.CurrentCulture;
+        var previousDefault = CultureInfo.DefaultThreadCurrentCulture;
 
         try
         {
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
+            var culture = CultureInfo.GetCultureInfo(cultureName);
+
+            // Both, and in this order: bUnit renders through a dispatcher that may hop threads, and
+            // a thread it picks up fresh reads DefaultThreadCurrentCulture rather than the one this
+            // method set. Program.cs assigns the pair the same way for the same reason.
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.CurrentCulture = culture;
+
             action();
         }
         finally
         {
-            CultureInfo.CurrentCulture = previous;
+            CultureInfo.DefaultThreadCurrentCulture = previousDefault;
+            CultureInfo.CurrentCulture = previousCurrent;
         }
     }
 }

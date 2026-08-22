@@ -1,0 +1,255 @@
+@namespace CashFlowPlanner.BlazorWasm.Tests.Components
+@using System.Globalization
+@inherits ComponentTestBase
+
+@code {
+    [Theory]
+    [InlineData("de-CH")]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void Round_trips_an_amount_through_the_users_own_number_format(string cultureName)
+    {
+        // The bug this exists for: money is edited through <input type="number">, which Blazor
+        // binds with the invariant culture. An amount displayed as 12'345.60 arrives in the edit
+        // field as 12345.6, and typing 12'345.60 back binds nothing at all.
+        WithCulture(cultureName, () =>
+        {
+            var bound = 12345.60m;
+            var expected = bound.ToString("N2", CultureInfo.CurrentCulture);
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            var input = cut.Find("input");
+
+            Assert.Equal(expected, input.GetAttribute("value"));
+
+            // Hand the component back exactly the text it just rendered.
+            input.Change(expected);
+
+            Assert.Equal(12345.60m, bound);
+        });
+    }
+
+    [Fact]
+    public void Reads_the_group_separator_the_current_culture_actually_uses()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            // ICU gives de-CH U+2019 as its group separator; a plain apostrophe is what people
+            // actually type, and pasting from a bank statement gives the currency code too.
+            cut.Find("input").Change("CHF 12'345.60");
+
+            Assert.Equal(12345.60m, bound);
+        });
+    }
+
+    [Fact]
+    public void Accepts_a_decimal_comma_from_a_culture_that_writes_a_point()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("5,25");
+
+            Assert.Equal(5.25m, bound);
+        });
+    }
+
+    [Fact]
+    public void Does_not_mistake_a_German_decimal_point_for_a_group_separator()
+    {
+        // Under de-DE the group separator is "."; stripping it wholesale would turn a typed
+        // "12.5" into 125, which in a cashflow plan is a two-order-of-magnitude error.
+        WithCulture("de-DE", () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("12.5");
+
+            Assert.Equal(12.5m, bound);
+        });
+    }
+
+    [Theory]
+    // "1.234" is one thousand two hundred and thirty-four to a German reader and just over one to
+    // an American one. The separator's own culture decides, and only in this three-digit case.
+    [InlineData("de-DE", "1.234", 1234)]
+    [InlineData("en-US", "1.234", 1.234)]
+    [InlineData("en-US", "1,234", 1234)]
+    [InlineData("de-DE", "1,234", 1.234)]
+    public void Resolves_the_three_digit_ambiguity_the_way_the_culture_reads_it(
+        string cultureName,
+        string typed,
+        double expected)
+    {
+        WithCulture(cultureName, () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.Decimals, 3)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change(typed);
+
+            Assert.Equal((decimal)expected, bound);
+        });
+    }
+
+    [Fact]
+    public void Treats_a_repeated_separator_as_grouping()
+    {
+        WithCulture("de-DE", () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("1.234.567");
+
+            Assert.Equal(1234567m, bound);
+        });
+    }
+
+    [Fact]
+    public void Normalises_what_the_user_typed_into_the_formatted_value()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("1234.5");
+
+            Assert.Equal(1234.50m.ToString("N2", CultureInfo.CurrentCulture), cut.Find("input").GetAttribute("value"));
+        });
+    }
+
+    [Fact]
+    public void Rejects_nonsense_by_reverting_rather_than_binding_zero()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var bound = 900m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("not a number");
+
+            Assert.Equal(900m, bound);
+            Assert.Equal(900m.ToString("N2", CultureInfo.CurrentCulture), cut.Find("input").GetAttribute("value"));
+        });
+    }
+
+    [Fact]
+    public void Keeps_negative_amounts_negative()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("-1800");
+
+            Assert.Equal(-1800m, bound);
+        });
+    }
+
+    [Fact]
+    public void Rounds_to_the_requested_number_of_decimals()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var bound = 0m;
+
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.Decimals, 0)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("1234.5");
+
+            Assert.Equal(1235m, bound);
+        });
+    }
+
+    [Fact]
+    public void Re_renders_when_the_bound_value_changes_from_outside()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var cut = Render<MoneyInput>(parameters => parameters.Add(p => p.Value, 10m));
+
+            cut.Render(parameters => parameters.Add(p => p.Value, 99.95m));
+
+            Assert.Equal(99.95m.ToString("N2", CultureInfo.CurrentCulture), cut.Find("input").GetAttribute("value"));
+        });
+    }
+
+    [Fact]
+    public void Is_a_text_box_with_a_decimal_keyboard_not_a_number_spinner()
+    {
+        var cut = Render<MoneyInput>(parameters => parameters.Add(p => p.Value, 1m));
+
+        var input = cut.Find("input");
+
+        Assert.Equal("text", input.GetAttribute("type"));
+        Assert.Equal("decimal", input.GetAttribute("inputmode"));
+        Assert.Contains("num", input.ClassList);
+    }
+
+    [Fact]
+    public void Renders_a_prefix_beside_the_box_rather_than_inside_the_value()
+    {
+        WithCulture("de-CH", () =>
+        {
+            var cut = Render<MoneyInput>(parameters => parameters
+                .Add(p => p.Value, 12345.60m)
+                .Add(p => p.Prefix, "CHF"));
+
+            Assert.Equal("CHF", cut.Find("div.input-group > span.input-group-text").TextContent.Trim());
+            Assert.Equal(12345.60m.ToString("N2", CultureInfo.CurrentCulture), cut.Find("input").GetAttribute("value"));
+        });
+    }
+
+    [Fact]
+    public void Carries_the_id_and_description_a_FormField_hands_it()
+    {
+        var cut = Render(@<FormField Label="Opening balance" Hint="Balance on the opening date." Context="field">
+                             <MoneyInput Id="@field.Id" AriaDescribedBy="@field.DescribedBy" Value="0" />
+                         </FormField>);
+
+        var input = cut.Find("input");
+
+        Assert.Equal(input.Id, cut.Find("label").GetAttribute("for"));
+        Assert.Equal(cut.Find("div.form-text").Id, input.GetAttribute("aria-describedby"));
+    }
+}
