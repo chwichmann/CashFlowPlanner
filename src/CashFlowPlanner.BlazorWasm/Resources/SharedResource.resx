@@ -2289,4 +2289,58 @@
   <data name="Update_Later" xml:space="preserve">
     <value>Later</value>
   </data>
+  <data name="Passphrase_UnlockTitle" xml:space="preserve">
+    <value>This plan is encrypted</value>
+  </data>
+  <data name="Passphrase_CreateTitle" xml:space="preserve">
+    <value>Choose a passphrase</value>
+  </data>
+  <data name="Passphrase_Label" xml:space="preserve">
+    <value>Passphrase</value>
+  </data>
+  <data name="Passphrase_ConfirmLabel" xml:space="preserve">
+    <value>Repeat the passphrase</value>
+  </data>
+  <data name="Passphrase_Mismatch" xml:space="preserve">
+    <value>The two passphrases do not match.</value>
+  </data>
+  <data name="Passphrase_NoRecoveryTitle" xml:space="preserve">
+    <value>There is no way to reset this.</value>
+  </data>
+  <data name="Passphrase_NoRecoveryBody" xml:space="preserve">
+    <value>If you forget this passphrase your plan cannot be opened again, by you or by anyone else. Write it down somewhere safe before you continue.</value>
+  </data>
+  <data name="Passphrase_Acknowledge" xml:space="preserve">
+    <value>I understand that a forgotten passphrase means the plan is lost.</value>
+  </data>
+  <data name="Passphrase_UnlockAction" xml:space="preserve">
+    <value>Open plan</value>
+  </data>
+  <data name="Passphrase_CreateAction" xml:space="preserve">
+    <value>Encrypt and export</value>
+  </data>
+  <data name="Passphrase_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Settings_EncryptionTitle" xml:space="preserve">
+    <value>Encryption</value>
+  </data>
+  <data name="Settings_EncryptExports" xml:space="preserve">
+    <value>Encrypt exported plan files</value>
+  </data>
+  <data name="Settings_EncryptExportsHint" xml:space="preserve">
+    <value>Your plan contains account balances, salary and debts. Encrypting the file means it stays private in a synced folder, a backup, or on a lost laptop. You will be asked for a passphrase the first time you export.</value>
+  </data>
+  <data name="Settings_EncryptionLocked" xml:space="preserve">
+    <value>Locked. You will be asked for the passphrase on the next export.</value>
+  </data>
+  <data name="Settings_EncryptionUnlocked" xml:space="preserve">
+    <value>Unlocked for this session.</value>
+  </data>
+  <data name="Settings_LockNow" xml:space="preserve">
+    <value>Lock now</value>
+  </data>
+  <data name="Settings_RecoveryHint" xml:space="preserve">
+    <value>Keep a copy of tools/decrypt-plan.html with your encrypted plans. It opens them offline without this app.</value>
+  </data>
 </root>

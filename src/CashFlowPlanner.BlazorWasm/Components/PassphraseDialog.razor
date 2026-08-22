@@ -1,0 +1,189 @@
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using Microsoft.Extensions.Localization
+
+@implements IDisposable
+
+@inject PassphrasePromptService Prompt
+@inject IStringLocalizer<SharedResource> L
+
+@*
+    Asks for the passphrase, for both opening an encrypted plan and choosing one for
+    the first time.
+
+    The Create path deliberately makes it hard to proceed carelessly: the passphrase
+    is typed twice and the user must tick an acknowledgement. There is no reset, no
+    hint and no backdoor - if this is forgotten the plan is unreadable by anyone,
+    including us. Saying that once, clearly, before anything is encrypted is the only
+    protection available.
+*@
+
+@if (Prompt.Current is { } request)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog"
+         aria-modal="true" aria-labelledby="passphraseDialogTitle">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="passphraseDialogTitle">
+                        @(request.Mode == PassphrasePromptMode.Create
+                            ? L["Passphrase_CreateTitle"]
+                            : L["Passphrase_UnlockTitle"])
+                    </h5>
+                </div>
+
+                <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(request.FileName))
+                    {
+                        <p class="text-body-secondary mb-3">
+                            @request.FileName
+                        </p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(request.ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">@request.ErrorMessage</div>
+                    }
+
+                    @if (request.Mode == PassphrasePromptMode.Create)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <strong>@L["Passphrase_NoRecoveryTitle"]</strong>
+                            <div>@L["Passphrase_NoRecoveryBody"]</div>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label" for="passphraseInput">
+                            @L["Passphrase_Label"]
+                        </label>
+                        <input id="passphraseInput"
+                               type="password"
+                               class="form-control"
+                               autocomplete="@(request.Mode == PassphrasePromptMode.Create ? "new-password" : "current-password")"
+                               @bind="_passphrase"
+                               @bind:event="oninput"
+                               @onkeydown="OnKeyDown" />
+                    </div>
+
+                    @if (request.Mode == PassphrasePromptMode.Create)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label" for="passphraseConfirmInput">
+                                @L["Passphrase_ConfirmLabel"]
+                            </label>
+                            <input id="passphraseConfirmInput"
+                                   type="password"
+                                   class="form-control"
+                                   autocomplete="new-password"
+                                   @bind="_confirm"
+                                   @bind:event="oninput"
+                                   @onkeydown="OnKeyDown" />
+                        </div>
+
+                        @if (_passphrase.Length > 0 && _confirm.Length > 0 && _passphrase != _confirm)
+                        {
+                            <div class="text-danger small mb-2">@L["Passphrase_Mismatch"]</div>
+                        }
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="passphraseAck"
+                                   @bind="_acknowledged" />
+                            <label class="form-check-label" for="passphraseAck">
+                                @L["Passphrase_Acknowledge"]
+                            </label>
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">
+                        @L["Passphrase_Cancel"]
+                    </button>
+                    <button type="button" class="btn btn-primary" disabled="@(!CanSubmit)" @onclick="Submit">
+                        @(request.Mode == PassphrasePromptMode.Create
+                            ? L["Passphrase_CreateAction"]
+                            : L["Passphrase_UnlockAction"])
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private string _passphrase = string.Empty;
+    private string _confirm = string.Empty;
+    private bool _acknowledged;
+
+    private bool CanSubmit
+    {
+        get
+        {
+            if (_passphrase.Length == 0)
+            {
+                return false;
+            }
+
+            if (Prompt.Current?.Mode != PassphrasePromptMode.Create)
+            {
+                return true;
+            }
+
+            return _passphrase == _confirm && _acknowledged;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Prompt.Changed += OnPromptChanged;
+    }
+
+    private void OnPromptChanged()
+    {
+        // Never let a passphrase survive into the next prompt.
+        _passphrase = string.Empty;
+        _confirm = string.Empty;
+        _acknowledged = false;
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && CanSubmit)
+        {
+            Submit();
+        }
+        else if (e.Key == "Escape")
+        {
+            Cancel();
+        }
+    }
+
+    private void Submit()
+    {
+        var value = _passphrase;
+
+        _passphrase = string.Empty;
+        _confirm = string.Empty;
+        _acknowledged = false;
+
+        Prompt.Complete(value);
+    }
+
+    private void Cancel()
+    {
+        _passphrase = string.Empty;
+        _confirm = string.Empty;
+        _acknowledged = false;
+
+        Prompt.Cancel();
+    }
+
+    public void Dispose()
+    {
+        Prompt.Changed -= OnPromptChanged;
+    }
+}

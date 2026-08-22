@@ -15,6 +15,10 @@
 @inject BrowserCultureService CultureService
 @inject IJSRuntime JsRuntime
 @inject EnumLocalizer EnumL
+@inject PlanExportPreferences ExportPreferences
+@inject PlanCryptoService Crypto
+
+@implements IDisposable
 
 <PageTitle>@L["Settings"] - CashFlow Planner</PageTitle>
 
@@ -41,6 +45,52 @@
     }
     else if (_editModel is not null)
     {
+        <div class="card mb-3">
+            <div class="card-header">
+                @L["Settings_EncryptionTitle"]
+            </div>
+
+            <div class="card-body">
+                <div class="form-check mb-2">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="settings-encrypt-exports"
+                           checked="@ExportPreferences.EncryptExports"
+                           @onchange="OnEncryptExportsChangedAsync" />
+                    <label class="form-check-label" for="settings-encrypt-exports">
+                        @L["Settings_EncryptExports"]
+                    </label>
+                </div>
+
+                <p class="form-text">@L["Settings_EncryptExportsHint"]</p>
+
+                @if (ExportPreferences.EncryptExports)
+                {
+                    <p class="mb-2">
+                        <span class="badge @(Crypto.IsUnlocked ? "text-bg-success" : "text-bg-secondary")">
+                            @(Crypto.IsUnlocked
+                                ? L["Settings_EncryptionUnlocked"]
+                                : L["Settings_EncryptionLocked"])
+                        </span>
+
+                        @if (Crypto.IsUnlocked)
+                        {
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary ms-2"
+                                    @onclick="LockNowAsync">
+                                @L["Settings_LockNow"]
+                            </button>
+                        }
+                    </p>
+
+                    <div class="alert alert-warning mb-0" role="alert">
+                        <div><strong>@L["Passphrase_NoRecoveryTitle"]</strong></div>
+                        <div>@L["Settings_RecoveryHint"]</div>
+                    </div>
+                }
+            </div>
+        </div>
+
         <div class="card mb-3">
             <div class="card-header">
                 @L["Plan"]
@@ -419,6 +469,24 @@
 </div>
 
 @code {
+    private async Task OnEncryptExportsChangedAsync(ChangeEventArgs e)
+    {
+        var enabled = e.Value is bool b && b;
+
+        await ExportPreferences.SetAsync(enabled);
+
+        // Turning encryption off should not leave a derived key sitting in memory.
+        if (!enabled)
+        {
+            await Crypto.LockAsync();
+        }
+    }
+
+    private async Task LockNowAsync()
+    {
+        await Crypto.LockAsync();
+    }
+
     private SimulationSettingsEditModel? _editModel;
     private PlanDefaultsEditModel? _planDefaultsEditModel;
 
@@ -433,6 +501,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // The lock state changes from outside this page - an export unlocks the key -
+        // so without this the badge below keeps showing whatever it said on first render.
+        Crypto.LockStateChanged += OnCryptoStateChanged;
+        ExportPreferences.Changed += OnCryptoStateChanged;
+
         var preferences = await CultureService.LoadAsync();
 
         _cultureEditModel = new CulturePreferenceEditModel
@@ -711,5 +784,16 @@
     private string Text(string key, params object[] arguments)
     {
         return L[key, arguments].Value;
+    }
+
+    private void OnCryptoStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Crypto.LockStateChanged -= OnCryptoStateChanged;
+        ExportPreferences.Changed -= OnCryptoStateChanged;
     }
 }

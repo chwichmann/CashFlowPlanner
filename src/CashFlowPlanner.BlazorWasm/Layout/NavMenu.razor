@@ -10,6 +10,7 @@
 @inject CashFlowAppState AppState
 @inject CashFlowPlanJsonSerializer JsonSerializer
 @inject BrowserPlanCacheService BrowserCache
+@inject PlanFileService PlanFiles
 @inject IJSRuntime JsRuntime
 @inject IStringLocalizer<SharedResource> L
 @inject UiFeedbackService Feedback
@@ -135,6 +136,7 @@
             <div class="navbar-actions">
                 <InputFile id="navJsonFileInput"
                            style="display: none;"
+                           accept=".json,.cfplan"
                            OnChange="LoadFileAsync" />
 
                 <label class="btn btn-sm btn-outline-light nav-icon-button"
@@ -258,11 +260,16 @@
             await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
             using var reader = new StreamReader(stream);
 
-            var json = await reader.ReadToEndAsync();
-            var document = JsonSerializer.DeserializeDocument(json);
+            var fileText = await reader.ReadToEndAsync();
+
+            // Decrypts and prompts for a passphrase when the file is encrypted.
+            var document = await PlanFiles.ReadAsync(fileText, file.Name);
 
             AppState.LoadDocument(document);
 
+            // The working copy is always plaintext JSON: it is scoped to this browser
+            // and is re-derived from the document, never from the file bytes.
+            var json = JsonSerializer.SerializeDocument(document);
             var cacheWrite = await BrowserCache.SaveAsync(json);
             await RefreshCachedAtTextAsync();
 
@@ -320,17 +327,23 @@
         try
         {
             var document = AppState.GetDocumentForSave();
-            var json = JsonSerializer.SerializeDocument(document);
-            var fileName = CreateExportFileName(document.Name);
+
+            // Encrypts when the user has asked for it, prompting for a passphrase the
+            // first time. Throws PassphraseCancelledException if they back out.
+            var file = await PlanFiles.WriteAsync(document);
+            var fileName = CreateExportFileName(document.Name, file.Extension);
 
             await JsRuntime.InvokeVoidAsync(
                 "cashFlowPlanner.downloadTextFile",
                 fileName,
-                json,
-                "application/json");
+                file.Text,
+                file.ContentType);
 
             // The file on disk now matches what is in memory, so the plan is no longer
             // dirty. Without this the "unexported changes" indicator never clears (P1c).
+            // Hash the PLAN json, not the envelope: a fresh key on every encryption makes
+            // the envelope bytes different each time even when nothing changed.
+            var json = JsonSerializer.SerializeDocument(document);
             AppState.MarkExported(json);
 
             var cacheWrite = await BrowserCache.SaveAsync(json);
@@ -349,6 +362,10 @@
                     + $"updated: {cacheWrite.Message}";
                 _isError = true;
             }
+        }
+        catch (PassphraseCancelledException)
+        {
+            ClearStatus();
         }
         catch (Exception ex)
         {
@@ -394,7 +411,7 @@
         }
     }
 
-    private static string CreateExportFileName(string planName)
+    private static string CreateExportFileName(string planName, string extension)
     {
         var safeName = string.Join(
             "-",
@@ -405,7 +422,7 @@
             safeName = "cashflow-plan";
         }
 
-        return $"{safeName}-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+        return $"{safeName}-{DateTime.Now:yyyyMMdd-HHmmss}{extension}";
     }
 
     private void ClearStatus()

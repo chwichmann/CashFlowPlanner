@@ -1,4 +1,4 @@
-@using CashFlowPlanner.BlazorWasm.Resources
+﻿@using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.BlazorWasm.Services
 @using CashFlowPlanner.Core
 @using CashFlowPlanner.Storage.Json
@@ -7,6 +7,7 @@
 
 @inject CashFlowAppState AppState
 @inject CashFlowPlanJsonSerializer JsonSerializer
+@inject PlanFileService PlanFiles
 @inject StarterPlanProvider StarterPlan
 @inject PlanCacheCoordinator CacheCoordinator
 @inject IStringLocalizer<SharedResource> L
@@ -56,7 +57,7 @@
                     </p>
                     <label class="btn btn-outline-secondary mb-0">
                         @L["EmptyState_OpenAction"]
-                        <InputFile OnChange="OpenFileAsync" accept=".json" hidden disabled="@_isBusy" />
+                        <InputFile OnChange="OpenFileAsync" accept=".json,.cfplan" hidden disabled="@_isBusy" />
                     </label>
                 </div>
             </div>
@@ -122,8 +123,10 @@
             await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
             using var reader = new StreamReader(stream);
 
-            var json = await reader.ReadToEndAsync();
-            var document = JsonSerializer.DeserializeDocument(json);
+            var fileText = await reader.ReadToEndAsync();
+
+            // Handles encrypted files, prompting for the passphrase.
+            var document = await PlanFiles.ReadAsync(fileText, file.Name);
 
             AppState.LoadDocument(document);
         });
@@ -141,6 +144,10 @@
             // Write the working copy immediately: without this a newly created plan lives only
             // in memory and a reload loses it before the user has done anything at all.
             await CacheCoordinator.FlushAsync();
+        }
+        catch (PassphraseCancelledException)
+        {
+            // The user backed out of the passphrase prompt; not an error.
         }
         catch (Exception ex)
         {

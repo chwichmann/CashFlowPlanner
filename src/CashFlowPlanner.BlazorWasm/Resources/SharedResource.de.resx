@@ -2289,4 +2289,58 @@
   <data name="Update_Later" xml:space="preserve">
     <value>Später</value>
   </data>
+  <data name="Passphrase_UnlockTitle" xml:space="preserve">
+    <value>Dieser Plan ist verschlüsselt</value>
+  </data>
+  <data name="Passphrase_CreateTitle" xml:space="preserve">
+    <value>Passphrase wählen</value>
+  </data>
+  <data name="Passphrase_Label" xml:space="preserve">
+    <value>Passphrase</value>
+  </data>
+  <data name="Passphrase_ConfirmLabel" xml:space="preserve">
+    <value>Passphrase wiederholen</value>
+  </data>
+  <data name="Passphrase_Mismatch" xml:space="preserve">
+    <value>Die beiden Passphrasen stimmen nicht überein.</value>
+  </data>
+  <data name="Passphrase_NoRecoveryTitle" xml:space="preserve">
+    <value>Es gibt keine Möglichkeit, das zurückzusetzen.</value>
+  </data>
+  <data name="Passphrase_NoRecoveryBody" xml:space="preserve">
+    <value>Wenn du diese Passphrase vergisst, lässt sich der Plan nie wieder öffnen - weder von dir noch von jemand anderem. Notiere sie an einem sicheren Ort, bevor du fortfährst.</value>
+  </data>
+  <data name="Passphrase_Acknowledge" xml:space="preserve">
+    <value>Mir ist klar, dass eine vergessene Passphrase den Plan unwiederbringlich verloren macht.</value>
+  </data>
+  <data name="Passphrase_UnlockAction" xml:space="preserve">
+    <value>Plan öffnen</value>
+  </data>
+  <data name="Passphrase_CreateAction" xml:space="preserve">
+    <value>Verschlüsseln und exportieren</value>
+  </data>
+  <data name="Passphrase_Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Settings_EncryptionTitle" xml:space="preserve">
+    <value>Verschlüsselung</value>
+  </data>
+  <data name="Settings_EncryptExports" xml:space="preserve">
+    <value>Exportierte Plandateien verschlüsseln</value>
+  </data>
+  <data name="Settings_EncryptExportsHint" xml:space="preserve">
+    <value>Dein Plan enthält Kontostände, Lohn und Schulden. Verschlüsselt bleibt die Datei privat - in einem synchronisierten Ordner, in einem Backup oder auf einem verlorenen Laptop. Beim ersten Export wirst du nach einer Passphrase gefragt.</value>
+  </data>
+  <data name="Settings_EncryptionLocked" xml:space="preserve">
+    <value>Gesperrt. Beim nächsten Export wirst du nach der Passphrase gefragt.</value>
+  </data>
+  <data name="Settings_EncryptionUnlocked" xml:space="preserve">
+    <value>Für diese Sitzung entsperrt.</value>
+  </data>
+  <data name="Settings_LockNow" xml:space="preserve">
+    <value>Jetzt sperren</value>
+  </data>
+  <data name="Settings_RecoveryHint" xml:space="preserve">
+    <value>Bewahre eine Kopie von tools/decrypt-plan.html zusammen mit deinen verschlüsselten Plänen auf. Damit lassen sie sich offline auch ohne diese App öffnen.</value>
+  </data>
 </root>
