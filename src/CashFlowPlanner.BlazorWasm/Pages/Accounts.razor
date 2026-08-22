@@ -1,6 +1,5 @@
-﻿@page "/accounts"
+@page "/accounts"
 
-@using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core
 @using CashFlowPlanner.Core.Accounts
@@ -12,471 +11,506 @@
 @inherits AppStateAwarePage
 
 @inject CashFlowAppState AppState
+@inject AppFormatter Formatter
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> L
 @inject EnumLocalizer EnumL
 
-<PageTitle>@L["Account_Title"] - CashFlow Planner</PageTitle>
+<ConfirmDialog @ref="_confirmDialog" />
 
-<h2>@L["Account_Title"]</h2>
+<PageScaffold Title="@L["Account_Title"]"
+              RequiresPlan="true"
+              EmptyStateMessage="@L["Account_NoPlan"]">
 
-@if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <div class="alert alert-danger">
-        @_errorMessage
-    </div>
-}
-
-@if (!string.IsNullOrWhiteSpace(_infoMessage))
-{
-    <div class="alert alert-success">
-        @_infoMessage
-    </div>
-}
-
-@if (AppState.CurrentPlan is null)
-{
-    <PlanEmptyState Message='@L["Account_NoPlan"]' />
-}
-else
-{
-    var plan = AppState.CurrentPlan;
-    var result = AppState.CurrentSimulationResult;
-
-    <div class="mb-3">
-        <button type="button" class="btn btn-primary" @onclick="NewAccount">
-            @L["Account_AddAccount"]
-        </button>
-    </div>
-
-    @if (_editModel is not null)
-    {
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header">
-                <strong>@(_isNewAccount ? L["Account_AddAccount"] : L["Account_EditAccount"])</strong>
+    <Notifications>
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger">
+                @_errorMessage
             </div>
+        }
 
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">@L["Account_Name"]</label>
-                        <input class="form-control" @bind="_editModel.Name" />
-                    </div>
+        @if (!string.IsNullOrWhiteSpace(_infoMessage))
+        {
+            <div class="alert alert-success">
+                @_infoMessage
+            </div>
+        }
+    </Notifications>
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Account_Type"]</label>
-                        <select class="form-select" @bind="_editModel.Type">
-                            @foreach (var accountType in Enum.GetValues<AccountType>())
-                            {
-                                <option value="@accountType">@EnumL.Translate(accountType)</option>
-                            }
-                        </select>
-                    </div>
+    <ChildContent>
+        @{
+            // PageScaffold only renders ChildContent once AppState.HasPlan, and HasPlan is
+            // CurrentPlan is not null. The guard the page used to write itself now lives there.
+            var plan = AppState.CurrentPlan!;
+            var result = AppState.CurrentSimulationResult;
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Account_Currency"]</label>
-                        <input class="form-control" @bind="_editModel.Currency" />
-                    </div>
+            var accounts = plan.Accounts
+                .OrderBy(x => x.Type)
+                .ThenBy(x => x.Name)
+                .ToList();
+        }
 
-                    <div class="col-md-6">
-                        <label class="form-label">@L["Account_Owner"]</label>
-                        <select class="form-select" @bind="_editModel.OwnerPersonId">
-                            <option value="">@L["Account_NoOwner"]</option>
-                            @foreach (var person in PersonList.OrderBy(x => x.DisplayName))
-                            {
-                                <option value="@person.Id">@person.DisplayName</option>
-                            }
-                        </select>
+        <div class="mb-3">
+            <button type="button" class="btn btn-primary" @onclick="NewAccount">
+                @L["Account_AddAccount"]
+            </button>
+        </div>
+
+        @if (_editModel is not null)
+        {
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">
+                    <strong>@(_isNewAccount ? L["Account_AddAccount"] : L["Account_EditAccount"])</strong>
+                </div>
+
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <FormField Label="@L["Account_Name"]" CssClass="mb-0">
+                                <input id="@context.Id"
+                                       aria-describedby="@context.DescribedBy"
+                                       class="form-control"
+                                       @bind="_editModel.Name" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label="@L["Account_Type"]" CssClass="mb-0">
+                                <select id="@context.Id"
+                                        aria-describedby="@context.DescribedBy"
+                                        class="form-select"
+                                        @bind="_editModel.Type">
+                                    @foreach (var accountType in Enum.GetValues<AccountType>())
+                                    {
+                                        <option value="@accountType">@EnumL.Translate(accountType)</option>
+                                    }
+                                </select>
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label="@L["Account_Currency"]" CssClass="mb-0">
+                                <input id="@context.Id"
+                                       aria-describedby="@context.DescribedBy"
+                                       class="form-control"
+                                       @bind="_editModel.Currency" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-6">
+                            <FormField Label="@L["Account_Owner"]"
+                                       CssClass="mb-0"
+                                       Hint="@OwnerHint">
+                                <select id="@context.Id"
+                                        aria-describedby="@context.DescribedBy"
+                                        class="form-select"
+                                        @bind="_editModel.OwnerPersonId">
+                                    <option value="">@L["Account_NoOwner"]</option>
+                                    @foreach (var person in PersonList.OrderBy(x => x.DisplayName))
+                                    {
+                                        <option value="@person.Id">@person.DisplayName</option>
+                                    }
+                                </select>
+                            </FormField>
+                        </div>
 
                         @if (_editModel.Type == AccountType.Pillar3a)
                         {
-                            <div class="form-text">
-                                @L["Account_RequiredForPillar3a"]
+                            <div class="col-md-6">
+                                <FormField Label="@L["Account_Pillar3aSubType"]"
+                                           CssClass="mb-0"
+                                           Hint="@Pillar3aSubtypeHint">
+                                    <select id="@context.Id"
+                                            aria-describedby="@context.DescribedBy"
+                                            class="form-select"
+                                            @bind="_editModel.Pillar3aSubtype">
+                                        <option value="">@L["Account_Pillar3aSelectSubType"]</option>
+                                        <option value="@Pillar3aAccountSubtype.BankAccount">
+                                            @EnumL.Translate(Pillar3aAccountSubtype.BankAccount)
+                                        </option>
+                                        <option value="@Pillar3aAccountSubtype.FundSolution">
+                                            @EnumL.Translate(Pillar3aAccountSubtype.FundSolution)
+                                        </option>
+                                    </select>
+                                </FormField>
                             </div>
                         }
-                    </div>
 
-                    @if (_editModel.Type == AccountType.Pillar3a)
-                    {
                         <div class="col-md-6">
-                            <label class="form-label">@L["Account_Pillar3aSubType"]</label>
-                            <select class="form-select" @bind="_editModel.Pillar3aSubtype">
-                                <option value="">@L["Account_Pillar3aSelectSubType"]</option>
-                                <option value="@Pillar3aAccountSubtype.BankAccount">
-                                    @EnumL.Translate(Pillar3aAccountSubtype.BankAccount)
-                                </option>
-                                <option value="@Pillar3aAccountSubtype.FundSolution">
-                                    @EnumL.Translate(Pillar3aAccountSubtype.FundSolution)
-                                </option>
-                            </select>
-
-                            @if (PersonList.Count == 0)
-                            {
-                                <div class="form-text">
-                                    @L["Account_NoOwners"]
-                                </div>
-                            }
+                            <FormField Label="@L["Account_BankName"]" CssClass="mb-0">
+                                <input id="@context.Id"
+                                       aria-describedby="@context.DescribedBy"
+                                       class="form-control"
+                                       @bind="_editModel.BankName" />
+                            </FormField>
                         </div>
-                    }
 
-                    <div class="col-md-6">
-                        <label class="form-label">@L["Account_BankName"]</label>
-                        <input class="form-control" @bind="_editModel.BankName" />
-                    </div>
+                        <div class="col-md-3">
+                            <FormField Label="@L["Account_OpeningBalance"]" CssClass="mb-0">
+                                <MoneyInput Id="@context.Id"
+                                            AriaDescribedBy="@context.DescribedBy"
+                                            @bind-Value="_editModel.OpeningBalance" />
+                            </FormField>
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Account_OpeningBalance"]</label>
-                        <input class="form-control" type="number" step="0.01" @bind="_editModel.OpeningBalance" />
-                    </div>
+                        <div class="col-md-3">
+                            <FormField Label="@L["Account_OpeningDate"]" CssClass="mb-0">
+                                <input id="@context.Id"
+                                       aria-describedby="@context.DescribedBy"
+                                       class="form-control"
+                                       type="date"
+                                       @bind="_editModel.OpeningDate" />
+                            </FormField>
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Account_OpeningDate"]</label>
-                        <input class="form-control" type="date" @bind="_editModel.OpeningDate" />
-                    </div>
+                        <div class="col-md-6">
+                            <FormField Label="@L["Account_IbanMasked"]" CssClass="mb-0">
+                                <input id="@context.Id"
+                                       aria-describedby="@context.DescribedBy"
+                                       class="form-control"
+                                       @bind="_editModel.IbanMasked" />
+                            </FormField>
+                        </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">@L["Account_IbanMasked"]</label>
-                        <input class="form-control" @bind="_editModel.IbanMasked" />
-                    </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <FormField Label="@L["Account_Active"]"
+                                       Layout="FormFieldLayout.Checkbox"
+                                       CssClass="mb-0">
+                                <input id="@context.Id"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       @bind="_editModel.IsActive" />
+                            </FormField>
+                        </div>
 
-                    <div class="col-md-6 d-flex align-items-end">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="account-active" @bind="_editModel.IsActive" />
-                            <label class="form-check-label" for="account-active">
-                                @L["Account_Active"]
-                            </label>
+                        <div class="col-12">
+                            <FormField Label="@L["Account_Notes"]" CssClass="mb-0">
+                                <textarea id="@context.Id"
+                                          aria-describedby="@context.DescribedBy"
+                                          class="form-control"
+                                          rows="3"
+                                          @bind="_editModel.Notes"></textarea>
+                            </FormField>
                         </div>
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label">@L["Account_Notes"]</label>
-                        <textarea class="form-control" rows="3" @bind="_editModel.Notes"></textarea>
-                    </div>
-                </div>
+                    <hr />
 
-                <hr />
+                    <h5>@L["Account_InterestContracts"]</h5>
 
-                <h5>@L["Account_InterestContracts"]</h5>
+                    <p>@L["Account_InterestText"]</p>
 
-                <p>@L["Account_InterestText"]</p>
+                    <button type="button" class="btn btn-secondary mb-3" @onclick="AddInterestContract">
+                        @L["Account_InterestAdd"]
+                    </button>
 
-                <button type="button" class="btn btn-secondary mb-3" @onclick="AddInterestContract">
-                    @L["Account_InterestAdd"]
-                </button>
-
-                @if (_editModel.InterestContracts.Count == 0)
-                {
-                    <p>@L["Account_NoInterestContracts"]</p>
-                }
-                else
-                {
-                    @foreach (var contract in _editModel.InterestContracts)
+                    @if (_editModel.InterestContracts.Count == 0)
                     {
-                        <div class="card mb-3">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <strong>
-                                    @(string.IsNullOrWhiteSpace(contract.Name)
-                                        ? L["Account_InterestContract"]
-                                        : contract.Name)
-                                </strong>
+                        <p>@L["Account_NoInterestContracts"]</p>
+                    }
+                    else
+                    {
+                        @foreach (var contract in _editModel.InterestContracts)
+                        {
+                            <div class="card mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <strong>
+                                        @(string.IsNullOrWhiteSpace(contract.Name)
+                                            ? L["Account_InterestContract"]
+                                            : contract.Name)
+                                    </strong>
 
-                                <button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoveInterestContract(contract)">
-                                    @L["Remove"]
-                                </button>
-                            </div>
-
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">@L["Account_Name"]</label>
-                                        <input class="form-control" @bind="contract.Name" />
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <label class="form-label">@L["Account_CalculationMethod"]</label>
-                                        <select class="form-select" @bind="contract.CalculationMethod">
-                                            @foreach (var method in Enum.GetValues<AccountInterestCalculationMethod>())
-                                            {
-                                                <option value="@method">@EnumL.Translate(method)</option>
-                                            }
-                                        </select>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label">@L["Account_PostingFrequency"]</label>
-                                        <select class="form-select" @bind="contract.PostingFrequency">
-                                            @foreach (var frequency in Enum.GetValues<InterestPostingFrequency>())
-                                            {
-                                                <option value="@frequency">@EnumL.Translate(frequency)</option>
-                                            }
-                                        </select>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label">@L["Account_DayCount"]</label>
-                                        <select class="form-select" @bind="contract.DayCountConvention">
-                                            @foreach (var convention in Enum.GetValues<InterestDayCountConvention>())
-                                            {
-                                                <option value="@convention">@EnumL.Translate(convention)</option>
-                                            }
-                                        </select>
-                                    </div>
-
-                                    <div class="col-md-2">
-                                        <label class="form-label">@L["Account_StartDate"]</label>
-                                        <input class="form-control" type="date" @bind="contract.StartDate" />
-                                    </div>
-
-                                    <div class="col-md-2">
-                                        <label class="form-label">@L["Account_EndDate"]</label>
-                                        <input class="form-control" type="date" @bind="contract.EndDate" />
-                                    </div>
-
-                                    <div class="col-12">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" @bind="contract.IsActive" />
-                                            <label class="form-check-label">
-                                                @L["Account_Active"]
-                                            </label>
-                                        </div>
-                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoveInterestContract(contract)">
+                                        @L["Remove"]
+                                    </button>
                                 </div>
 
-                                @if (contract.CalculationMethod == AccountInterestCalculationMethod.FlatBalance)
-                                {
-                                    <hr />
-
-                                    <h6>@L["Account_FlatInterestRate"]</h6>
-
+                                <div class="card-body">
                                     <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <FormField Label="@L["Account_Name"]" CssClass="mb-0">
+                                                <input id="@context.Id"
+                                                       aria-describedby="@context.DescribedBy"
+                                                       class="form-control"
+                                                       @bind="contract.Name" />
+                                            </FormField>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <FormField Label="@L["Account_CalculationMethod"]" CssClass="mb-0">
+                                                <select id="@context.Id"
+                                                        aria-describedby="@context.DescribedBy"
+                                                        class="form-select"
+                                                        @bind="contract.CalculationMethod">
+                                                    @foreach (var method in Enum.GetValues<AccountInterestCalculationMethod>())
+                                                    {
+                                                        <option value="@method">@EnumL.Translate(method)</option>
+                                                    }
+                                                </select>
+                                            </FormField>
+                                        </div>
+
                                         <div class="col-md-4">
-                                            <label class="form-label">@L["Account_AnnualRatePercent"]</label>
-                                            <input class="form-control" type="number" step="0.0001" @bind="contract.FlatAnnualRatePercent" />
+                                            <FormField Label="@L["Account_PostingFrequency"]" CssClass="mb-0">
+                                                <select id="@context.Id"
+                                                        aria-describedby="@context.DescribedBy"
+                                                        class="form-select"
+                                                        @bind="contract.PostingFrequency">
+                                                    @foreach (var frequency in Enum.GetValues<InterestPostingFrequency>())
+                                                    {
+                                                        <option value="@frequency">@EnumL.Translate(frequency)</option>
+                                                    }
+                                                </select>
+                                            </FormField>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <FormField Label="@L["Account_DayCount"]" CssClass="mb-0">
+                                                <select id="@context.Id"
+                                                        aria-describedby="@context.DescribedBy"
+                                                        class="form-select"
+                                                        @bind="contract.DayCountConvention">
+                                                    @foreach (var convention in Enum.GetValues<InterestDayCountConvention>())
+                                                    {
+                                                        <option value="@convention">@EnumL.Translate(convention)</option>
+                                                    }
+                                                </select>
+                                            </FormField>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <FormField Label="@L["Account_StartDate"]" CssClass="mb-0">
+                                                <input id="@context.Id"
+                                                       aria-describedby="@context.DescribedBy"
+                                                       class="form-control"
+                                                       type="date"
+                                                       @bind="contract.StartDate" />
+                                            </FormField>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <FormField Label="@L["Account_EndDate"]" CssClass="mb-0">
+                                                <input id="@context.Id"
+                                                       aria-describedby="@context.DescribedBy"
+                                                       class="form-control"
+                                                       type="date"
+                                                       @bind="contract.EndDate" />
+                                            </FormField>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <FormField Label="@L["Account_Active"]"
+                                                       Layout="FormFieldLayout.Checkbox"
+                                                       CssClass="mb-0">
+                                                <input id="@context.Id"
+                                                       class="form-check-input"
+                                                       type="checkbox"
+                                                       @bind="contract.IsActive" />
+                                            </FormField>
                                         </div>
                                     </div>
 
-                                    <p class="mt-3">@L["Account_FlatBalanceModeText"]</p>
-                                }
-                                else
-                                {
-                                    <hr />
-
-                                    <h6>@L["Account_InterestTiers"]</h6>
-
-                                    <button type="button" class="btn btn-secondary btn-sm mb-3" @onclick="() => AddInterestTier(contract)">
-                                        @L["Account_AddTier"]
-                                    </button>
-
-                                    @if (contract.Tiers.Count == 0)
+                                    @if (contract.CalculationMethod == AccountInterestCalculationMethod.FlatBalance)
                                     {
-                                        <p>@L["Account_InterestTierRequired"]</p>
+                                        <hr />
+
+                                        <h6>@L["Account_FlatInterestRate"]</h6>
+
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <FormField Label="@L["Account_AnnualRatePercent"]" CssClass="mb-0">
+                                                    <MoneyInput Id="@context.Id"
+                                                                AriaDescribedBy="@context.DescribedBy"
+                                                                Decimals="4"
+                                                                @bind-Value="contract.FlatAnnualRatePercent" />
+                                                </FormField>
+                                            </div>
+                                        </div>
+
+                                        <p class="mt-3">@L["Account_FlatBalanceModeText"]</p>
                                     }
                                     else
                                     {
-                                        <table class="table table-sm table-striped align-middle">
-                                            <thead>
-                                                <tr>
-                                                    <th>@L["Account_FromAmount"]</th>
-                                                    <th>@L["Account_ToAmount"]</th>
-                                                    <th>@L["Account_AnnualRatePercent"]</th>
-                                                    <th></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var tier in contract.Tiers)
-                                                {
-                                                    <tr>
-                                                        <td>
-                                                            <input class="form-control form-control-sm" type="number" step="0.01" @bind="tier.FromAmount" />
-                                                        </td>
-                                                        <td>
-                                                            <input class="form-control form-control-sm" type="number" step="0.01" @bind="tier.ToAmount" />
-                                                        </td>
-                                                        <td>
-                                                            <input class="form-control form-control-sm" type="number" step="0.0001" @bind="tier.AnnualRatePercent" />
-                                                        </td>
-                                                        <td>
-                                                            <button type="button" class="btn btn-danger btn-sm" @onclick="() => RemoveInterestTier(contract, tier)">
-                                                                @L["Remove"]
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
+                                        <hr />
+
+                                        <h6>@L["Account_InterestTiers"]</h6>
+
+                                        <button type="button" class="btn btn-secondary btn-sm mb-3" @onclick="() => AddInterestTier(contract)">
+                                            @L["Account_AddTier"]
+                                        </button>
+
+                                        <DataTable Items="contract.Tiers"
+                                                   TableCssClass="table table-sm table-striped align-middle"
+                                                   Caption="@L["Account_InterestTiers"]"
+                                                   EmptyText="@L["Account_InterestTierRequired"]">
+
+                                            <Column Title="@L["Account_FromAmount"]" Align="ColumnAlign.Number">
+                                                <ChildContent Context="tier">
+                                                    <MoneyInput @bind-Value="tier.FromAmount"
+                                                                CssClass="form-control form-control-sm num"
+                                                                aria-label="@L["Account_FromAmount"]" />
+                                                </ChildContent>
+                                            </Column>
+
+                                            @*
+                                                Still a raw <input>: MoneyInput's Value is decimal, and an
+                                                empty ToAmount is what makes a tier open-ended. Binding it
+                                                through MoneyInput would turn "no upper bound" into 0.00.
+                                            *@
+                                            <Column Title="@L["Account_ToAmount"]" Align="ColumnAlign.Number">
+                                                <ChildContent Context="tier">
+                                                    <input class="form-control form-control-sm num"
+                                                           type="number"
+                                                           step="0.01"
+                                                           aria-label="@L["Account_ToAmount"]"
+                                                           @bind="tier.ToAmount" />
+                                                </ChildContent>
+                                            </Column>
+
+                                            <Column Title="@L["Account_AnnualRatePercent"]" Align="ColumnAlign.Number">
+                                                <ChildContent Context="tier">
+                                                    <MoneyInput @bind-Value="tier.AnnualRatePercent"
+                                                                Decimals="4"
+                                                                CssClass="form-control form-control-sm num"
+                                                                aria-label="@L["Account_AnnualRatePercent"]" />
+                                                </ChildContent>
+                                            </Column>
+
+                                            <Column HeaderCssClass="text-end" CellCssClass="text-end">
+                                                <ChildContent Context="tier">
+                                                    <button type="button"
+                                                            class="btn btn-danger btn-sm"
+                                                            @onclick="() => RemoveInterestTier(contract, tier)">
+                                                        @L["Remove"]
+                                                    </button>
+                                                </ChildContent>
+                                            </Column>
+                                        </DataTable>
                                     }
-                                }
+                                </div>
                             </div>
-                        </div>
+                        }
                     }
-                }
 
-                <div class="mt-3 no-wrap">
-                    <button type="button" class="btn btn-primary" @onclick="SaveAccount">
-                        @L["Account_Save"]
-                    </button>
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-primary" @onclick="SaveAccount">
+                            @L["Account_Save"]
+                        </button>
 
-                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit">
-                        @L["Account_Cancel"]
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (_balanceEditModel is not null)
-{
-    <div class="modal fade show d-block"
-         tabindex="-1"
-         role="dialog"
-         aria-modal="true"
-         aria-labelledby="setBalanceModalTitle">
-
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-
-                <div class="modal-header">
-                    <h5 class="modal-title" id="setBalanceModalTitle">
-                        @L["Account_SetBalanceTitle", _balanceEditModel.AccountName]
-                    </h5>
-
-                    <button type="button"
-                            class="btn-close"
-                            aria-label="@L["Cancel"]"
-                            @onclick="CancelBalanceEdit">
-                    </button>
-                </div>
-
-                <div class="modal-body">
-                    <p>
-                        @Text(
-                            "Account_SetBalanceDescription",
-                            _balanceEditModel.AccountName)
-                    </p>
-
-                    <div class="mb-3">
-                        <label class="form-label">@L["Account_Balance"]</label>
-
-                        <div class="input-group">
-                            <input class="form-control"
-                                   type="number"
-                                   step="0.01"
-                                   autofocus
-                                   @bind="_balanceEditModel.Balance" />
-
-                            <span class="input-group-text">
-                                @_balanceEditModel.Currency
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-warning mb-0">
-                        @L["Account_SetBalanceTodayHint"]
+                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">
+                            @L["Account_Cancel"]
+                        </button>
                     </div>
                 </div>
-
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            @onclick="CancelBalanceEdit">
-                        @L["Cancel"]
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-primary"
-                            @onclick="SaveBalance">
-                        @L["Save"]
-                    </button>
-                </div>
-
             </div>
-        </div>
-    </div>
+        }
 
-    <div class="modal-backdrop fade show"></div>
-}
+        @if (_balanceEditModel is not null)
+        {
+            @*
+                Bound to a local rather than to the field. The dialog's body is a RenderFragment the
+                AppModal holds on to, and cancelling clears the field before the modal has rendered
+                itself away - so a fragment reading _balanceEditModel directly dereferences null on
+                the way out.
+            *@
+            var balanceEdit = _balanceEditModel;
 
-    @if (plan.Accounts.Count == 0)
-    {
-        <p>@L["Account_NoAccounts"]</p>
-    }
-    else
-    {
-        <table class="table table-sm table-striped table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>@L["Account_Name"]</th>
-                    <th>@L["Account_Type"]</th>
-                    <th>@L["Account_Owner"]</th>
-                    <th class="text-center">@L["Account_Bank"]</th>
-                    <th class="text-center">@L["Account_Currency"]</th>
-                    <th class="text-end">@L["Account_OpeningBalance"]</th>
-                    <th class="text-center">@L["Account_OpeningDate"]</th>
-                    <th class="text-end">@L["Account_EndBalance"]</th>
-                    <th class="text-center">@L["Account_Interest"]</th>
-                    <th class="text-center">@L["Account_Active"]</th>
-                    <th class="text-end">@L["Account_Actions"]</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var account in plan.Accounts.OrderBy(x => x.Type).ThenBy(x => x.Name))
-                {
-                    var endBalance = result is null
-                        ? (decimal?)null
-                        : result.GetBalance(account.Id, plan.SimulationSettings.EndDate);
+            <AppModal Visible="true"
+                      Title="@(Text("Account_SetBalanceTitle", balanceEdit.AccountName))"
+                      ConfirmText="@L["Save"]"
+                      CancelText="@L["Cancel"]"
+                      OnConfirm="SaveBalance"
+                      OnCancel="CancelBalanceEdit">
 
-                    <tr>
-                        <td>@account.Name</td>
-                        <td>@EnumL.Translate(account.Type)</td>
-                        <td>@GetOwnerName(account)</td>
-                        <td class="text-center">@account.BankName</td>
-                        <td class="text-center">@account.Currency</td>
-                        <td class="text-end">@account.OpeningBalance.ToString("N2", CultureInfo.CurrentCulture)</td>
-                        <td class="text-center">@FormatDate(account.OpeningDate)</td>
-                        <td class="text-end">
-                            @if (endBalance is null)
-                            {
-                                @L["Account_NotSimulated"]
-                            }
-                            else
-                            {
-                                @endBalance.Value.ToString("N2", CultureInfo.CurrentCulture)
-                            }
-                        </td>
-                        <td class="text-center">@FormatInterestContracts(account)</td>
-                        <td class="text-center">
-                            @if (account.IsActive)
-                            {
-                                <span class="badge bg-success">@L["Account_Active"]</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">@L["Inactive"]</span>
-                            }
-                        </td>
-                        <td class="text-end text-nowrap" style="white-space: nowrap;">
-                            <button type="button" class="btn btn-sm btn-secondary" @onclick="() => OpenStatement(account)">
-                                @L["Account_Statement"]
-                            </button>
+                <p>
+                    @Text("Account_SetBalanceDescription", balanceEdit.AccountName)
+                </p>
 
-                            <button type="button" class="btn btn-sm btn-primary" @onclick="() => EditAccount(account)">
-                                @L["Edit"]
-                            </button>
+                <FormField Label="@L["Account_Balance"]">
+                    <MoneyInput Id="@context.Id"
+                                AriaDescribedBy="@context.DescribedBy"
+                                Suffix="@balanceEdit.Currency"
+                                @bind-Value="balanceEdit.Balance" />
+                </FormField>
 
-                            <button type="button" class="btn btn-sm btn-warning" @onclick="() => OpenBalanceEdit(account)">
-                                @L["Account_SetBalance"]
-                            </button>
+                <div class="alert alert-warning mb-0">
+                    @L["Account_SetBalanceTodayHint"]
+                </div>
+            </AppModal>
+        }
 
-                            <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteAccount(account)">
-                                @L["Delete"]
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-}
+        <DataTable Items="accounts"
+                   RowKey="@(account => (object)account.Id)"
+                   TableCssClass="table table-sm table-striped table-hover align-middle"
+                   Caption="@L["Account_Title"]"
+                   EmptyText="@L["Account_NoAccounts"]">
+
+            <Column Title="@L["Account_Name"]" Text="@(account => account.Name)" />
+
+            <Column Title="@L["Account_Type"]" Text="@(account => EnumL.Translate(account.Type))" />
+
+            <Column Title="@L["Account_Owner"]" Text="@(account => GetOwnerName(account))" />
+
+            @* Bank, Currency, OpeningDate and Interest are prose and dates, so they read from the
+               left like every other table in the app. They used to be centred here alone. *@
+            <Column Title="@L["Account_Bank"]" Text="@(account => account.BankName ?? string.Empty)" />
+
+            <Column Title="@L["Account_Currency"]" Text="@(account => account.Currency)" />
+
+            <Column Title="@L["Account_OpeningBalance"]"
+                    Align="ColumnAlign.Number"
+                    Text="@(account => Formatter.Money(account.OpeningBalance))" />
+
+            <Column Title="@L["Account_OpeningDate"]"
+                    Text="@(account => Formatter.Date(account.OpeningDate))" />
+
+            <Column Title="@L["Account_EndBalance"]"
+                    Align="ColumnAlign.Number"
+                    Text="@(account => result is null
+                               ? L["Account_NotSimulated"].Value
+                               : Formatter.Money(result.GetBalance(account.Id, plan.SimulationSettings.EndDate)))" />
+
+            <Column Title="@L["Account_Interest"]" Text="@(account => FormatInterestContracts(account))" />
+
+            <Column Title="@L["Account_Active"]" HeaderCssClass="text-center" CellCssClass="text-center">
+                <ChildContent Context="account">
+                    @if (account.IsActive)
+                    {
+                        <span class="badge bg-success">@L["Account_Active"]</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@L["Inactive"]</span>
+                    }
+                </ChildContent>
+            </Column>
+
+            <Column Title="@L["Account_Actions"]" HeaderCssClass="text-end">
+                <ChildContent Context="account">
+                    @* Four buttons that used to sit flush against each other. *@
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        <button type="button" class="btn btn-sm btn-secondary" @onclick="() => OpenStatement(account)">
+                            @L["Account_Statement"]
+                        </button>
+
+                        <button type="button" class="btn btn-sm btn-primary" @onclick="() => EditAccount(account)">
+                            @L["Edit"]
+                        </button>
+
+                        <button type="button" class="btn btn-sm btn-warning" @onclick="() => OpenBalanceEdit(account)">
+                            @L["Account_SetBalance"]
+                        </button>
+
+                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteAccount(account)">
+                            @L["Delete"]
+                        </button>
+                    </div>
+                </ChildContent>
+            </Column>
+        </DataTable>
+    </ChildContent>
+</PageScaffold>
 
 @code {
     private AccountEditModel? _editModel;
@@ -484,9 +518,20 @@ else
     private bool _isNewAccount;
     private string? _errorMessage;
     private string? _infoMessage;
+    private ConfirmDialog? _confirmDialog;
 
     private IReadOnlyList<Person> PersonList =>
         AppState.CurrentPlan?.Persons ?? new List<Person>();
+
+    private string? OwnerHint =>
+        _editModel?.Type == AccountType.Pillar3a
+            ? Text("Account_RequiredForPillar3a")
+            : null;
+
+    private string? Pillar3aSubtypeHint =>
+        PersonList.Count == 0
+            ? Text("Account_NoOwners")
+            : null;
 
     private void NewAccount()
     {
@@ -594,10 +639,29 @@ else
         }
     }
 
-    private void DeleteAccount(Account account)
+    /// <summary>
+    /// Deleting an account takes its postings with it and, until recently, could leave the plan in a
+    /// state it refused to save. It is the one destructive action on this page and it used to happen
+    /// on a single click with no way back.
+    /// </summary>
+    private async Task DeleteAccount(Account account)
     {
         ClearMessages();
         _balanceEditModel = null;
+
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("Delete"),
+            Text("Dialog_ConfirmMessage"));
+
+        if (!confirmed)
+        {
+            return;
+        }
 
         try
         {
@@ -669,8 +733,8 @@ else
             _infoMessage = Text(
                 "Account_BalanceUpdated",
                 updatedAccount.Name,
-                updatedAccount.OpeningBalance.ToString("N2", CultureInfo.CurrentCulture),
-                FormatDate(updatedAccount.OpeningDate));
+                Formatter.Money(updatedAccount.OpeningBalance),
+                Formatter.Date(updatedAccount.OpeningDate));
 
             _balanceEditModel = null;
         }
@@ -766,12 +830,12 @@ else
     {
         if (AppState.CurrentPlan is null)
         {
-            return "-";
+            return AppFormatter.EmptyMarker;
         }
 
         if (account.Owners is null || account.Owners.Count == 0)
         {
-            return "-";
+            return AppFormatter.EmptyMarker;
         }
 
         var ownerNames = account.Owners
@@ -781,7 +845,7 @@ else
             .ToList();
 
         return ownerNames.Count == 0
-            ? "-"
+            ? AppFormatter.EmptyMarker
             : string.Join(", ", ownerNames);
     }
 
@@ -789,7 +853,7 @@ else
     {
         if (account.Type != AccountType.Pillar3a)
         {
-            return "-";
+            return AppFormatter.EmptyMarker;
         }
 
         return EnumL.TranslateNullable(account.Pillar3aSubtype);
@@ -799,17 +863,12 @@ else
     {
         if (account.InterestContracts.Count == 0)
         {
-            return "-";
+            return AppFormatter.EmptyMarker;
         }
 
         var activeCount = account.InterestContracts.Count(x => x.IsActive);
 
         return $"{activeCount}/{account.InterestContracts.Count}";
-    }
-
-    private static string FormatDate(DateOnly date)
-    {
-        return date.ToString("d", CultureInfo.CurrentCulture);
     }
 
     private string Text(string key)
