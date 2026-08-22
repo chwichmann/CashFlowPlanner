@@ -21,7 +21,18 @@
     --bs-nav-link-font-size: var(--app-font-size-sm);
 }
 
-::deep .navbar-brand {
+::deep /*
+    Same reason as .navbar-plan-status below: the collapse is itself a flex item
+    of the navbar row, and its default min-width: auto is its content width. With
+    the row now bounded by --app-max-width instead of running to the window edge,
+    it has to be allowed to shrink or it pushes the export buttons off-screen and
+    the whole page gets a horizontal scrollbar.
+*/
+.navbar-collapse {
+    min-width: 0;
+}
+
+.navbar-brand {
     font-weight: var(--app-font-weight-bold);
     white-space: nowrap;
 }
@@ -69,7 +80,17 @@
     max-width: none;
     margin-top: var(--app-space-3);
     margin-inline-end: 0;
+
+    /*
+        The plan name is the one thing in the row that may be any length, so it
+        is the one thing that gives way. flex-shrink alone does nothing here: a
+        flex item's default min-width is auto, which is its content width, and
+        the children below are nowrap - so without min-width: 0 this block
+        refuses to shrink and pushes the export buttons out past the container
+        instead of ellipsising.
+    */
     flex-shrink: 1;
+    min-width: 0;
 }
 
 .navbar-plan-name {
