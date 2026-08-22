@@ -9,6 +9,8 @@
 @using Microsoft.Extensions.Localization
 @using Microsoft.JSInterop
 
+@inherits AppStateAwarePage
+
 @inject BrowserPlanCacheService BrowserCache
 @inject CashFlowAppState AppState
 @inject IStringLocalizer<SharedResource> L
@@ -18,12 +20,10 @@
 @inject PlanExportPreferences ExportPreferences
 @inject PlanCryptoService Crypto
 
-@implements IDisposable
 
 <PageTitle>@L["Settings"] - CashFlow Planner</PageTitle>
 
-<div class="container py-3">
-    <h1 class="mb-3">@L["Settings"]</h1>
+<h1 class="mb-3">@L["Settings"]</h1>
 
     @if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
@@ -466,7 +466,6 @@
             </div>
         </div>
     }
-</div>
 
 @code {
     private async Task OnEncryptExportsChangedAsync(ChangeEventArgs e)
@@ -791,8 +790,10 @@
         InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
+        base.Dispose();
+
         Crypto.LockStateChanged -= OnCryptoStateChanged;
         ExportPreferences.Changed -= OnCryptoStateChanged;
     }

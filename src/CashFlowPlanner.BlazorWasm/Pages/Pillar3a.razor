@@ -10,6 +10,8 @@
 @using CashFlowPlanner.Core.Pillar3a
 @using Microsoft.Extensions.Localization
 
+@inherits AppStateAwarePage
+
 @inject CashFlowAppState AppState
 @inject Pillar3aProjectionEngine ProjectionEngine
 @inject Pillar3aTaxYearSimulator TaxYearSimulator

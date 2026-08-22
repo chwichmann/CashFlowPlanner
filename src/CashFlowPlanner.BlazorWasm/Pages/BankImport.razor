@@ -9,6 +9,8 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Localization
 
+@inherits AppStateAwarePage
+
 @inject CashFlowAppState AppState
 @inject IBankImportStore ImportStore
 @inject BankStatementImportService ImportService

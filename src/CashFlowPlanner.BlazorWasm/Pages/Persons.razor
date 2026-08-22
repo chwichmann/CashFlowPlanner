@@ -8,6 +8,8 @@
 @using CashFlowPlanner.Core.People
 @using Microsoft.Extensions.Localization
 
+@inherits AppStateAwarePage
+
 @inject CashFlowAppState AppState
 @inject EnumLocalizer EnumL
 @inject IStringLocalizer<SharedResource> L

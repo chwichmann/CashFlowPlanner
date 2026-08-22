@@ -7,6 +7,8 @@
 @using CashFlowPlanner.Core.Accounts
 @using CashFlowPlanner.Core.Mortgages
 @using Microsoft.Extensions.Localization
+@inherits AppStateAwarePage
+
 @inject CashFlowAppState AppState
 @inject IStringLocalizer<SharedResource> L
 @inject EnumLocalizer EnumL

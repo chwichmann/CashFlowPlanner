@@ -9,6 +9,8 @@
 @using CashFlowPlanner.Core.Mortgages
 @using Microsoft.Extensions.Localization
 
+@inherits AppStateAwarePage
+
 @inject MonthlyCashflowSummaryService MonthlySummaryService
 @inject CashFlowAppState AppState
 @inject IStringLocalizer<SharedResource> L

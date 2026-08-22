@@ -9,6 +9,8 @@
 @using CashFlowPlanner.BlazorWasm.Services
 @using Microsoft.Extensions.Localization
 
+@inherits AppStateAwarePage
+
 @inject CashFlowAppState AppState
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResource> L

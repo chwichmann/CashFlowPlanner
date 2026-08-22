@@ -8,6 +8,8 @@
 @using CashFlowPlanner.BlazorWasm.Services
 @using Microsoft.Extensions.Localization
 
+@inherits AppStateAwarePage
+
 @inject CashFlowAppState AppState
 @inject IStringLocalizer<SharedResource> L
 
@@ -726,6 +728,8 @@ else
 
     protected override void OnInitialized()
     {
+        base.OnInitialized();
+
         var scenario = AppState.CurrentPlan?.HouseBuyScenarios
             .OrderBy(x => x.Name)
             .FirstOrDefault();
