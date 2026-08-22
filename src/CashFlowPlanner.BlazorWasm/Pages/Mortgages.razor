@@ -184,6 +184,17 @@
                         </div>
 
                         <div class="col-md-3">
+                            <FormField Label='@L["Mortgages_DayCountConvention"]' CssClass="">
+                                <select id="@context.Id" class="form-select" @bind="_editModel.DayCountConvention">
+                                    @foreach (var convention in Enum.GetValues<InterestDayCountConvention>())
+                                    {
+                                        <option value="@convention">@EnumL.Translate(convention)</option>
+                                    }
+                                </select>
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
                             <FormField Label='@L["Mortgages_BillingCalendar"]' CssClass="">
                                 <select id="@context.Id" class="form-select" @bind="_editModel.BillingCalendar">
                                     @foreach (var calendar in Enum.GetValues<MortgageBillingCalendar>())

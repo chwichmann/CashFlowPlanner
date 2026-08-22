@@ -1,4 +1,6 @@
-﻿namespace CashFlowPlanner.Core.Mortgages;
+﻿using CashFlowPlanner.Core.Accounts;
+
+namespace CashFlowPlanner.Core.Mortgages;
 
 public sealed class MortgageEventGenerator
 {
@@ -384,14 +386,35 @@ public sealed class MortgageEventGenerator
         var interest = 0m;
         var saronCurve = new MortgageRateCurve(mortgage.SaronRates);
 
-        for (var date = periodStart; date < periodEndExclusive; date = date.AddDays(1))
-        {
-            var effectiveRatePercent = GetEffectiveAnnualRatePercent(
-                mortgage,
-                saronCurve,
-                date);
+        // Walked as runs of equal rate rather than day by day, because a day count is a
+        // property of a date RANGE: 30/360 asks how far apart two dates are, and asking it
+        // about a single day gives 1/360 for the 31st of a month it says has thirty days.
+        // A fixed-rate mortgage is one run. A SARON mortgage is one run per rate step - and
+        // MortgageRateCurve interpolates between rate points, so between two differing points
+        // every day is its own run and this degrades to the per-day accrual it replaced.
+        var runStart = periodStart;
+        var runRatePercent = GetEffectiveAnnualRatePercent(mortgage, saronCurve, runStart);
 
-            interest += principal * (effectiveRatePercent / 100m) / 365m;
+        for (var date = periodStart.AddDays(1); date <= periodEndExclusive; date = date.AddDays(1))
+        {
+            var ratePercent = date < periodEndExclusive
+                ? GetEffectiveAnnualRatePercent(mortgage, saronCurve, date)
+                : decimal.MinValue;
+
+            if (ratePercent == runRatePercent)
+            {
+                continue;
+            }
+
+            interest += principal
+                * (runRatePercent / 100m)
+                * InterestDayCountCalculator.GetYearFraction(
+                    runStart,
+                    date,
+                    mortgage.DayCountConvention);
+
+            runStart = date;
+            runRatePercent = ratePercent;
         }
 
         return Math.Round(interest, 2, MidpointRounding.AwayFromZero);

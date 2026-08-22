@@ -2406,6 +2406,9 @@
   <data name="Mortgages_PaymentInterval" xml:space="preserve">
     <value>Zahlungsintervall</value>
   </data>
+  <data name="Mortgages_DayCountConvention" xml:space="preserve">
+    <value>Zinstageberechnung</value>
+  </data>
   <data name="Mortgages_BillingCalendar" xml:space="preserve">
     <value>Abrechnungskalender</value>
   </data>

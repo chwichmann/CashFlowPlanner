@@ -1,5 +1,7 @@
 ﻿using CashFlowPlanner.Core.Mortgages;
 
+using CashFlowPlanner.Core.Accounts;
+
 namespace CashFlowPlanner.BlazorWasm.Models;
 
 public sealed class MortgageEditModel
@@ -34,6 +36,8 @@ public sealed class MortgageEditModel
 
     public MortgageBillingCalendar BillingCalendar { get; set; } = MortgageBillingCalendar.BankQuarters;
 
+    public InterestDayCountConvention DayCountConvention { get; set; } = InterestDayCountConvention.Actual365;
+
     public DateOnly? EndDate { get; set; }
 
     public bool IsActive { get; set; } = true;
@@ -62,6 +66,7 @@ public sealed class MortgageEditModel
             AnnualAmortisationAmount = mortgage.AnnualAmortisationAmount,
             PaymentInterval = mortgage.PaymentInterval,
             BillingCalendar = mortgage.BillingCalendar,
+            DayCountConvention = mortgage.DayCountConvention,
             EndDate = mortgage.EndDate,
             IsActive = mortgage.IsActive,
             Notes = mortgage.Notes
@@ -92,6 +97,7 @@ public sealed class MortgageEditModel
             AnnualAmortisationAmount = AnnualAmortisationAmount,
             PaymentInterval = PaymentInterval,
             BillingCalendar = BillingCalendar,
+            DayCountConvention = DayCountConvention,
             EndDate = EndDate,
             IsActive = IsActive,
             Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim()

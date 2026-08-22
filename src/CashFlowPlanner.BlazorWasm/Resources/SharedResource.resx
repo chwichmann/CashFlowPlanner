@@ -2406,6 +2406,9 @@
   <data name="Mortgages_PaymentInterval" xml:space="preserve">
     <value>Payment interval</value>
   </data>
+  <data name="Mortgages_DayCountConvention" xml:space="preserve">
+    <value>Day-count convention</value>
+  </data>
   <data name="Mortgages_BillingCalendar" xml:space="preserve">
     <value>Billing calendar</value>
   </data>

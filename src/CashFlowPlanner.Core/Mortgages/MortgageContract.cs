@@ -1,4 +1,6 @@
-﻿namespace CashFlowPlanner.Core.Mortgages;
+﻿using CashFlowPlanner.Core.Accounts;
+
+namespace CashFlowPlanner.Core.Mortgages;
 
 public sealed class MortgageContract
 {
@@ -61,6 +63,22 @@ public sealed class MortgageContract
     public decimal AnnualAmortisationAmount { get; init; }
 
     public MortgagePaymentInterval PaymentInterval { get; init; } = MortgagePaymentInterval.Quarterly;
+
+    /// <summary>
+    /// How a year is counted when interest accrues. Swiss lenders differ - 30/360 is common on
+    /// mortgages, ACT/360 on money-market tranches - and the choice moves the annual bill by
+    /// roughly 1.4% between ACT/365 and ACT/360, which is exactly the sort of gap that makes a
+    /// plan disagree with a bank statement for no visible reason.
+    /// <para>
+    /// Defaults to <see cref="InterestDayCountConvention.Actual365"/>, which is what this
+    /// generator did unconditionally before the field existed, so no saved plan changes its
+    /// numbers. Note that <see cref="AccountInterestContract"/> defaults to ACT/360 instead;
+    /// the two defaults differ because they preserve two different histories, not because the
+    /// domain says so.
+    /// </para>
+    /// </summary>
+    public InterestDayCountConvention DayCountConvention { get; init; }
+        = InterestDayCountConvention.Actual365;
 
     public MortgageBillingCalendar BillingCalendar { get; init; } = MortgageBillingCalendar.BankQuarters;
 
