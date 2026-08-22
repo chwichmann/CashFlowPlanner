@@ -149,12 +149,6 @@ public sealed class MortgageContract
                 $"SARON mortgage '{Name}' requires at least one SARON rate point.");
         }
 
-        if (PaymentInterval != MortgagePaymentInterval.Quarterly)
-        {
-            throw new NotSupportedException(
-                $"Mortgage '{Name}' currently supports only quarterly payment interval.");
-        }
-
         if (BillingCalendar != MortgageBillingCalendar.BankQuarters)
         {
             throw new NotSupportedException(

@@ -67,12 +67,6 @@ public sealed class MortgageEventGenerator
     DateOnly simulationEnd,
     string baseCurrency)
     {
-        if (mortgage.PaymentInterval != MortgagePaymentInterval.Quarterly)
-        {
-            throw new NotSupportedException(
-                $"Mortgage '{mortgage.Name}' currently supports only quarterly payment interval.");
-        }
-
         if (mortgage.BillingCalendar != MortgageBillingCalendar.BankQuarters)
         {
             throw new NotSupportedException(
@@ -145,7 +139,8 @@ public sealed class MortgageEventGenerator
             Currency = baseCurrency
         });
 
-        var periods = _billingPeriodGenerator.GenerateBankQuarterPeriods(
+        var periods = _billingPeriodGenerator.GeneratePeriods(
+            mortgage.PaymentInterval,
             effectiveSimulationStart,
             simulationEnd);
 
@@ -313,7 +308,7 @@ public sealed class MortgageEventGenerator
         var toExclusive = Max(knownAtDate, targetDate);
 
         var billedPaymentDates = _billingPeriodGenerator
-            .GenerateBankQuarterPeriods(fromInclusive, toExclusive)
+            .GeneratePeriods(mortgage.PaymentInterval, fromInclusive, toExclusive)
             .Where(x => x.PaymentDate < toExclusive)
             .Where(x => IsBilledPeriod(mortgage, x))
             .ToList();

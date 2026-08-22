@@ -2,13 +2,32 @@
 
 public sealed class MortgageBillingPeriodGenerator
 {
-    public IReadOnlyList<MortgageBillingPeriod> GenerateBankQuarterPeriods(
+    /// <summary>
+    /// Billing periods of <paramref name="interval"/> length, anchored to the calendar year and
+    /// paid on the last business day before the period ends.
+    /// <para>
+    /// Anchoring to January means the periods a Swiss bank actually bills: quarters are
+    /// Jan-Mar, Apr-Jun, Jul-Sep, Oct-Dec regardless of when the mortgage was taken out, and
+    /// half-years and years follow the same rule. Only the interval changes; the payment-date
+    /// rule, the period arithmetic and the interest calculation are identical for all four.
+    /// </para>
+    /// </summary>
+    public IReadOnlyList<MortgageBillingPeriod> GeneratePeriods(
+        MortgagePaymentInterval interval,
         DateOnly simulationStart,
         DateOnly simulationEnd)
     {
         if (simulationEnd < simulationStart)
         {
             return [];
+        }
+
+        var intervalMonths = (int)interval;
+
+        if (intervalMonths <= 0 || 12 % intervalMonths != 0)
+        {
+            throw new InvalidOperationException(
+                $"Payment interval '{interval}' does not divide a calendar year evenly.");
         }
 
         var periods = new List<MortgageBillingPeriod>();
@@ -18,15 +37,26 @@ public sealed class MortgageBillingPeriodGenerator
 
         for (var year = startYear; year <= endYear; year++)
         {
-            AddQuarterPeriod(periods, year, 1, simulationStart, simulationEnd);
-            AddQuarterPeriod(periods, year, 4, simulationStart, simulationEnd);
-            AddQuarterPeriod(periods, year, 7, simulationStart, simulationEnd);
-            AddQuarterPeriod(periods, year, 10, simulationStart, simulationEnd);
+            for (var month = 1; month <= 12; month += intervalMonths)
+            {
+                AddPeriod(periods, year, month, intervalMonths, simulationStart, simulationEnd);
+            }
         }
 
         return periods
             .OrderBy(x => x.PaymentDate)
             .ToList();
+    }
+
+    /// <summary>Quarterly periods. Kept because most callers and tests mean exactly this.</summary>
+    public IReadOnlyList<MortgageBillingPeriod> GenerateBankQuarterPeriods(
+        DateOnly simulationStart,
+        DateOnly simulationEnd)
+    {
+        return GeneratePeriods(
+            MortgagePaymentInterval.Quarterly,
+            simulationStart,
+            simulationEnd);
     }
 
     public static DateOnly PreviousBusinessDayStrict(DateOnly date)
@@ -41,15 +71,16 @@ public sealed class MortgageBillingPeriodGenerator
         return current;
     }
 
-    private static void AddQuarterPeriod(
+    private static void AddPeriod(
         List<MortgageBillingPeriod> periods,
         int year,
-        int quarterStartMonth,
+        int periodStartMonth,
+        int intervalMonths,
         DateOnly simulationStart,
         DateOnly simulationEnd)
     {
-        var periodStart = new DateOnly(year, quarterStartMonth, 1);
-        var periodEndExclusive = periodStart.AddMonths(3);
+        var periodStart = new DateOnly(year, periodStartMonth, 1);
+        var periodEndExclusive = periodStart.AddMonths(intervalMonths);
         var paymentDate = PreviousBusinessDayStrict(periodEndExclusive);
 
         if (paymentDate < simulationStart || paymentDate > simulationEnd)
