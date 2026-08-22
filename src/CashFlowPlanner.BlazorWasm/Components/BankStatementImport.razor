@@ -21,6 +21,13 @@
     belongs - importing a statement is something you do *to an account*. The /bank-import
     route stays as a thin host so existing links and bookmarks keep working, and it is off
     the navigation bar, which was carrying twelve destinations on one row.
+
+    Both CAMT.053 and MT940 land here. The format is decided by BankStatementImportService
+    from the file *content*, never from the extension, and the service returns one result
+    per statement: MT940 always yields one, while a camt.053 file yields one per Stmt
+    because a combined export carries every account the customer holds at that bank. Every
+    result is rendered, matched or not - a statement dropped from the list would be an
+    account whose transactions silently vanished.
 *@
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
@@ -40,7 +47,7 @@
 
         <p>@L["BankImport_UploadDescription"]</p>
 
-        <InputFile class="form-control" OnChange="OnFileSelected" />
+        <InputFile class="form-control" accept="@AcceptedFileExtensions" OnChange="OnFileSelected" />
 
         @if (_fileBytes is not null)
         {
@@ -62,39 +69,147 @@
         <p>@L["BankImport_Working"]</p>
     }
 
-    @if (_result is not null)
+    @for (var index = 0; index < _results.Count; index++)
     {
-        <section class="mb-4">
-            <h3>@L["BankImport_Preview"]</h3>
+        var statementNumber = index + 1;
+        var result = _results[index];
 
-            <DataTable Items="BuildPreviewRows(_result.Preview)"
-                       RowKey="@(row => row.Field)"
-                       Caption='@L["BankImport_Preview"]'>
-                <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
-                <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
-            </DataTable>
-        </section>
-
-        <section class="mb-4">
-            <h3>@L["BankImport_AccountMatching"]</h3>
-
-            <p>
-                @Text(
-                    "BankImport_AccountMatchStatus",
-                    FormatAccountMatchStatus(_result.AccountMatchStatus))
-            </p>
-
-            @if (_result.AccountId is not null)
+        <article class="mb-5">
+            @if (_results.Count > 1)
             {
-                <p>
+                <h3>
                     @Text(
-                        "BankImport_MatchedAccount",
-                        GetAccountDisplayName(_result.AccountId.Value))
-                </p>
+                        "BankImport_StatementHeading",
+                        statementNumber,
+                        _results.Count,
+                        result.Preview.BankAccountIdentifier)
+                </h3>
             }
 
-            @if (_result.RequiresAccountSelection)
+            <section class="mb-4">
+                <h4>@L["BankImport_Preview"]</h4>
+
+                <DataTable Items="BuildPreviewRows(result.Preview)"
+                           RowKey="@(row => row.Field)"
+                           Caption='@L["BankImport_Preview"]'>
+                    <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
+                    <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
+                </DataTable>
+            </section>
+
+            <section class="mb-4">
+                <h4>@L["BankImport_AccountMatching"]</h4>
+
+                <p>
+                    @Text(
+                        "BankImport_AccountMatchStatus",
+                        FormatAccountMatchStatus(result.AccountMatchStatus))
+                </p>
+
+                @if (result.AccountId is not null)
+                {
+                    <p>
+                        @Text(
+                            "BankImport_MatchedAccount",
+                            GetAccountDisplayName(result.AccountId.Value))
+                    </p>
+                }
+                else
+                {
+                    <div class="alert alert-warning" role="alert">
+                        @Text(
+                            "BankImport_StatementNotImported",
+                            result.Preview.BankAccountIdentifier)
+                    </div>
+                }
+            </section>
+
+            @if (result.CanImport && result.MergeResult is not null)
             {
+                <section class="mb-4">
+                    <h4>@L["BankImport_MergeResult"]</h4>
+
+                    <DataTable Items="BuildMergeRows(result.MergeResult)"
+                               RowKey="@(row => row.Field)"
+                               Caption='@L["BankImport_MergeResult"]'>
+                        <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
+                        <Column Title='@L["BankImport_Value"]' Align="ColumnAlign.Number"
+                                Text="@(row => row.Value)" />
+                    </DataTable>
+                </section>
+
+                @if (result.SuggestedBalanceUpdate is { } suggestedBalanceUpdate)
+                {
+                    <section class="mb-4">
+                        <h4>@L["BankImport_SuggestedBalanceUpdate"]</h4>
+
+                        <DataTable Items="BuildSuggestedBalanceRows(suggestedBalanceUpdate)"
+                                   RowKey="@(row => row.Field)"
+                                   Caption='@L["BankImport_SuggestedBalanceUpdate"]'>
+                            <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
+                            <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
+                        </DataTable>
+
+                        @if (suggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious)
+                        {
+                            <p>
+                                @L["BankImport_SuspiciousClosingDateHint"]
+                            </p>
+                        }
+                    </section>
+                }
+            }
+
+            @if (result.CanImport && result.MappingResult?.Transactions.Count > 0)
+            {
+                var previewTransactions = result.MappingResult.Transactions
+                    .OrderBy(x => x.ValueDate)
+                    .ThenBy(x => x.BookingDate)
+                    .ThenBy(x => x.Description)
+                    .Take(TransactionPreviewLimit)
+                    .ToList();
+
+                <section class="mb-4">
+                    <h4>@L["BankImport_TransactionPreview"]</h4>
+
+                    <DataTable Items="previewTransactions"
+                               Caption='@L["BankImport_TransactionPreview"]'>
+                        <Column Title='@L["Date"]' Text="@(x => Formatter.Date(x.ValueDate))" />
+                        <Column Title='@L["BankImport_BookingDate"]' Text="@(x => Formatter.Date(x.BookingDate))" />
+                        <Column Title='@L["Amount"]' Align="ColumnAlign.Number"
+                                Text="@(x => Formatter.Money(x.SignedAmount))" />
+                        <Column Title='@L["Currency"]' Text="@(x => x.Currency)" />
+                        <Column Title='@L["BankImport_Code"]' Text="@(x => x.TransactionCode ?? string.Empty)" />
+                        <Column Title='@L["BankImport_Reference"]' Text="@(x => x.BankReference ?? string.Empty)" />
+                        <Column Title='@L["Description"]' Text="@(x => x.Description ?? string.Empty)" />
+                    </DataTable>
+
+                    @if (result.MappingResult.Transactions.Count > TransactionPreviewLimit)
+                    {
+                        <p>
+                            @Text(
+                                "BankImport_TransactionPreviewLimited",
+                                TransactionPreviewLimit,
+                                result.MappingResult.Transactions.Count)
+                        </p>
+                    }
+                </section>
+            }
+        </article>
+    }
+
+    @if (_results.Count > 0)
+    {
+        @*
+            One dropdown can only stand in for one missing account, so manual selection is
+            offered exactly when a single statement is unmatched. With several unmatched
+            IBANs the user is asked to store the identifiers on the accounts instead -
+            guessing which IBAN a single selection meant would post money to the wrong
+            account.
+        *@
+        @if (UnmatchedResultCount == 1)
+        {
+            <section class="mb-4">
                 <FormField Label='@L["BankImport_SelectAccount"]'>
                     <select id="@context.Id"
                             class="form-select"
@@ -114,42 +229,14 @@
                         @onclick="AnalyzeWithSelectedAccountAsync">
                     @L["BankImport_UseSelectedAccount"]
                 </button>
-            }
-        </section>
-
-        @if (_result.CanImport && _result.MergeResult is not null)
-        {
-            <section class="mb-4">
-                <h3>@L["BankImport_MergeResult"]</h3>
-
-                <DataTable Items="BuildMergeRows(_result.MergeResult)"
-                           RowKey="@(row => row.Field)"
-                           Caption='@L["BankImport_MergeResult"]'>
-                    <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
-                    <Column Title='@L["BankImport_Value"]' Align="ColumnAlign.Number"
-                            Text="@(row => row.Value)" />
-                </DataTable>
             </section>
+        }
 
-            @if (_result.SuggestedBalanceUpdate is { } suggestedBalanceUpdate)
+        @if (ImportableResults.Count > 0)
+        {
+            @if (SuggestedBalanceUpdateCount > 0)
             {
                 <section class="mb-4">
-                    <h3>@L["BankImport_SuggestedBalanceUpdate"]</h3>
-
-                    <DataTable Items="BuildSuggestedBalanceRows(suggestedBalanceUpdate)"
-                               RowKey="@(row => row.Field)"
-                               Caption='@L["BankImport_SuggestedBalanceUpdate"]'>
-                        <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
-                        <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
-                    </DataTable>
-
-                    @if (suggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious)
-                    {
-                        <p>
-                            @L["BankImport_SuspiciousClosingDateHint"]
-                        </p>
-                    }
-
                     <FormField Label='@L["BankImport_ApplySuggestedBalanceUpdate"]'
                                Layout="FormFieldLayout.Checkbox">
                         <input id="@context.Id"
@@ -160,7 +247,7 @@
                 </section>
             }
 
-            @if (!string.IsNullOrWhiteSpace(_result.BankAccountIdentifierToRemember))
+            @if (IdentifiersToRemember.Count > 0)
             {
                 <section class="mb-4">
                     <FormField Label="@RememberAccountMappingLabel"
@@ -189,42 +276,6 @@
                 </button>
             </section>
         }
-
-        @if (_result.CanImport && _result.MappingResult?.Transactions.Count > 0)
-        {
-            var previewTransactions = _result.MappingResult.Transactions
-                .OrderBy(x => x.ValueDate)
-                .ThenBy(x => x.BookingDate)
-                .ThenBy(x => x.Description)
-                .Take(TransactionPreviewLimit)
-                .ToList();
-
-            <section class="mb-4">
-                <h3>@L["BankImport_TransactionPreview"]</h3>
-
-                <DataTable Items="previewTransactions"
-                           Caption='@L["BankImport_TransactionPreview"]'>
-                    <Column Title='@L["Date"]' Text="@(x => Formatter.Date(x.ValueDate))" />
-                    <Column Title='@L["BankImport_BookingDate"]' Text="@(x => Formatter.Date(x.BookingDate))" />
-                    <Column Title='@L["Amount"]' Align="ColumnAlign.Number"
-                            Text="@(x => Formatter.Money(x.SignedAmount))" />
-                    <Column Title='@L["Currency"]' Text="@(x => x.Currency)" />
-                    <Column Title='@L["BankImport_Code"]' Text="@(x => x.TransactionCode ?? string.Empty)" />
-                    <Column Title='@L["BankImport_Reference"]' Text="@(x => x.BankReference ?? string.Empty)" />
-                    <Column Title='@L["Description"]' Text="@(x => x.Description ?? string.Empty)" />
-                </DataTable>
-
-                @if (_result.MappingResult.Transactions.Count > TransactionPreviewLimit)
-                {
-                    <p>
-                        @Text(
-                            "BankImport_TransactionPreviewLimited",
-                            TransactionPreviewLimit,
-                            _result.MappingResult.Transactions.Count)
-                    </p>
-                }
-            </section>
-        }
     }
 }
 
@@ -233,23 +284,45 @@
 
     private const int TransactionPreviewLimit = 25;
 
+    /// <summary>
+    /// A hint for the file picker only. The format is decided from the content, so a file with
+    /// an unexpected name still imports correctly once the user picks it.
+    /// </summary>
+    private const string AcceptedFileExtensions = ".xml,.mt940,.sta,.txt";
+
     private byte[]? _fileBytes;
     private string? _fileName;
     private string? _errorMessage;
     private string? _infoMessage;
     private bool _isBusy;
     private string? _selectedAccountIdValue;
-    private BankStatementImportResult? _result;
+    private IReadOnlyList<BankStatementImportResult> _results = [];
     private bool _rememberAccountMapping = true;
     private bool _applySuggestedBalanceUpdate = true;
 
     /// <summary>One row of the key/value tables the preview, merge and balance sections are made of.</summary>
     private sealed record FieldValue(string Field, string Value);
 
+    private IReadOnlyList<BankStatementImportResult> ImportableResults =>
+        _results.Where(x => x.CanImport && x.MergeResult is not null).ToList();
+
+    private int UnmatchedResultCount =>
+        _results.Count(x => x.RequiresAccountSelection);
+
+    private int SuggestedBalanceUpdateCount =>
+        _results.Count(x => x.CanImport && x.SuggestedBalanceUpdate is not null);
+
+    private IReadOnlyList<string> IdentifiersToRemember =>
+        _results
+            .Where(x => x.CanImport && !string.IsNullOrWhiteSpace(x.BankAccountIdentifierToRemember))
+            .Select(x => x.BankAccountIdentifierToRemember!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     private string RememberAccountMappingLabel =>
         Text(
             "BankImport_RememberAccountMapping",
-            _result?.BankAccountIdentifierToRemember);
+            string.Join(", ", IdentifiersToRemember));
 
     private IReadOnlyList<FieldValue> BuildPreviewRows(BankStatementImportPreview preview) =>
     [
@@ -378,7 +451,8 @@
 
             var existingTransactions = await ImportStore.GetAllTransactionsAsync();
 
-            _result = ImportService.ImportMt940(new BankStatementImportRequest
+            // Import() sniffs the content and routes to the CAMT.053 or the MT940 path.
+            _results = ImportService.Import(new BankStatementImportRequest
             {
                 FileBytes = _fileBytes,
                 FileName = _fileName,
@@ -388,24 +462,26 @@
                 AsOfDate = DateOnly.FromDateTime(DateTime.Today)
             });
 
-            if (_result.AccountId is not null)
+            var singleMatchedAccountId = _results.Count == 1
+                ? _results[0].AccountId
+                : null;
+
+            if (singleMatchedAccountId is not null)
             {
-                _selectedAccountIdValue = _result.AccountId.Value.ToString();
+                _selectedAccountIdValue = singleMatchedAccountId.Value.ToString();
             }
 
-            if (_result.RequiresAccountSelection)
+            _infoMessage = UnmatchedResultCount switch
             {
-                _infoMessage = Text("BankImport_InfoManualAccountSelectionRequired");
-            }
-            else
-            {
-                _infoMessage = Text("BankImport_InfoAnalysisCompleted");
-            }
+                0 => Text("BankImport_InfoAnalysisCompleted"),
+                1 => Text("BankImport_InfoManualAccountSelectionRequired"),
+                _ => Text("BankImport_InfoSeveralAccountSelectionsRequired", UnmatchedResultCount)
+            };
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
-            _result = null;
+            _results = [];
         }
         finally
         {
@@ -423,21 +499,11 @@
             return;
         }
 
-        if (_result is null || !_result.CanImport)
+        var importableResults = ImportableResults;
+
+        if (importableResults.Count == 0)
         {
             _errorMessage = Text("BankImport_ErrorNothingToApply");
-            return;
-        }
-
-        if (_result.MergeResult is null)
-        {
-            _errorMessage = Text("BankImport_ErrorMissingMergeResult");
-            return;
-        }
-
-        if (_result.AccountId is null)
-        {
-            _errorMessage = Text("BankImport_ErrorMissingAccount");
             return;
         }
 
@@ -445,50 +511,64 @@
         {
             _isBusy = true;
 
-            await ImportStore.ApplyImportAsync(_result.MergeResult);
+            // The service chains the merges, so each result's MergedTransactions already
+            // contains everything the previous statements added. Applying them in order ends
+            // with the complete set and one stored batch per statement.
+            var updatedAccounts = new Dictionary<Guid, Account>();
 
-            var account = AppState.CurrentPlan.Accounts
-                .SingleOrDefault(x => x.Id == _result.AccountId.Value);
-
-            if (account is null)
+            foreach (var result in importableResults)
             {
-                throw new InvalidOperationException(Text("Account_ErrorAccountNotFound"));
+                if (result.MergeResult is null || result.AccountId is null)
+                {
+                    throw new InvalidOperationException(Text("BankImport_ErrorMissingMergeResult"));
+                }
+
+                await ImportStore.ApplyImportAsync(result.MergeResult);
+
+                if (!updatedAccounts.TryGetValue(result.AccountId.Value, out var account))
+                {
+                    account = AppState.CurrentPlan.Accounts
+                        .SingleOrDefault(x => x.Id == result.AccountId.Value)
+                        ?? throw new InvalidOperationException(Text("Account_ErrorAccountNotFound"));
+                }
+
+                if (_rememberAccountMapping &&
+                    !string.IsNullOrWhiteSpace(result.BankAccountIdentifierToRemember))
+                {
+                    account = AddBankIdentifierIfMissing(
+                        account,
+                        result.BankAccountIdentifierToRemember,
+                        result.Preview.SourceFormat);
+                }
+
+                if (_applySuggestedBalanceUpdate &&
+                    result.SuggestedBalanceUpdate is not null)
+                {
+                    account = CopyAccount(
+                        account,
+                        openingBalance: result.SuggestedBalanceUpdate.Balance,
+                        openingDate: result.SuggestedBalanceUpdate.BalanceDate,
+                        bankIdentifiers: account.BankIdentifiers.ToList());
+                }
+
+                updatedAccounts[result.AccountId.Value] = account;
             }
 
-            var updatedAccount = account;
-            var needsAccountUpdate = false;
-
-            if (_rememberAccountMapping &&
-                !string.IsNullOrWhiteSpace(_result.BankAccountIdentifierToRemember))
+            foreach (var account in updatedAccounts.Values)
             {
-                updatedAccount = AddMt940IdentifierIfMissing(
-                    updatedAccount,
-                    _result.BankAccountIdentifierToRemember);
-
-                needsAccountUpdate = true;
+                AppState.AddOrUpdateAccount(account);
             }
 
-            if (_applySuggestedBalanceUpdate &&
-                _result.SuggestedBalanceUpdate is not null)
-            {
-                updatedAccount = CopyAccount(
-                    updatedAccount,
-                    openingBalance: _result.SuggestedBalanceUpdate.Balance,
-                    openingDate: _result.SuggestedBalanceUpdate.BalanceDate,
-                    bankIdentifiers: updatedAccount.BankIdentifiers);
+            var addedCount = importableResults.Sum(x => x.MergeResult!.AddedCount);
+            var skippedCount = importableResults.Sum(x => x.MergeResult!.SkippedDuplicateCount);
 
-                needsAccountUpdate = true;
-            }
-
-            if (needsAccountUpdate)
-            {
-                AppState.AddOrUpdateAccount(updatedAccount);
-            }
-
-            _infoMessage = Text(
-                "BankImport_ImportApplied",
-                _result.MergeResult.AddedCount,
-                _result.MergeResult.SkippedDuplicateCount);
+            _infoMessage = importableResults.Count == 1
+                ? Text("BankImport_ImportApplied", addedCount, skippedCount)
+                : Text(
+                    "BankImport_ImportAppliedForStatements",
+                    importableResults.Count,
+                    addedCount,
+                    skippedCount);
 
             ResetImportAfterApply();
         }
@@ -502,13 +582,26 @@
         }
     }
 
-    private Account AddMt940IdentifierIfMissing(
+    /// <summary>
+    /// Stores the statement's account identifier on the account so the next file matches
+    /// automatically. CAMT.053 identifies the account by IBAN; MT940 by its own :25: account id.
+    /// </summary>
+    private Account AddBankIdentifierIfMissing(
         Account account,
-        string mt940AccountIdentifier)
+        string accountIdentifier,
+        string? sourceFormat)
     {
-        if (AccountBankIdentifierMatcher.HasMt940AccountId(
+        var identifierType = string.Equals(
+            sourceFormat,
+            BankStatementImportService.Camt053SourceFormat,
+            StringComparison.Ordinal)
+            ? AccountBankIdentifierType.Iban
+            : AccountBankIdentifierType.Mt940AccountId;
+
+        if (AccountBankIdentifierMatcher.HasIdentifier(
                 account,
-                mt940AccountIdentifier,
+                identifierType,
+                accountIdentifier,
                 account.BankName))
         {
             return account;
@@ -519,10 +612,10 @@
             [
                 new AccountBankIdentifier
                 {
-                    Type = AccountBankIdentifierType.Mt940AccountId,
-                    Value = mt940AccountIdentifier,
+                    Type = identifierType,
+                    Value = accountIdentifier,
                     BankName = account.BankName,
-                    Notes = "Added from MT940 import."
+                    Notes = $"Added from {sourceFormat} import."
                 }
             ])
             .ToList();
@@ -568,7 +661,7 @@
         _selectedAccountIdValue = null;
         _rememberAccountMapping = true;
         _applySuggestedBalanceUpdate = true;
-        _result = null;
+        _results = [];
     }
 
     private void ResetImportAfterApply()
@@ -578,7 +671,7 @@
         _selectedAccountIdValue = null;
         _rememberAccountMapping = true;
         _applySuggestedBalanceUpdate = true;
-        _result = null;
+        _results = [];
     }
 
     private void ResetResultOnly()
@@ -586,7 +679,7 @@
         _selectedAccountIdValue = null;
         _rememberAccountMapping = true;
         _applySuggestedBalanceUpdate = true;
-        _result = null;
+        _results = [];
     }
 
     private void ClearMessages()

@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The two entry shapes that break naive parsers, in one statement.
+
+  Ntry 1 - INTERNAL batch booking (LSV+ collection).
+     Ntry/Amt is the batch TOTAL of 1'500.00 and the three items appear as TxDtls
+     (500.00 + 400.00 + 600.00). Summing entries and details together yields
+     1'000.00 + 1'500.00 + 1'500.00 - 250.00 = 3'750.00 instead of 2'250.00, so the
+     balance check below fails loudly the moment anyone double-counts.
+
+  Ntry 2 - no NtryDtls at all (standing order).
+     NtryDtls is 0..n; several Swiss banks deliver camt.053 with no transaction detail
+     whatsoever. The entry is the whole truth and must still import.
+
+  OPBD 1'000.00 + 1'500.00 - 250.00 = CLBD 2'250.00
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>20260201-CAMT053-0007</MsgId>
+      <CreDtTm>2026-02-01T02:41:03+01:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-2026-005</Id>
+      <ElctrncSeqNb>5</ElctrncSeqNb>
+      <CreDtTm>2026-02-01T02:41:03+01:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH2100210210108311400</IBAN>
+        </Id>
+        <Ccy>CHF</Ccy>
+        <Ownr>
+          <Nm>Christian Wichmann</Nm>
+        </Ownr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">1000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-01-24</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">2250.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-01-31</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>BATCH-2026-01-28-0001</AcctSvcrRef>
+        <Amt Ccy="CHF">1500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <RvslInd>false</RvslInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-01-28</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-01-28</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RDDT</Cd>
+              <SubFmlyCd>PMDD</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <Btch>
+            <NbOfTxs>3</NbOfTxs>
+            <TtlAmt Ccy="CHF">1500.00</TtlAmt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+          </Btch>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>BATCH-2026-01-28-0001-01</AcctSvcrRef>
+              <EndToEndId>LSV-MIETE-0001</EndToEndId>
+            </Refs>
+            <Amt Ccy="CHF">500.00</Amt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Mieter Eins</Nm>
+                </Pty>
+              </Dbtr>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Mietzins Januar 2026 Wohnung 1</Ustrd>
+            </RmtInf>
+          </TxDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>BATCH-2026-01-28-0001-02</AcctSvcrRef>
+              <EndToEndId>LSV-MIETE-0002</EndToEndId>
+            </Refs>
+            <Amt Ccy="CHF">400.00</Amt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Mieter Zwei</Nm>
+                </Pty>
+              </Dbtr>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Mietzins Januar 2026 Wohnung 2</Ustrd>
+            </RmtInf>
+          </TxDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>BATCH-2026-01-28-0001-03</AcctSvcrRef>
+              <EndToEndId>LSV-MIETE-0003</EndToEndId>
+            </Refs>
+            <Amt Ccy="CHF">600.00</Amt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Mieter Drei</Nm>
+                </Pty>
+              </Dbtr>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Mietzins Januar 2026 Wohnung 3</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Sammelgutschrift LSV+ 3 Positionen</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <AcctSvcrRef>SO-2026-01-30-0042</AcctSvcrRef>
+        <Amt Ccy="CHF">250.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <RvslInd>false</RvslInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-01-30</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-01-30</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>ICDT</Cd>
+              <SubFmlyCd>STDO</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <AddtlNtryInf>Dauerauftrag Sparen</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

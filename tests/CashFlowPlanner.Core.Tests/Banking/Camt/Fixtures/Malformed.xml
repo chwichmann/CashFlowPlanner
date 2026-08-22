@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Truncated mid-element: the download was interrupted. Must produce an actionable
+     parse error, not an unhandled XmlException. -->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>20260124-CAMT053-BROKEN</MsgId>
+      <CreDtTm>2026-01-24T03:12:47+01:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-BROKEN</Id>
+      <Acct>
+        <Id>
+          <IBAN>CH2100210210108311400</IBAN>

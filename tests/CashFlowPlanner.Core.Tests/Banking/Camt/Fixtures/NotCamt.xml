@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Well-formed XML that is not a bank-to-customer statement: a pain.001 payment
+     instruction, which is the file a user is most likely to grab by mistake. -->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>20260124-PAIN001-0001</MsgId>
+      <CreDtTm>2026-01-24T09:00:00+01:00</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+    </GrpHdr>
+  </CstmrCdtTrfInitn>
+</Document>

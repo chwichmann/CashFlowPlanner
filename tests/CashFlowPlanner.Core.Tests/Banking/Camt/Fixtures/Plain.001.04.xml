@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The same statement as Plain.001.08.xml, in camt.053.001.04 - the revision Swiss banks
+  support in parallel until November 2026.
+
+  Every difference below is a real one between the two revisions, and the point of the
+  fixture is that none of them needs a second code path:
+    * namespace ......... camt.053.001.04 instead of .08
+    * Svcr BIC .......... <BIC> instead of <BICFI>
+    * entry status ...... <Sts>BOOK</Sts> instead of <Sts><Cd>BOOK</Cd></Sts>
+    * related parties ... <Cdtr><Nm> instead of <Cdtr><Pty><Nm>
+    * detail amount ..... <AmtDtls><TxAmt><Amt> instead of a direct <Amt>
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.04"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>20260124-CAMT053-0001</MsgId>
+      <CreDtTm>2026-01-24T03:12:47+01:00</CreDtTm>
+      <MsgPgntn>
+        <PgNb>1</PgNb>
+        <LastPgInd>true</LastPgInd>
+      </MsgPgntn>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-2026-004</Id>
+      <ElctrncSeqNb>4</ElctrncSeqNb>
+      <LglSeqNb>142</LglSeqNb>
+      <CreDtTm>2026-01-24T03:12:47+01:00</CreDtTm>
+      <FrToDt>
+        <FrDtTm>2026-01-01T00:00:00</FrDtTm>
+        <ToDtTm>2026-01-23T23:59:59</ToDtTm>
+      </FrToDt>
+      <Acct>
+        <Id>
+          <IBAN>CH2100210210108311400</IBAN>
+        </Id>
+        <Ccy>CHF</Ccy>
+        <Ownr>
+          <Nm>Christian Wichmann</Nm>
+        </Ownr>
+        <Svcr>
+          <FinInstnId>
+            <BIC>UBSWCHZH80A</BIC>
+            <Nm>UBS Switzerland AG</Nm>
+          </FinInstnId>
+        </Svcr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">4042.62</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-01-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">4978.37</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-01-23</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLAV</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">6978.37</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-01-23</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>9910005GK0615030</AcctSvcrRef>
+        <Amt Ccy="CHF">40.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <RvslInd>false</RvslInd>
+        <Sts>BOOK</Sts>
+        <BookgDt>
+          <Dt>2026-01-05</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-01-05</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>CCRD</Cd>
+              <SubFmlyCd>POSD</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>9910005GK0615030</AcctSvcrRef>
+              <EndToEndId>NOTPROVIDED</EndToEndId>
+            </Refs>
+            <AmtDtls>
+              <TxAmt>
+                <Amt Ccy="CHF">40.00</Amt>
+              </TxAmt>
+            </AmtDtls>
+            <RltdPties>
+              <Cdtr>
+                <Nm>BAZG VIA-WEBSHOP</Nm>
+              </Cdtr>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Zahlung UBS TWINT</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>BAZG VIA-WEBSHOP Zahlung UBS TWINT</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <AcctSvcrRef>9999023ZC7856428</AcctSvcrRef>
+        <Amt Ccy="CHF">975.75</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <RvslInd>false</RvslInd>
+        <Sts>BOOK</Sts>
+        <BookgDt>
+          <Dt>2026-01-23</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-01-23</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RCDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>9999023ZC7856428</AcctSvcrRef>
+              <EndToEndId>SALARY-2026-01</EndToEndId>
+            </Refs>
+            <AmtDtls>
+              <TxAmt>
+                <Amt Ccy="CHF">975.75</Amt>
+              </TxAmt>
+            </AmtDtls>
+            <RltdPties>
+              <Dbtr>
+                <Nm>Example Employer AG</Nm>
+              </Dbtr>
+              <DbtrAcct>
+                <Id>
+                  <IBAN>CH5604835012345678009</IBAN>
+                </Id>
+              </DbtrAcct>
+            </RltdPties>
+            <RmtInf>
+              <Strd>
+                <CdtrRefInf>
+                  <Tp>
+                    <CdOrPrtry>
+                      <Prtry>QRR</Prtry>
+                    </CdOrPrtry>
+                  </Tp>
+                  <Ref>210000000003139471430009017</Ref>
+                </CdtrRefInf>
+              </Strd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Example Employer AG Salary January 2026</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

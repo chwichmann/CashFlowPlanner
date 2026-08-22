@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The reference variants that share one schema *choice* - Tp/CdOrPrtry/Cd versus
+  Tp/CdOrPrtry/Prtry. Reading only one spelling silently loses every reference of the
+  other kind.
+
+    Ntry 1  Cd    = SCOR            ISO 11649 creditor reference (RF...), normal IBAN
+    Ntry 2  Prtry = ISR Reference   LSV+/BDD and legacy ISR slips
+    Ntry 3  (none)                  no structured reference at all - the text is in RmtInf/Ustrd
+
+  OPBD 500.00 - 120.50 - 89.90 - 45.00 = CLBD 244.60
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>20260301-CAMT053-0011</MsgId>
+      <CreDtTm>2026-03-01T02:15:00+01:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-2026-006</Id>
+      <ElctrncSeqNb>6</ElctrncSeqNb>
+      <CreDtTm>2026-03-01T02:15:00+01:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH2100210210108311400</IBAN>
+        </Id>
+        <Ccy>CHF</Ccy>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-02-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">244.60</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-02-28</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>REF-SCOR-0001</AcctSvcrRef>
+        <Amt Ccy="CHF">120.50</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-02-03</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-02-03</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>ICDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>REF-SCOR-0001</AcctSvcrRef>
+              <EndToEndId>RECHNUNG-8842</EndToEndId>
+            </Refs>
+            <Amt Ccy="CHF">120.50</Amt>
+            <CdtDbtInd>DBIT</CdtDbtInd>
+            <RltdPties>
+              <Cdtr>
+                <Pty>
+                  <Nm>Swisscom (Schweiz) AG</Nm>
+                </Pty>
+              </Cdtr>
+              <CdtrAcct>
+                <Id>
+                  <IBAN>CH9300762011623852957</IBAN>
+                </Id>
+              </CdtrAcct>
+            </RltdPties>
+            <RmtInf>
+              <Strd>
+                <CdtrRefInf>
+                  <Tp>
+                    <CdOrPrtry>
+                      <Cd>SCOR</Cd>
+                    </CdOrPrtry>
+                  </Tp>
+                  <Ref>RF18539007547034</Ref>
+                </CdtrRefInf>
+              </Strd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Zahlungsauftrag Swisscom</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <AcctSvcrRef>REF-ISR-0002</AcctSvcrRef>
+        <Amt Ccy="CHF">89.90</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-02-10</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-02-10</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RDDT</Cd>
+              <SubFmlyCd>PMDD</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>REF-ISR-0002</AcctSvcrRef>
+              <MndtId>LSV-MND-77120</MndtId>
+            </Refs>
+            <Amt Ccy="CHF">89.90</Amt>
+            <CdtDbtInd>DBIT</CdtDbtInd>
+            <RltdPties>
+              <Cdtr>
+                <Pty>
+                  <Nm>Krankenkasse Beispiel AG</Nm>
+                </Pty>
+              </Cdtr>
+            </RltdPties>
+            <RmtInf>
+              <Strd>
+                <CdtrRefInf>
+                  <Tp>
+                    <CdOrPrtry>
+                      <Prtry>ISR Reference</Prtry>
+                    </CdOrPrtry>
+                  </Tp>
+                  <Ref>120000000000234478943216899</Ref>
+                </CdtrRefInf>
+              </Strd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>LSV Krankenkasse Februar</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <AcctSvcrRef>REF-USTRD-0003</AcctSvcrRef>
+        <Amt Ccy="CHF">45.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-02-20</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-02-20</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>ICDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>REF-USTRD-0003</AcctSvcrRef>
+              <EndToEndId>NOTPROVIDED</EndToEndId>
+            </Refs>
+            <Amt Ccy="CHF">45.00</Amt>
+            <CdtDbtInd>DBIT</CdtDbtInd>
+            <RltdPties>
+              <Cdtr>
+                <Pty>
+                  <Nm>Hans Muster</Nm>
+                </Pty>
+              </Cdtr>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Anteil Geschenk</Ustrd>
+              <Ustrd>Geburtstag Anna</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

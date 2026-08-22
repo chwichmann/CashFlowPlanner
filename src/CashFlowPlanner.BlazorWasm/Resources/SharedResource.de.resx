@@ -1987,10 +1987,10 @@
     <value>Es ist kein Plan geladen.</value>
   </data>
   <data name="BankImport_UploadMt940" xml:space="preserve">
-    <value>MT940-Kontoauszug hochladen</value>
+    <value>Kontoauszug hochladen</value>
   </data>
   <data name="BankImport_UploadDescription" xml:space="preserve">
-    <value>Lade einen UBS MT940 Light- oder Enriched-Export hoch. Die Datei wird verwendet, um tatsächliche Kontobewegungen lokal im Browser-Cache zu speichern.</value>
+    <value>Lade einen CAMT.053-Export (ISO-20022-XML) oder einen MT940-Export hoch. Das Format wird aus dem Inhalt der Datei erkannt, nicht aus dem Dateinamen. Die Datei wird verwendet, um tatsächliche Kontobewegungen lokal im Browser-Cache zu speichern.</value>
   </data>
   <data name="BankImport_SelectedFile" xml:space="preserve">
     <value>Ausgewählte Datei: {0} ({1})</value>
@@ -2171,6 +2171,18 @@
   </data>
   <data name="BankImport_InfoAnalysisCompleted" xml:space="preserve">
     <value>Die Datei wurde erfolgreich analysiert.</value>
+  </data>
+  <data name="BankImport_StatementHeading" xml:space="preserve">
+    <value>Auszug {0} von {1}: {2}</value>
+  </data>
+  <data name="BankImport_StatementNotImported" xml:space="preserve">
+    <value>Dieser Auszug wurde nicht importiert: Kein Konto passt zur Kennung {0}. Hinterlege sie beim passenden Konto und analysiere die Datei erneut - bereits importierte Transaktionen werden nicht doppelt hinzugefügt.</value>
+  </data>
+  <data name="BankImport_InfoSeveralAccountSelectionsRequired" xml:space="preserve">
+    <value>{0} Auszüge konnten keinem Konto zugeordnet werden. Hinterlege die jeweils angezeigte Kennung beim passenden Konto und analysiere die Datei erneut. Zugeordnete Auszüge können jetzt importiert werden.</value>
+  </data>
+  <data name="BankImport_ImportAppliedForStatements" xml:space="preserve">
+    <value>Import für {0} Auszüge übernommen. Hinzugefügte Transaktionen: {1}. Übersprungene Duplikate: {2}.</value>
   </data>
   <data name="BankImport_ImportApplied" xml:space="preserve">
     <value>Import übernommen. Hinzugefügte Transaktionen: {0}. Übersprungene Duplikate: {1}.</value>

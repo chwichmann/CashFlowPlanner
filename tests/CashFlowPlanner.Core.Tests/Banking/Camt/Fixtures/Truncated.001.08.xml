@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Plain.001.08.xml with the salary entry cut out and the balances left untouched - what a
+  partially downloaded or hand-edited file looks like.
+
+  OPBD 4042.62 + (-40.00) = 4002.62, but CLBD claims 4978.37, so the statement is short by
+  975.75. Nothing else in the file is wrong; only the balance-conservation check notices.
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>20260124-CAMT053-0001</MsgId>
+      <CreDtTm>2026-01-24T03:12:47+01:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-2026-004</Id>
+      <ElctrncSeqNb>4</ElctrncSeqNb>
+      <CreDtTm>2026-01-24T03:12:47+01:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH2100210210108311400</IBAN>
+        </Id>
+        <Ccy>CHF</Ccy>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">4042.62</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-01-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">4978.37</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-01-23</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>9910005GK0615030</AcctSvcrRef>
+        <Amt Ccy="CHF">40.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-01-05</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-01-05</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>CCRD</Cd>
+              <SubFmlyCd>POSD</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <AddtlNtryInf>BAZG VIA-WEBSHOP Zahlung UBS TWINT</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>
