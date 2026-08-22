@@ -3,6 +3,7 @@
 @using CashFlowPlanner.BlazorWasm.Services
 @using CashFlowPlanner.BlazorWasm.Services.BankImport
 @using CashFlowPlanner.Core.Accounts
+@using CashFlowPlanner.Core.Banking.Csv
 @using CashFlowPlanner.Core.Banking.Import
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Localization
@@ -22,12 +23,19 @@
     route stays as a thin host so existing links and bookmarks keep working, and it is off
     the navigation bar, which was carrying twelve destinations on one row.
 
-    Both CAMT.053 and MT940 land here. The format is decided by BankStatementImportService
+    CAMT.053, MT940 and CSV all land here. The format is decided by BankStatementImportService
     from the file *content*, never from the extension, and the service returns one result
-    per statement: MT940 always yields one, while a camt.053 file yields one per Stmt
+    per statement: MT940 and CSV always yield one, while a camt.053 file yields one per Stmt
     because a combined export carries every account the customer holds at that bank. Every
     result is rendered, matched or not - a statement dropped from the list would be an
     account whose transactions silently vanished.
+
+    CSV gets one thing the other two do not: a mapping the user has to confirm. MT940 and
+    camt.053 are self-describing - a :61: record is an amount because the standard says so -
+    but a CSV column is an amount because this app guessed, and there is no Swiss CSV
+    standard to guess against. So the detected format and the column mapping are rendered in
+    full, and the Apply button stays disabled until the user ticks that they have looked at
+    it. Nobody should discover that column 3 was read as the balance after it is in the plan.
 *@
 
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
@@ -54,6 +62,28 @@
             <p class="mt-2">
                 @Text("BankImport_SelectedFile", _fileName, FormatFileSize(_fileBytes.Length))
             </p>
+
+            @*
+                The profile picker appears only for a file the content sniff already decided is
+                CSV, so an MT940 or camt upload is not offered a setting that would do nothing.
+            *@
+            @if (IsCsvUpload)
+            {
+                <div class="mt-3">
+                    <FormField Label='@L["BankImport_CsvProfile"]'
+                               Hint='@L["BankImport_CsvProfileHint"]'>
+                        <select id="@context.Id"
+                                class="form-select"
+                                aria-describedby="@context.DescribedBy"
+                                @bind="_csvProfileId">
+                            @foreach (var profile in CsvStatementProfiles.All)
+                            {
+                                <option value="@profile.Id">@FormatCsvProfileName(profile)</option>
+                            }
+                        </select>
+                    </FormField>
+                </div>
+            }
 
             <button type="button"
                     class="btn btn-primary"
@@ -96,6 +126,102 @@
                     <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
                 </DataTable>
             </section>
+
+            @if (result.Preview.Csv is { } csv)
+            {
+                @*
+                    Everything below is CSV-only and exists because CSV is not self-describing.
+                    It is rendered before the account matching on purpose: the first question is
+                    "did it read the file correctly", and only then "which account is it for".
+                *@
+                <section class="mb-4">
+                    <h4>@L["BankImport_CsvDetectedFormat"]</h4>
+
+                    <DataTable Items="BuildCsvFormatRows(csv)"
+                               RowKey="@(row => row.Field)"
+                               Caption='@L["BankImport_CsvDetectedFormat"]'>
+                        <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
+                        <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
+                    </DataTable>
+                </section>
+
+                <section class="mb-4">
+                    <h4>@L["BankImport_CsvColumnMapping"]</h4>
+
+                    <p>@L["BankImport_CsvColumnMappingHint"]</p>
+
+                    <DataTable Items="csv.Columns"
+                               RowKey="@(column => column.Role)"
+                               Caption='@L["BankImport_CsvColumnMapping"]'>
+                        <Column Title='@L["BankImport_Field"]'
+                                Text="@(column => FormatCsvRole(column.Role))" />
+                        <Column Title='@L["BankImport_CsvColumnNumber"]' Align="ColumnAlign.Number"
+                                Text="@(column => Formatter.Number(column.ColumnNumber, 0))" />
+                        <Column Title='@L["BankImport_CsvColumnHeader"]'
+                                Text="@(column => column.Header ?? string.Empty)" />
+                    </DataTable>
+
+                    @if (csv.UnmappedHeaders.Count > 0)
+                    {
+                        <p class="text-body-secondary">
+                            @Text(
+                                "BankImport_CsvUnmappedColumns",
+                                string.Join(", ", csv.UnmappedHeaders))
+                        </p>
+                    }
+                </section>
+
+                @if (csv.Warnings.Count > 0)
+                {
+                    <section class="mb-4">
+                        <h4>@L["BankImport_CsvWarnings"]</h4>
+
+                        <ul class="list-unstyled">
+                            @foreach (var warning in csv.Warnings)
+                            {
+                                <li class="alert alert-warning" role="alert">
+                                    @FormatCsvWarning(warning)
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+
+                @if (csv.RowIssues.Count > 0)
+                {
+                    var shownIssues = csv.RowIssues.Take(RowIssuePreviewLimit).ToList();
+
+                    <section class="mb-4">
+                        <h4>@L["BankImport_CsvUnreadableRows"]</h4>
+
+                        <p>@L["BankImport_CsvUnreadableRowsHint"]</p>
+
+                        <DataTable Items="shownIssues"
+                                   Caption='@L["BankImport_CsvUnreadableRows"]'>
+                            <Column Title='@L["BankImport_CsvLine"]' Align="ColumnAlign.Number"
+                                    Text="@(issue => Formatter.Number(issue.LineNumber, 0))" />
+                            <Column Title='@L["BankImport_CsvProblem"]'
+                                    Text="@(issue => FormatCsvIssue(issue.Kind))" />
+                            <Column Title='@L["BankImport_CsvColumnHeader"]'
+                                    Text="@(issue => issue.ColumnHeader ?? string.Empty)" />
+                            <Column Title='@L["BankImport_Value"]'
+                                    Text="@(issue => issue.Value ?? string.Empty)" />
+                            <Column Title='@L["BankImport_CsvRowContent"]'
+                                    Text="@(issue => Truncate(issue.RawText))" />
+                        </DataTable>
+
+                        @if (csv.RowIssues.Count > RowIssuePreviewLimit)
+                        {
+                            <p>
+                                @Text(
+                                    "BankImport_CsvUnreadableRowsLimited",
+                                    RowIssuePreviewLimit,
+                                    csv.RowIssues.Count)
+                            </p>
+                        }
+                    </section>
+                }
+            }
 
             <section class="mb-4">
                 <h4>@L["BankImport_AccountMatching"]</h4>
@@ -180,7 +306,15 @@
                                 Text="@(x => Formatter.Money(x.SignedAmount))" />
                         <Column Title='@L["Currency"]' Text="@(x => x.Currency)" />
                         <Column Title='@L["BankImport_Code"]' Text="@(x => x.TransactionCode ?? string.Empty)" />
-                        <Column Title='@L["BankImport_Reference"]' Text="@(x => x.BankReference ?? string.Empty)" />
+                        @*
+                            CSV transactions deliberately carry no BankReference - a CSV
+                            reference column repeats every month for a standing order, so it must
+                            not key the deduplication - but the reference is still what a user
+                            recognises, so it is shown from CustomerReference when there is no
+                            bank reference.
+                        *@
+                        <Column Title='@L["BankImport_Reference"]'
+                                Text="@(x => x.BankReference ?? x.CustomerReference ?? string.Empty)" />
                         <Column Title='@L["Description"]' Text="@(x => x.Description ?? string.Empty)" />
                     </DataTable>
 
@@ -260,10 +394,30 @@
                 </section>
             }
 
+            @*
+                CSV only, and deliberately a hard gate rather than a hint. The column mapping is
+                a guess this app made about a file format that has no standard; a user who has
+                not looked at it cannot know whether column 3 was the amount or the balance, and
+                by the time a wrong reading is in the plan it has been merged with everything
+                else.
+            *@
+            @if (RequiresCsvMappingConfirmation)
+            {
+                <section class="mb-4">
+                    <FormField Label='@L["BankImport_CsvConfirmMapping"]'
+                               Layout="FormFieldLayout.Checkbox">
+                        <input id="@context.Id"
+                               class="form-check-input"
+                               type="checkbox"
+                               @bind="_csvMappingConfirmed" />
+                    </FormField>
+                </section>
+            }
+
             <section class="mb-4 d-flex gap-2">
                 <button type="button"
                         class="btn btn-primary"
-                        disabled="@_isBusy"
+                        disabled="@(_isBusy || (RequiresCsvMappingConfirmation && !_csvMappingConfirmed))"
                         @onclick="ApplyImportAsync">
                     @L["BankImport_ApplyImport"]
                 </button>
@@ -285,10 +439,18 @@
     private const int TransactionPreviewLimit = 25;
 
     /// <summary>
+    /// How many unreadable rows are listed before the table is cut short. Every one of them is
+    /// counted in the message underneath, so nothing goes unmentioned - but a file whose profile
+    /// is simply wrong produces one issue per row, and a thousand-row table would bury the
+    /// column mapping that explains why.
+    /// </summary>
+    private const int RowIssuePreviewLimit = 25;
+
+    /// <summary>
     /// A hint for the file picker only. The format is decided from the content, so a file with
     /// an unexpected name still imports correctly once the user picks it.
     /// </summary>
-    private const string AcceptedFileExtensions = ".xml,.mt940,.sta,.txt";
+    private const string AcceptedFileExtensions = ".xml,.mt940,.sta,.txt,.csv,.tsv";
 
     private byte[]? _fileBytes;
     private string? _fileName;
@@ -299,6 +461,13 @@
     private IReadOnlyList<BankStatementImportResult> _results = [];
     private bool _rememberAccountMapping = true;
     private bool _applySuggestedBalanceUpdate = true;
+
+    /// <summary>The format the content sniff found, so the CSV-only controls can appear before analysis.</summary>
+    private string? _detectedSourceFormat;
+
+    private string _csvProfileId = CsvStatementProfiles.AutoId;
+
+    private bool _csvMappingConfirmed;
 
     /// <summary>One row of the key/value tables the preview, merge and balance sections are made of.</summary>
     private sealed record FieldValue(string Field, string Value);
@@ -318,6 +487,19 @@
             .Select(x => x.BankAccountIdentifierToRemember!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    private bool IsCsvUpload =>
+        string.Equals(
+            _detectedSourceFormat,
+            BankStatementImportService.CsvSourceFormat,
+            StringComparison.Ordinal);
+
+    /// <summary>
+    /// True when something importable came out of a CSV file. MT940 and camt.053 never require
+    /// this: they say what their fields mean, so there is nothing for the user to confirm.
+    /// </summary>
+    private bool RequiresCsvMappingConfirmation =>
+        ImportableResults.Any(x => x.Preview.Csv is not null);
 
     private string RememberAccountMappingLabel =>
         Text(
@@ -340,6 +522,18 @@
         new(Text("BankImport_ParsedTransactionCount"), Formatter.Number(preview.ParsedTransactionCount, 0)),
         new(Text("BankImport_TransactionNetAmount"), Formatter.Money(preview.TransactionNetAmount, preview.Currency)),
         new(Text("BankImport_Reconciliation"), FormatReconciliation(preview)),
+    ];
+
+    private IReadOnlyList<FieldValue> BuildCsvFormatRows(BankStatementImportCsvDetails csv) =>
+    [
+        new(Text("BankImport_CsvProfile"), FormatCsvProfileName(csv.ProfileId, csv.ProfileDisplayName)),
+        new(Text("BankImport_CsvDelimiter"), FormatCsvDelimiter(csv.Delimiter)),
+        new(Text("BankImport_CsvDecimalSeparator"), FormatCsvDecimalSeparator(csv.DecimalSeparator)),
+        new(Text("BankImport_CsvDateFormat"), csv.DateFormat ?? string.Empty),
+        new(Text("BankImport_CsvEncoding"), FormatCsvEncoding(csv.Encoding)),
+        new(Text("BankImport_CsvAmountConvention"), FormatCsvAmountConvention(csv.AmountConvention)),
+        new(Text("BankImport_CsvHeaderRow"), Formatter.Number(csv.HeaderLineNumber, 0)),
+        new(Text("BankImport_CsvPreambleLines"), Formatter.Number(csv.PreambleLineCount, 0)),
     ];
 
     private IReadOnlyList<FieldValue> BuildMergeRows(ImportedBankTransactionMergeResult mergeResult) =>
@@ -392,6 +586,7 @@
 
             _fileBytes = null;
             _fileName = null;
+            _detectedSourceFormat = null;
             return;
         }
 
@@ -402,6 +597,11 @@
 
         _fileBytes = memoryStream.ToArray();
         _fileName = file.Name;
+
+        // Sniffed here rather than after analysis so the CSV profile picker can be offered
+        // *before* the first parse. The same call decides the route inside the service, so the
+        // picker never appears for a file that will not take one.
+        _detectedSourceFormat = BankStatementImportService.DetectSourceFormat(_fileBytes);
     }
 
     private async Task AnalyzeAsync()
@@ -459,8 +659,12 @@
                 Accounts = AppState.CurrentPlan.Accounts,
                 ExistingImportedTransactions = existingTransactions,
                 SelectedAccountId = selectedAccountId,
+                CsvProfileId = _csvProfileId,
                 AsOfDate = DateOnly.FromDateTime(DateTime.Today)
             });
+
+            // Re-analysing means a new mapping, which the user has not looked at yet.
+            _csvMappingConfirmed = false;
 
             var singleMatchedAccountId = _results.Count == 1
                 ? _results[0].AccountId
@@ -504,6 +708,14 @@
         if (importableResults.Count == 0)
         {
             _errorMessage = Text("BankImport_ErrorNothingToApply");
+            return;
+        }
+
+        // The button is already disabled without the tick; this catches the path where it is not
+        // a button that got us here.
+        if (RequiresCsvMappingConfirmation && !_csvMappingConfirmed)
+        {
+            _errorMessage = Text("BankImport_CsvConfirmMappingRequired");
             return;
         }
 
@@ -585,18 +797,20 @@
     /// <summary>
     /// Stores the statement's account identifier on the account so the next file matches
     /// automatically. CAMT.053 identifies the account by IBAN; MT940 by its own :25: account id.
+    /// A CSV identifier is always an IBAN - it only exists at all because the preamble scan
+    /// found one and its check digits validated - so it is stored as one, which also means a CSV
+    /// import and a camt import of the same account converge on the same stored identifier.
     /// </summary>
     private Account AddBankIdentifierIfMissing(
         Account account,
         string accountIdentifier,
         string? sourceFormat)
     {
-        var identifierType = string.Equals(
-            sourceFormat,
-            BankStatementImportService.Camt053SourceFormat,
-            StringComparison.Ordinal)
-            ? AccountBankIdentifierType.Iban
-            : AccountBankIdentifierType.Mt940AccountId;
+        var identifierType =
+            string.Equals(sourceFormat, BankStatementImportService.Camt053SourceFormat, StringComparison.Ordinal)
+            || string.Equals(sourceFormat, BankStatementImportService.CsvSourceFormat, StringComparison.Ordinal)
+                ? AccountBankIdentifierType.Iban
+                : AccountBankIdentifierType.Mt940AccountId;
 
         if (AccountBankIdentifierMatcher.HasIdentifier(
                 account,
@@ -658,9 +872,11 @@
         ClearMessages();
         _fileBytes = null;
         _fileName = null;
+        _detectedSourceFormat = null;
         _selectedAccountIdValue = null;
         _rememberAccountMapping = true;
         _applySuggestedBalanceUpdate = true;
+        _csvMappingConfirmed = false;
         _results = [];
     }
 
@@ -668,9 +884,11 @@
     {
         _fileBytes = null;
         _fileName = null;
+        _detectedSourceFormat = null;
         _selectedAccountIdValue = null;
         _rememberAccountMapping = true;
         _applySuggestedBalanceUpdate = true;
+        _csvMappingConfirmed = false;
         _results = [];
     }
 
@@ -679,6 +897,7 @@
         _selectedAccountIdValue = null;
         _rememberAccountMapping = true;
         _applySuggestedBalanceUpdate = true;
+        _csvMappingConfirmed = false;
         _results = [];
     }
 
@@ -740,6 +959,88 @@
 
             _ => status.ToString()
         };
+    }
+
+    private string FormatCsvProfileName(CsvStatementProfile profile) =>
+        FormatCsvProfileName(profile.Id, profile.DisplayName);
+
+    /// <summary>
+    /// Profile names are translated through a key per id, falling back to the profile's own
+    /// English <c>DisplayName</c>. A switch rather than a computed key, so adding a profile
+    /// without a translation degrades to readable English instead of rendering the key itself.
+    /// </summary>
+    private string FormatCsvProfileName(string profileId, string displayName)
+    {
+        var key = profileId switch
+        {
+            CsvStatementProfiles.AutoId => "BankImport_CsvProfileAuto",
+            CsvStatementProfiles.SwissSemicolonId => "BankImport_CsvProfileSwissSemicolon",
+            CsvStatementProfiles.SwissCommaId => "BankImport_CsvProfileSwissComma",
+            CsvStatementProfiles.GermanSemicolonId => "BankImport_CsvProfileGermanSemicolon",
+            CsvStatementProfiles.DebitCreditSemicolonId => "BankImport_CsvProfileDebitCreditSemicolon",
+            CsvStatementProfiles.IsoCommaId => "BankImport_CsvProfileIsoComma",
+            CsvStatementProfiles.TabSeparatedId => "BankImport_CsvProfileTabSeparated",
+            _ => null
+        };
+
+        return key is null ? displayName : Text(key);
+    }
+
+    /// <summary>
+    /// A tab has no printable form, so it is named rather than shown. Everything else is the
+    /// character itself, which is what the user sees in their file.
+    /// </summary>
+    private string FormatCsvDelimiter(string delimiter) =>
+        string.Equals(delimiter, "Tab", StringComparison.Ordinal)
+            ? Text("BankImport_CsvTab")
+            : delimiter;
+
+    private string FormatCsvDecimalSeparator(CsvDecimalSeparator separator) => separator switch
+    {
+        CsvDecimalSeparator.Dot => Text("BankImport_CsvDecimalSeparator_Dot"),
+        CsvDecimalSeparator.Comma => Text("BankImport_CsvDecimalSeparator_Comma"),
+        _ => Text("BankImport_CsvDecimalSeparator_Auto")
+    };
+
+    private string FormatCsvEncoding(CsvTextEncoding encoding) => encoding switch
+    {
+        CsvTextEncoding.Utf8 => Text("BankImport_CsvEncoding_Utf8"),
+        CsvTextEncoding.Latin1 => Text("BankImport_CsvEncoding_Latin1"),
+        _ => Text("BankImport_CsvEncoding_Auto")
+    };
+
+    private string FormatCsvAmountConvention(CsvAmountConvention convention) => convention switch
+    {
+        CsvAmountConvention.SignedAmount => Text("BankImport_CsvAmountConvention_SignedAmount"),
+        CsvAmountConvention.SeparateDebitCredit => Text("BankImport_CsvAmountConvention_SeparateDebitCredit"),
+        CsvAmountConvention.AmountWithIndicator => Text("BankImport_CsvAmountConvention_AmountWithIndicator"),
+        _ => Text("BankImport_CsvAmountConvention_Auto")
+    };
+
+    private string FormatCsvRole(CsvColumnRole role) =>
+        Text("BankImport_CsvRole_" + role);
+
+    private string FormatCsvIssue(CsvRowIssueKind kind) =>
+        Text("BankImport_CsvIssue_" + kind);
+
+    private string FormatCsvWarning(CsvParseWarning warning) =>
+        Text("BankImport_CsvWarning_" + warning);
+
+    /// <summary>
+    /// Keeps a raw row readable in the issues table. A quoted remittance field can run to
+    /// several lines, and the point of showing it is recognition, not reproduction.
+    /// </summary>
+    private static string Truncate(string value)
+    {
+        const int MaxLength = 120;
+
+        var singleLine = string.Join(
+            " ",
+            value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        return singleLine.Length <= MaxLength
+            ? singleLine
+            : singleLine[..MaxLength] + "…";
     }
 
     /// <summary>
