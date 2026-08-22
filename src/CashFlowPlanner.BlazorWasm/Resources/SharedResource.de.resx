@@ -2361,4 +2361,94 @@
   <data name="Account_DeleteConfirm" xml:space="preserve">
     <value>Konto '{0}' löschen? Bewegungen, Hypotheken und Säule-3a-Pläne, die darauf verweisen, müssen zuerst angepasst werden.</value>
   </data>
+  <data name="Yes" xml:space="preserve">
+    <value>Ja</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>Nein</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="Account_NameHint" xml:space="preserve">
+    <value>Der Name, der in Tabellen und Auswahlfeldern erscheint.</value>
+  </data>
+  <data name="Mortgages_InitialDate" xml:space="preserve">
+    <value>Startdatum</value>
+  </data>
+  <data name="Mortgages_EndDate" xml:space="preserve">
+    <value>Enddatum</value>
+  </data>
+  <data name="Mortgages_RatePercent" xml:space="preserve">
+    <value>Zinssatz (%)</value>
+  </data>
+  <data name="Mortgages_FixedInterestSaronMarginPercent" xml:space="preserve">
+    <value>SARON-Marge (%)</value>
+  </data>
+  <data name="Mortgages_AmortisationMode" xml:space="preserve">
+    <value>Amortisation</value>
+  </data>
+  <data name="Mortgages_AnnualAmortisationAmount" xml:space="preserve">
+    <value>Jährliche Amortisation</value>
+  </data>
+  <data name="Mortgages_PaymentInterval" xml:space="preserve">
+    <value>Zahlungsintervall</value>
+  </data>
+  <data name="Mortgages_BillingCalendar" xml:space="preserve">
+    <value>Abrechnungskalender</value>
+  </data>
+  <data name="Mortgages_CalculationPrincipalDate" xml:space="preserve">
+    <value>Schuld bekannt per</value>
+  </data>
+  <data name="Mortgages_AddOrUpdateRatePoint" xml:space="preserve">
+    <value>Zinspunkt hinzufügen oder aktualisieren</value>
+  </data>
+  <data name="Mortgages_SaronRatesHint" xml:space="preserve">
+    <value>SARON-Sätze werden manuell erfasst und zwischen den Punkten interpoliert. Die flexible Komponente wird bei 0% begrenzt.</value>
+  </data>
+  <data name="Mortgages_SaronRateRequired" xml:space="preserve">
+    <value>Für dieses Datum ist ein SARON-Satz erforderlich.</value>
+  </data>
+  <data name="Mortgages_Added" xml:space="preserve">
+    <value>Hypothek hinzugefügt.</value>
+  </data>
+  <data name="Mortgages_Updated" xml:space="preserve">
+    <value>Hypothek aktualisiert.</value>
+  </data>
+  <data name="Mortgages_Deleted" xml:space="preserve">
+    <value>Hypothek gelöscht.</value>
+  </data>
+  <data name="Mortgages_ErrorNameRequired" xml:space="preserve">
+    <value>Ein Name ist erforderlich.</value>
+  </data>
+  <data name="Mortgages_ErrorInitialPrincipalGreaterThanZero" xml:space="preserve">
+    <value>Die anfängliche Hypothekarschuld muss grösser als null sein.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalRequired" xml:space="preserve">
+    <value>Die bekannte Hypothekarschuld ist erforderlich.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalGreaterThanZero" xml:space="preserve">
+    <value>Die bekannte Hypothekarschuld muss grösser als null sein.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalDateRequired" xml:space="preserve">
+    <value>Das Datum, per dem die Schuld bekannt ist, ist erforderlich.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalDateBeforeInitialDate" xml:space="preserve">
+    <value>Die bekannte Schuld kann nicht vor dem Start der Hypothek datiert sein.</value>
+  </data>
+  <data name="Mortgages_ErrorFixedInterestNotNegative" xml:space="preserve">
+    <value>Der Zinssatz darf nicht negativ sein.</value>
+  </data>
+  <data name="Mortgages_ErrorAnnualAmortisationNotNegative" xml:space="preserve">
+    <value>Die jährliche Amortisation darf nicht negativ sein.</value>
+  </data>
+  <data name="Mortgages_ErrorPaymentAccountRequired" xml:space="preserve">
+    <value>Ein Zahlungskonto ist erforderlich.</value>
+  </data>
+  <data name="Mortgages_ErrorIndirectAmortisationAccountRequired" xml:space="preserve">
+    <value>Für die indirekte Amortisation ist ein Zielkonto erforderlich.</value>
+  </data>
+  <data name="Mortgages_ErrorSaronRateRequired" xml:space="preserve">
+    <value>Mindestens ein SARON-Zinspunkt ist erforderlich.</value>
+  </data>
 </root>

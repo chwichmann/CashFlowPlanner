@@ -2361,4 +2361,94 @@
   <data name="Account_DeleteConfirm" xml:space="preserve">
     <value>Delete account '{0}'? Movements, mortgages and Pillar 3a schedules that reference it must be updated first.</value>
   </data>
+  <data name="Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Account_NameHint" xml:space="preserve">
+    <value>The name shown in tables and pickers.</value>
+  </data>
+  <data name="Mortgages_InitialDate" xml:space="preserve">
+    <value>Start date</value>
+  </data>
+  <data name="Mortgages_EndDate" xml:space="preserve">
+    <value>End date</value>
+  </data>
+  <data name="Mortgages_RatePercent" xml:space="preserve">
+    <value>Interest rate (%)</value>
+  </data>
+  <data name="Mortgages_FixedInterestSaronMarginPercent" xml:space="preserve">
+    <value>SARON margin (%)</value>
+  </data>
+  <data name="Mortgages_AmortisationMode" xml:space="preserve">
+    <value>Amortisation</value>
+  </data>
+  <data name="Mortgages_AnnualAmortisationAmount" xml:space="preserve">
+    <value>Annual amortisation</value>
+  </data>
+  <data name="Mortgages_PaymentInterval" xml:space="preserve">
+    <value>Payment interval</value>
+  </data>
+  <data name="Mortgages_BillingCalendar" xml:space="preserve">
+    <value>Billing calendar</value>
+  </data>
+  <data name="Mortgages_CalculationPrincipalDate" xml:space="preserve">
+    <value>Principal known as of</value>
+  </data>
+  <data name="Mortgages_AddOrUpdateRatePoint" xml:space="preserve">
+    <value>Add or update rate point</value>
+  </data>
+  <data name="Mortgages_SaronRatesHint" xml:space="preserve">
+    <value>SARON rates are entered by hand and interpolated between points. The flexible component is floored at 0%.</value>
+  </data>
+  <data name="Mortgages_SaronRateRequired" xml:space="preserve">
+    <value>A SARON rate is required for this date.</value>
+  </data>
+  <data name="Mortgages_Added" xml:space="preserve">
+    <value>Mortgage added.</value>
+  </data>
+  <data name="Mortgages_Updated" xml:space="preserve">
+    <value>Mortgage updated.</value>
+  </data>
+  <data name="Mortgages_Deleted" xml:space="preserve">
+    <value>Mortgage deleted.</value>
+  </data>
+  <data name="Mortgages_ErrorNameRequired" xml:space="preserve">
+    <value>A name is required.</value>
+  </data>
+  <data name="Mortgages_ErrorInitialPrincipalGreaterThanZero" xml:space="preserve">
+    <value>The initial principal must be greater than zero.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalRequired" xml:space="preserve">
+    <value>The known principal is required.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalGreaterThanZero" xml:space="preserve">
+    <value>The known principal must be greater than zero.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalDateRequired" xml:space="preserve">
+    <value>The date the principal was known is required.</value>
+  </data>
+  <data name="Mortgages_ErrorCalculationPrincipalDateBeforeInitialDate" xml:space="preserve">
+    <value>The known principal cannot be dated before the mortgage starts.</value>
+  </data>
+  <data name="Mortgages_ErrorFixedInterestNotNegative" xml:space="preserve">
+    <value>The interest rate cannot be negative.</value>
+  </data>
+  <data name="Mortgages_ErrorAnnualAmortisationNotNegative" xml:space="preserve">
+    <value>The annual amortisation cannot be negative.</value>
+  </data>
+  <data name="Mortgages_ErrorPaymentAccountRequired" xml:space="preserve">
+    <value>A payment account is required.</value>
+  </data>
+  <data name="Mortgages_ErrorIndirectAmortisationAccountRequired" xml:space="preserve">
+    <value>Indirect amortisation needs a target account.</value>
+  </data>
+  <data name="Mortgages_ErrorSaronRateRequired" xml:space="preserve">
+    <value>At least one SARON rate point is required.</value>
+  </data>
 </root>
