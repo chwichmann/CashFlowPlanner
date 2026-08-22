@@ -85,7 +85,13 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
             _playwright = await Playwright.CreateAsync();
             _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
-                Headless = true
+                Headless = true,
+
+                // Required on most Linux CI images. Without --no-sandbox Chromium cannot
+                // start in an unprivileged container, and the failure presents as a hang
+                // rather than an error. --disable-dev-shm-usage avoids the small /dev/shm
+                // those images give you, which crashes the renderer on a page this size.
+                Args = ["--no-sandbox", "--disable-dev-shm-usage"]
             });
         }
         catch (PlaywrightException ex)
@@ -106,9 +112,30 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         _server?.Dispose();
     }
 
+    /// <summary>
+    /// A page with the service worker disabled.
+    ///
+    /// The worker is not what these tests check - it has its own verification - and letting
+    /// it run makes them slow and racy: on first load it precaches every asset, so a
+    /// NetworkIdle wait may never settle, and a second load may be served from its cache
+    /// rather than from the artifact under test.
+    /// </summary>
+    private async Task<IPage> NewPageAsync(int? width = null)
+    {
+        var context = await _browser!.NewContextAsync(new BrowserNewContextOptions
+        {
+            ServiceWorkers = ServiceWorkerPolicy.Block,
+            ViewportSize = width is null
+                ? null
+                : new ViewportSize { Width = width.Value, Height = 800 }
+        });
+
+        return await context.NewPageAsync();
+    }
+
     private async Task<(IPage Page, List<string> Errors)> OpenAsync(string path = "")
     {
-        var page = await _browser!.NewPageAsync();
+        var page = await NewPageAsync();
         var errors = new List<string>();
 
         page.Console += (_, message) =>
@@ -123,7 +150,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
 
         await page.GotoAsync(_server!.BaseUrl + path, new PageGotoOptions
         {
-            WaitUntil = WaitUntilState.NetworkIdle,
+            WaitUntil = WaitUntilState.Load,
             Timeout = 60_000
         });
 
@@ -232,7 +259,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         // screen catches that class of mistake.
         await page.GotoAsync(_server!.BaseUrl + "persons", new PageGotoOptions
         {
-            WaitUntil = WaitUntilState.NetworkIdle,
+            WaitUntil = WaitUntilState.Load,
             Timeout = 60_000
         });
 
@@ -269,14 +296,11 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         // name and, far worse, the export-needed / saved badge were simply not on screen.
         //
         // That badge is the data-loss indicator. It may shrink; it must never disappear.
-        var page = await _browser!.NewPageAsync(new BrowserNewPageOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = 800 }
-        });
+        var page = await NewPageAsync(width);
 
         await page.GotoAsync(_server!.BaseUrl, new PageGotoOptions
         {
-            WaitUntil = WaitUntilState.NetworkIdle,
+            WaitUntil = WaitUntilState.Load,
             Timeout = 60_000
         });
 

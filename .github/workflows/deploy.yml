@@ -290,6 +290,9 @@ jobs:
         run: pwsh tests/CashFlowPlanner.SmokeTests/bin/Release/net10.0/playwright.ps1 install chromium --with-deps
 
       - name: Smoke test the published app
+        # A hang here must fail fast rather than eat the job's 30 minutes. The suite
+        # takes well under a minute; anything near this ceiling is a defect.
+        timeout-minutes: 8
         env:
           CFP_PUBLISH_WWWROOT: ${{ env.PUBLISH_WWWROOT }}
           CFP_SMOKE_REQUIRED: "1"
