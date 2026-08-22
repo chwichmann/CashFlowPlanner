@@ -12,7 +12,11 @@
     <AppUpdateBanner />
     <UiFeedbackBanner />
     <main class="app-main">
-        <div class="content px-4 py-3" @key="_appStateRefreshKey">
+        @* .app-container (app.css) is the same class the navbar's inner element
+           uses, so the page content and the brand share a left edge at every
+           viewport width. Do not add horizontal padding utilities here: the
+           container owns the gutter (finding U2). *@
+        <div class="app-container content">
             @if (!_cacheInitialized)
             {
                 <div class="alert alert-info">
@@ -38,7 +42,6 @@
 @code {
     private bool _cacheInitialized;
     private string? _cacheError;
-    private long _appStateRefreshKey;
 
     protected override void OnInitialized()
     {
@@ -67,13 +70,29 @@
         }
     }
 
+    // This used to also bump a counter used as @key on the content div (finding
+    // U5). CashFlowAppState raises Changed on ~28 different mutations, and every
+    // one of them changed the key, which made Blazor tear the whole subtree down
+    // and construct a brand new page component instead of diffing the existing
+    // one. Adding a single account therefore discarded filter text, the selected
+    // tab, scroll position, focus and any half-typed edit anywhere on the page.
+    //
+    // What re-rendering the layout does and does not do, measured in the browser:
+    // the layout itself re-renders, and so does every component the layout owns
+    // directly. It does NOT reach the routed page. @Body renders the page as a
+    // child component with no parameters, and Blazor skips SetParametersAsync on
+    // a retained child whose parameters are unchanged (ParameterView
+    // .DefinitelyEquals), so the page never learns anything happened.
+    //
+    // In practice a page still updates for any change the user made on that page,
+    // because the page's own event handler re-renders it. What does not update is
+    // a mutation raised somewhere else - loading a plan or running the simulation
+    // from the navigation bar, or the PlanEmptyState buttons. The fix is for each
+    // page to subscribe to AppState.Changed itself (Pages/ is out of scope for
+    // this change); reinstating the key would only trade the bug back.
     private void OnAppStateChanged()
     {
-        _ = InvokeAsync(() =>
-        {
-            _appStateRefreshKey++;
-            StateHasChanged();
-        });
+        _ = InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

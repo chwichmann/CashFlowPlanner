@@ -8,7 +8,12 @@
     flex: 1;
 }
 
+/*
+    Width, centring and the horizontal gutter all come from .app-container in
+    app.css, which the navbar uses too (finding U2). This rule owns the vertical
+    rhythm only - it used to fight a second .content rule in app.css that set a
+    different padding-top (finding H2).
+*/
 .content {
-    max-width: 1600px;
-    margin: 0 auto;
+    padding-block: var(--app-space-4);
 }

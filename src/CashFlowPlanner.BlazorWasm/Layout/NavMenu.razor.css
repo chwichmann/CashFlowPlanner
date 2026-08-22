@@ -1,91 +1,144 @@
-.app-navbar {
+/*
+    The navbar and the status strip stick together as one block (finding H4), so
+    nothing has to know how tall the navbar happens to be. --nav-height below is
+    only a floor for the collapsed row; if the menu wraps or expands, the header
+    grows and the strip travels with it.
+*/
+.app-header {
     position: sticky;
     top: 0;
     z-index: 1030;
 }
 
+/*
+    Twelve destinations have to fit on one row inside --app-max-width, so the nav
+    takes the small step of the type scale rather than body size. Set through
+    Bootstrap's own --bs-nav-link-font-size so .nav-link keeps computing its
+    padding and colours the normal way.
+*/
+.app-navbar {
+    min-height: var(--nav-height);
+    --bs-nav-link-font-size: var(--app-font-size-sm);
+}
+
+::deep /*
+    Same reason as .navbar-plan-status below: the collapse is itself a flex item
+    of the navbar row, and its default min-width: auto is its content width. With
+    the row now bounded by --app-max-width instead of running to the window edge,
+    it has to be allowed to shrink or it pushes the export buttons off-screen and
+    the whole page gets a horizontal scrollbar.
+*/
+.navbar-collapse {
+    min-width: 0;
+}
+
 .navbar-brand {
-    font-weight: 600;
+    font-weight: var(--app-font-weight-bold);
     white-space: nowrap;
 }
 
-.nav-link {
+/*
+    ::deep is required: NavLink is a child component, and Blazor does not stamp
+    this component's scope attribute onto markup another component rendered. The
+    plain `.nav-link` selector these rules used to carry silently matched nothing,
+    which is why "Säule 3a" and "Hauskauf Simulator" were free to break in half.
+*/
+::deep .nav-link {
     white-space: nowrap;
 }
 
-.nav-link.active {
-    font-weight: 600;
-    color: #ffffff !important;
-    border-bottom: 2px solid #ffffff;
+::deep .nav-link.active {
+    font-weight: var(--app-font-weight-bold);
+    color: var(--bs-white) !important;
+    border-bottom: 2px solid var(--bs-white);
 }
 
 .navbar-actions {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: var(--app-space-1);
     flex-shrink: 0;
+    margin-top: var(--app-space-3);
+    padding-bottom: var(--app-space-2);
 }
 
 .nav-icon-button {
     min-width: 2.25rem;
-    line-height: 1.2;
+    line-height: var(--app-line-height-tight);
     text-align: center;
 }
 
+/*
+    Mobile first: below Bootstrap's lg breakpoint the navbar is collapsed and the
+    plan status stacks under the links. The desktop layout is the @media below -
+    the only breakpoint this file uses, and it is one of Bootstrap's five.
+*/
 .navbar-plan-status {
-    color: #ffffff;
-    margin-right: 0.75rem;
-    max-width: 360px;
-    text-align: right;
-    line-height: 1.15;
+    color: var(--bs-white);
+    line-height: var(--app-line-height-tight);
+    text-align: left;
+    max-width: none;
+    margin-top: var(--app-space-3);
+    margin-inline-end: 0;
+
+    /*
+        The plan name is the one thing in the row that may be any length, so it
+        is the one thing that gives way. flex-shrink alone does nothing here: a
+        flex item's default min-width is auto, which is its content width, and
+        the children below are nowrap - so without min-width: 0 this block
+        refuses to shrink and pushes the export buttons out past the container
+        instead of ellipsising.
+    */
     flex-shrink: 1;
+    min-width: 0;
 }
 
 .navbar-plan-name {
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: var(--app-font-size-sm);
+    font-weight: var(--app-font-weight-bold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .navbar-cache-status {
-    font-size: 0.72rem;
+    font-size: var(--app-font-size-sm);
     opacity: 0.8;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+/*
+    No position/top/z-index of its own any more: .app-header carries all three
+    for the pair. The inline gutter comes from the .app-container inside it.
+*/
 .nav-status {
-    position: sticky;
-    top: 56px;
-    z-index: 1020;
-    padding: 0.35rem 1rem;
-    font-size: 0.875rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    padding-block: var(--app-space-1);
+    font-size: var(--app-font-size-sm);
+    border-bottom: 1px solid var(--bs-border-color-translucent);
 }
 
 .nav-status-info {
-    color: #084298;
-    background-color: #cfe2ff;
+    color: var(--bs-primary-text-emphasis);
+    background-color: var(--bs-primary-bg-subtle);
 }
 
 .nav-status-error {
-    color: #842029;
-    background-color: #f8d7da;
+    color: var(--bs-danger-text-emphasis);
+    background-color: var(--bs-danger-bg-subtle);
 }
 
-@media (max-width: 991.98px) {
+@media (min-width: 992px) {
     .navbar-plan-status {
-        text-align: left;
-        margin-top: 0.75rem;
-        margin-right: 0;
-        max-width: none;
+        text-align: right;
+        max-width: 360px;
+        margin-top: 0;
+        margin-inline-end: var(--app-space-3);
     }
 
     .navbar-actions {
-        margin-top: 0.75rem;
-        padding-bottom: 0.5rem;
+        margin-top: 0;
+        padding-bottom: 0;
     }
 }
