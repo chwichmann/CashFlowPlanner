@@ -60,11 +60,13 @@ public sealed class AppFormatter
     /// A percentage, e.g. <c>3.25 %</c>. The value is already a percentage, not a fraction: pass
     /// <c>3.25</c>, not <c>0.0325</c>.
     ///
-    /// The space before the sign follows the two existing localized pages; HouseBuySimulator's
-    /// space-less variant is the odd one out and changes when it migrates.
+    /// A space before the sign follows the two existing localized pages - HouseBuySimulator's
+    /// space-less variant is the odd one out and changes when it migrates - and it is a
+    /// non-breaking one, so a narrow table column cannot wrap the sign onto its own line and leave
+    /// a number that reads as an absolute amount.
     /// </summary>
     public string Percent(decimal value, int decimals = 2) =>
-        $"{Number(value, decimals)} %";
+        $"{Number(value, decimals)}\u00A0%";
 
     /// <summary>A percentage, or <see cref="EmptyMarker"/>.</summary>
     public string Percent(decimal? value, int decimals = 2) =>
