@@ -3,6 +3,7 @@ using CashFlowPlanner.Core.CreditCards;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
+using CashFlowPlanner.Core.RealEstate;
 
 namespace CashFlowPlanner.Core.Tests;
 
@@ -15,6 +16,7 @@ public static class TestPlanBuilder
         List<MortgageContract>? mortgages = null,
         List<CreditCardContract>? creditCards = null,
         List<Pillar3aContract>? pillar3aContracts = null,
+        List<RealEstateAsset>? realEstateAssets = null,
         DateOnly? startDate = null,
         DateOnly? endDate = null)
     {
@@ -30,6 +32,7 @@ public static class TestPlanBuilder
             Mortgages = mortgages ?? [],
             CreditCards = creditCards ?? [],
             Pillar3aContracts = pillar3aContracts ?? [],
+            RealEstateAssets = realEstateAssets ?? [],
 
             SimulationSettings = new SimulationSettings
             {
@@ -74,6 +77,33 @@ public static class TestPlanBuilder
             OpeningBalance = openingBalance,
             OpeningDate = openingDate ?? new DateOnly(2026, 1, 1),
             IsActive = true
+        };
+    }
+
+    /// <summary>
+    /// A Pillar 3a account that passes <see cref="Validation.AccountValidator"/>:
+    /// it needs exactly one owner and a subtype, so a plan-level test has to
+    /// supply the person who owns it.
+    /// </summary>
+    public static Account CreatePillar3aAccount(
+        decimal openingBalance = 0m,
+        DateOnly? openingDate = null,
+        string name = "Pillar 3a Account",
+        Guid? ownerPersonId = null)
+    {
+        return new Account
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = AccountType.Pillar3a,
+            Currency = "CHF",
+            OpeningBalance = openingBalance,
+            OpeningDate = openingDate ?? new DateOnly(2026, 1, 1),
+            IsActive = true,
+            Pillar3aSubtype = Pillar3aAccountSubtype.FundSolution,
+            Owners = ownerPersonId is null
+                ? []
+                : [new AccountOwner { PersonId = ownerPersonId.Value, OwnershipShare = 1m }]
         };
     }
 

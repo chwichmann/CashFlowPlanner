@@ -1,6 +1,7 @@
 ﻿using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.CreditCards;
 using CashFlowPlanner.Core.Mortgages;
+using CashFlowPlanner.Core.NetWorth;
 using CashFlowPlanner.Core.Pillar3a;
 
 namespace CashFlowPlanner.Core;
@@ -12,6 +13,7 @@ public sealed class SimulationEngine
     private readonly CreditCardPaymentEventGenerator _creditCardPaymentEventGenerator;
     private readonly AccountInterestEventGenerator _accountInterestEventGenerator;
     private readonly Pillar3aEventGenerator _pillar3aEventGenerator;
+    private readonly NetWorthCalculator _netWorthCalculator = new();
 
     public SimulationEngine()
         : this(
@@ -106,10 +108,13 @@ public sealed class SimulationEngine
 
         var mortgageEvents = mortgageGeneration.Events;
 
-        var pillar3aEvents = _pillar3aEventGenerator.GenerateEvents(
+        var pillar3aGeneration = _pillar3aEventGenerator.Generate(
             plan.Pillar3aContracts,
+            accounts,
             simulationStart,
             simulationEnd);
+
+        var pillar3aEvents = pillar3aGeneration.Events;
 
         var baseEvents = transactionEvents
             .Concat(mortgageEvents)
@@ -169,6 +174,8 @@ public sealed class SimulationEngine
         var balancePoints = new List<AccountBalancePoint>();
 
         var warnings = new List<SimulationWarning>(mortgageGeneration.Warnings);
+
+        warnings.AddRange(pillar3aGeneration.Warnings);
 
         // One warning per overdrawn account per DAY meant 7'305 warnings for a
         // single overdrawn account over 20 years -- a list nobody can read, and
@@ -230,7 +237,16 @@ public sealed class SimulationEngine
             Events = events,
             BalancePoints = balancePoints,
             MortgagePrincipalPoints = mortgageGeneration.PrincipalPoints,
-            Warnings = warnings
+            Warnings = warnings,
+            Inflation = plan.Inflation,
+
+            NetWorthPoints = _netWorthCalculator.Calculate(
+                plan,
+                accounts,
+                balancePoints,
+                mortgageGeneration.PrincipalPoints,
+                simulationStart,
+                simulationEnd)
         };
     }
 
