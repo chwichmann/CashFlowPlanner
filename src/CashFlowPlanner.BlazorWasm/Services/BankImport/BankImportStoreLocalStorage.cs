@@ -75,6 +75,8 @@ public sealed class BankImportStoreLocalStorage : IBankImportStore
         ArgumentNullException.ThrowIfNull(mergeResult);
 
         // Replace all transactions with merged result
+        var previous = _state;
+
         _state = new BankImportStoreState
         {
             Batches = _state.Batches
@@ -86,17 +88,22 @@ public sealed class BankImportStoreLocalStorage : IBankImportStore
             LastUpdatedUtc = DateTime.UtcNow
         };
 
-        await SaveAsync();
+        await SaveAsync(previous);
     }
 
     public async Task ClearAllAsync()
     {
+        var previous = _state;
+
         _state = new BankImportStoreState();
-        await SaveAsync();
+
+        await SaveAsync(previous);
     }
 
     public async Task ClearAccountAsync(Guid accountId)
     {
+        var previous = _state;
+
         _state = new BankImportStoreState
         {
             Batches = _state.Batches
@@ -110,10 +117,20 @@ public sealed class BankImportStoreLocalStorage : IBankImportStore
             LastUpdatedUtc = DateTime.UtcNow
         };
 
-        await SaveAsync();
+        await SaveAsync(previous);
     }
 
-    private async Task SaveAsync()
+    /// <summary>
+    /// Writes the store, and puts <paramref name="previous"/> back if the browser refuses.
+    /// <para>
+    /// Goes through the <c>window.cashFlowPlanner</c> shim rather than calling
+    /// <c>localStorage.setItem</c> directly, because a direct call throws a DOMException on a
+    /// full quota and the shim reports it instead. Without the rollback the session would go on
+    /// showing transactions as imported that are not stored anywhere, and they would vanish on
+    /// the next reload - which is the shape of P1b, one key over.
+    /// </para>
+    /// </summary>
+    private async Task SaveAsync(BankImportStoreState previous)
     {
         var json = JsonSerializer.Serialize(
             _state,
@@ -121,9 +138,23 @@ public sealed class BankImportStoreLocalStorage : IBankImportStore
 
         var stored = await _cipher.ProtectAsync(json);
 
-        await _js.InvokeVoidAsync(
-            "localStorage.setItem",
+        var written = await _js.InvokeAsync<bool>(
+            "cashFlowPlanner.setLocalStorageItem",
             LocalStorageKeys.BankImportStore,
             stored);
+
+        if (written)
+        {
+            return;
+        }
+
+        _state = previous;
+
+        var error = await _js.InvokeAsync<BrowserStorageError?>(
+            "cashFlowPlanner.getLastStorageError");
+
+        throw new BankImportStorageException(
+            error?.IsQuotaExceeded ?? false,
+            error?.Message);
     }
 }

@@ -2157,6 +2157,12 @@
   <data name="BankImport_ErrorNoFileSelected" xml:space="preserve">
     <value>Please select an MT940 file first.</value>
   </data>
+  <data name="BankImport_ErrorStorageFull" xml:space="preserve">
+    <value>Browser storage is full. The import was not saved and nothing was changed. Clear older imports under "Imported transactions" and try again.</value>
+  </data>
+  <data name="BankImport_ErrorStorageFailed" xml:space="preserve">
+    <value>The import could not be saved and was rolled back: {0}</value>
+  </data>
   <data name="BankImport_ErrorNothingToApply" xml:space="preserve">
     <value>There is no completed import to apply.</value>
   </data>

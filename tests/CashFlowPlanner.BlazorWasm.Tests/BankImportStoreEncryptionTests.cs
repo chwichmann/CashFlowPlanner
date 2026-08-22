@@ -137,4 +137,58 @@ public sealed class BankImportStoreEncryptionTests
 
         Assert.Empty(await reopened.GetAllTransactionsAsync());
     }
+
+    /// <summary>
+    /// Browser storage is about 5 MB per origin and this store shares it with the plan's own
+    /// working copy, so filling it is a normal outcome of a long CSV history rather than an
+    /// exotic one. It must not be silent, and it must not leave the session believing an import
+    /// happened - the transactions would be gone at the next reload, which is P1b one key over.
+    /// </summary>
+    [Fact]
+    public async Task WhenStorageIsFull_TheImport_IsRolledBackAndReported()
+    {
+        var (store, js, _) = Create();
+
+        await store.InitializeAsync();
+        await store.ApplyImportAsync(Merge("ERSTE ZAHLUNG"));
+
+        var storedBefore = js.Items[Key];
+
+        js.QuotaExceeded = true;
+
+        var failure = await Assert.ThrowsAsync<BankImportStorageException>(
+            () => store.ApplyImportAsync(Merge("ZWEITE ZAHLUNG")));
+
+        Assert.True(failure.IsQuotaExceeded);
+
+        // Nothing written...
+        Assert.Equal(storedBefore, js.Items[Key]);
+
+        // ...and nothing believed. The session still holds exactly what is on disk.
+        var transactions = await store.GetAllTransactionsAsync();
+
+        Assert.Equal("ERSTE ZAHLUNG", Assert.Single(transactions).Description);
+    }
+
+    [Fact]
+    public async Task AfterAFailedWrite_TheNextImport_StillWorks()
+    {
+        var (store, js, _) = Create();
+
+        await store.InitializeAsync();
+
+        js.QuotaExceeded = true;
+
+        await Assert.ThrowsAsync<BankImportStorageException>(
+            () => store.ApplyImportAsync(Merge("ZU GROSS")));
+
+        js.QuotaExceeded = false;
+
+        await store.ApplyImportAsync(Merge("PASST WIEDER"));
+
+        var transactions = await store.GetAllTransactionsAsync();
+
+        Assert.Equal("PASST WIEDER", Assert.Single(transactions).Description);
+        Assert.StartsWith(WorkingCopyEnvelope.Prefix, js.Items[Key]);
+    }
 }

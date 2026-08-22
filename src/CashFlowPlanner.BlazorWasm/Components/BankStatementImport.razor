@@ -784,6 +784,15 @@
 
             ResetImportAfterApply();
         }
+        catch (BankImportStorageException ex)
+        {
+            // Browser storage is ~5 MB per origin and this store shares it with the plan's own
+            // working copy. Saying "quota exceeded" would be true and useless; the user needs to
+            // know which lever to pull.
+            _errorMessage = ex.IsQuotaExceeded
+                ? Text("BankImport_ErrorStorageFull")
+                : Text("BankImport_ErrorStorageFailed", ex.Message);
+        }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;

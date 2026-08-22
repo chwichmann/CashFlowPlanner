@@ -2157,6 +2157,12 @@
   <data name="BankImport_ErrorNoFileSelected" xml:space="preserve">
     <value>Bitte wähle zuerst eine MT940-Datei aus.</value>
   </data>
+  <data name="BankImport_ErrorStorageFull" xml:space="preserve">
+    <value>Der Browser-Speicher ist voll. Der Import wurde nicht gespeichert und nichts wurde verändert. Löschen Sie ältere Importe unter «Importierte Buchungen» und versuchen Sie es erneut.</value>
+  </data>
+  <data name="BankImport_ErrorStorageFailed" xml:space="preserve">
+    <value>Der Import konnte nicht gespeichert werden und wurde rückgängig gemacht: {0}</value>
+  </data>
   <data name="BankImport_ErrorNothingToApply" xml:space="preserve">
     <value>Es gibt keinen abgeschlossenen Import zum Übernehmen.</value>
   </data>
