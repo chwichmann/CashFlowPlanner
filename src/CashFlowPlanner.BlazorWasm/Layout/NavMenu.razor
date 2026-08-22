@@ -15,6 +15,13 @@
 @inject IStringLocalizer<SharedResource> L
 @inject UiFeedbackService Feedback
 
+@* The navbar and the status strip stick to the top as one element (finding H4).
+   The strip used to be sticky on its own at a hardcoded top: 56px, which left a
+   gap the page scrolled through whenever the navbar was not exactly 56px tall,
+   and slid underneath it entirely on mobile with the menu expanded (the navbar
+   is then 3-4x taller, and z-index 1020 lost to the navbar's 1030). Sticking the
+   pair means neither number has to be guessed. *@
+<header class="app-header">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark app-navbar">
     @* .app-container, not .container-fluid: the same class MainLayout wraps the
        page content in, so the brand and the page <h1> share a left edge at every
@@ -184,9 +191,14 @@
 @if (!string.IsNullOrWhiteSpace(_statusMessage))
 {
     <div class="@StatusCssClass">
-        @_statusMessage
+        @* Same container as the navbar row above and the page below, so the
+           message starts on the app's left edge instead of the window's. *@
+        <div class="app-container">
+            @_statusMessage
+        </div>
     </div>
 }
+</header>
 
 @code {
     private bool collapseNavMenu = true;
