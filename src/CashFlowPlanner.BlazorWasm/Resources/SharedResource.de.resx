@@ -2355,4 +2355,10 @@
   <data name="Dialog_ConfirmMessage" xml:space="preserve">
     <value>Sind Sie sicher?</value>
   </data>
+  <data name="Account_DeleteTitle" xml:space="preserve">
+    <value>Konto löschen</value>
+  </data>
+  <data name="Account_DeleteConfirm" xml:space="preserve">
+    <value>Konto '{0}' löschen? Bewegungen, Hypotheken und Säule-3a-Pläne, die darauf verweisen, müssen zuerst angepasst werden.</value>
+  </data>
 </root>

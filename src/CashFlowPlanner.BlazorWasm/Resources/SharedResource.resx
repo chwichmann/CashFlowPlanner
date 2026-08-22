@@ -2355,4 +2355,10 @@
   <data name="Dialog_ConfirmMessage" xml:space="preserve">
     <value>Are you sure?</value>
   </data>
+  <data name="Account_DeleteTitle" xml:space="preserve">
+    <value>Delete account</value>
+  </data>
+  <data name="Account_DeleteConfirm" xml:space="preserve">
+    <value>Delete account '{0}'? Movements, mortgages and Pillar 3a schedules that reference it must be updated first.</value>
+  </data>
 </root>

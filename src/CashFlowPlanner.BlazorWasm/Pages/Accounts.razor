@@ -1,4 +1,4 @@
-@page "/accounts"
+﻿@page "/accounts"
 
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core
@@ -654,9 +654,12 @@
             return;
         }
 
+        // Name the account. A generic "Are you sure?" on a destructive action tells the
+        // user nothing about what is about to disappear, and this is the delete that could
+        // strand the plan if the account is still referenced.
         var confirmed = await _confirmDialog.ShowAsync(
-            Text("Delete"),
-            Text("Dialog_ConfirmMessage"));
+            Text("Account_DeleteTitle"),
+            Text("Account_DeleteConfirm", account.Name));
 
         if (!confirmed)
         {
