@@ -1,0 +1,148 @@
+@namespace CashFlowPlanner.BlazorWasm.Tests.Components
+@inherits ComponentTestBase
+
+@code {
+    [Fact]
+    public void Points_the_label_at_the_control_it_labels()
+    {
+        // 141 labels in the app, 19 with a for. This is the test for the other 122: clicking the
+        // label has to focus the control, and a screen reader has to announce the two as one thing.
+        var cut = Render(@<FormField Label="Account name" Context="field">
+                             <input id="@field.Id" class="form-control" />
+                         </FormField>);
+
+        var label = cut.Find("label");
+        var input = cut.Find("input");
+
+        Assert.False(string.IsNullOrWhiteSpace(input.Id));
+        Assert.Equal(input.Id, label.GetAttribute("for"));
+    }
+
+    [Fact]
+    public void Gives_every_field_on_a_page_a_different_id()
+    {
+        var cut = Render(@<div>
+                             <FormField Label="First" Context="field">
+                                 <input id="@field.Id" class="form-control" />
+                             </FormField>
+                             <FormField Label="Second" Context="field">
+                                 <input id="@field.Id" class="form-control" />
+                             </FormField>
+                         </div>);
+
+        var ids = cut.FindAll("input").Select(i => i.Id).ToList();
+
+        Assert.Equal(2, ids.Count);
+        Assert.Equal(2, ids.Distinct().Count());
+    }
+
+    [Fact]
+    public void Keeps_the_same_id_across_re_renders()
+    {
+        // A regenerated id would silently break the association the moment anything on the page
+        // changed, which is exactly the kind of bug that never shows up in a screenshot.
+        var cut = Render<FormField>(@<FormField Label="Account name" Context="field">
+                                        <input id="@field.Id" class="form-control" />
+                                    </FormField>);
+
+        var before = cut.Find("input").Id;
+
+        cut.Render();
+
+        Assert.Equal(before, cut.Find("input").Id);
+    }
+
+    [Fact]
+    public void Honours_an_explicit_id()
+    {
+        var cut = Render(@<FormField Label="Account name" Id="account-name" Context="field">
+                             <input id="@field.Id" class="form-control" />
+                         </FormField>);
+
+        Assert.Equal("account-name", cut.Find("input").Id);
+        Assert.Equal("account-name", cut.Find("label").GetAttribute("for"));
+    }
+
+    [Fact]
+    public void Describes_the_control_by_its_hint()
+    {
+        var cut = Render(@<FormField Label="Opening balance" Hint="Balance on the opening date." Context="field">
+                             <input id="@field.Id" aria-describedby="@field.DescribedBy" class="form-control" />
+                         </FormField>);
+
+        var hint = cut.Find("div.form-text");
+
+        Assert.Equal(hint.Id, cut.Find("input").GetAttribute("aria-describedby"));
+        Assert.Equal("Balance on the opening date.", hint.TextContent.Trim());
+    }
+
+    [Fact]
+    public void Describes_the_control_by_both_hint_and_validation_message()
+    {
+        var cut = Render(@<FormField Label="Opening balance" Hint="A hint." ValidationMessage="Required." Context="field">
+                             <input id="@field.Id" aria-describedby="@field.DescribedBy" class="form-control" />
+                         </FormField>);
+
+        var describedBy = cut.Find("input").GetAttribute("aria-describedby")!.Split(' ');
+        var error = cut.Find("[role=alert]");
+
+        Assert.Equal(2, describedBy.Length);
+        Assert.Contains(cut.Find("div.form-text").Id, describedBy);
+        Assert.Contains(error.Id, describedBy);
+        Assert.Equal("Required.", error.TextContent.Trim());
+    }
+
+    [Fact]
+    public void Leaves_aria_describedby_off_when_there_is_nothing_to_describe()
+    {
+        var cut = Render(@<FormField Label="Account name" Context="field">
+                             <input id="@field.Id" aria-describedby="@field.DescribedBy" class="form-control" />
+                         </FormField>);
+
+        Assert.False(cut.Find("input").HasAttribute("aria-describedby"));
+    }
+
+    [Fact]
+    public void Checkbox_layout_puts_the_control_before_its_label_and_renders_the_label_once()
+    {
+        // CreditCards renders @L["Active"] twice - once as a .form-label above the check and once
+        // as the .form-check-label beside it - and neither carries a for.
+        var cut = Render(@<FormField Label="Active" Layout="FormFieldLayout.Checkbox" Context="field">
+                             <input id="@field.Id" type="checkbox" class="form-check-input" />
+                         </FormField>);
+
+        var labels = cut.FindAll("label");
+        var check = cut.Find("div.form-check");
+
+        Assert.Single(labels);
+        Assert.Contains("form-check-label", labels[0].ClassList);
+        Assert.Equal(cut.Find("input").Id, labels[0].GetAttribute("for"));
+
+        // Control first, label second: Bootstrap's .form-check only lines up in that order.
+        Assert.Equal("INPUT", check.Children[0].TagName);
+        Assert.Equal("LABEL", check.Children[1].TagName);
+    }
+
+    [Fact]
+    public void Marks_required_fields_for_sighted_and_screen_reader_users_alike()
+    {
+        var cut = Render(@<FormField Label="Account name" Required="true" Context="field">
+                             <input id="@field.Id" class="form-control" />
+                         </FormField>);
+
+        var label = cut.Find("label");
+
+        Assert.Equal("true", label.QuerySelector("span.text-danger")!.GetAttribute("aria-hidden"));
+        Assert.NotNull(label.QuerySelector("span.visually-hidden"));
+    }
+
+    [Fact]
+    public void Does_not_mark_optional_fields()
+    {
+        var cut = Render(@<FormField Label="Notes" Context="field">
+                             <input id="@field.Id" class="form-control" />
+                         </FormField>);
+
+        Assert.Null(cut.Find("label").QuerySelector("span.text-danger"));
+    }
+}

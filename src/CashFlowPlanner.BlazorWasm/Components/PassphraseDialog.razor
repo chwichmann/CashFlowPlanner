@@ -16,100 +16,84 @@
     hint and no backdoor - if this is forgotten the plan is unreadable by anyone,
     including us. Saying that once, clearly, before anything is encrypted is the only
     protection available.
+
+    The chrome is AppModal's now, so this dialog gains the focus trap, the page lock and
+    the focus restore it never had. What it must not gain is a new way out: there is no
+    header close button, exactly as before, because a dialog that gates encryption is
+    answered or cancelled, not dismissed.
 *@
 
 @if (Prompt.Current is { } request)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog"
-         aria-modal="true" aria-labelledby="passphraseDialogTitle">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="passphraseDialogTitle">
-                        @(request.Mode == PassphrasePromptMode.Create
-                            ? L["Passphrase_CreateTitle"]
-                            : L["Passphrase_UnlockTitle"])
-                    </h5>
-                </div>
+    <AppModal Visible="true"
+              Title="@(request.Mode == PassphrasePromptMode.Create
+                        ? L["Passphrase_CreateTitle"].Value
+                        : L["Passphrase_UnlockTitle"].Value)"
+              ShowCloseButton="false"
+              CancelText="@L["Passphrase_Cancel"].Value"
+              ConfirmText="@(request.Mode == PassphrasePromptMode.Create
+                             ? L["Passphrase_CreateAction"].Value
+                             : L["Passphrase_UnlockAction"].Value)"
+              ConfirmDisabled="@(!CanSubmit)"
+              OnConfirm="Submit"
+              OnCancel="Cancel">
 
-                <div class="modal-body">
-                    @if (!string.IsNullOrWhiteSpace(request.FileName))
-                    {
-                        <p class="text-body-secondary mb-3">
-                            @request.FileName
-                        </p>
-                    }
+        @if (!string.IsNullOrWhiteSpace(request.FileName))
+        {
+            <p class="text-body-secondary mb-3">
+                @request.FileName
+            </p>
+        }
 
-                    @if (!string.IsNullOrWhiteSpace(request.ErrorMessage))
-                    {
-                        <div class="alert alert-danger" role="alert">@request.ErrorMessage</div>
-                    }
+        @if (!string.IsNullOrWhiteSpace(request.ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@request.ErrorMessage</div>
+        }
 
-                    @if (request.Mode == PassphrasePromptMode.Create)
-                    {
-                        <div class="alert alert-warning" role="alert">
-                            <strong>@L["Passphrase_NoRecoveryTitle"]</strong>
-                            <div>@L["Passphrase_NoRecoveryBody"]</div>
-                        </div>
-                    }
-
-                    <div class="mb-3">
-                        <label class="form-label" for="passphraseInput">
-                            @L["Passphrase_Label"]
-                        </label>
-                        <input id="passphraseInput"
-                               type="password"
-                               class="form-control"
-                               autocomplete="@(request.Mode == PassphrasePromptMode.Create ? "new-password" : "current-password")"
-                               @bind="_passphrase"
-                               @bind:event="oninput"
-                               @onkeydown="OnKeyDown" />
-                    </div>
-
-                    @if (request.Mode == PassphrasePromptMode.Create)
-                    {
-                        <div class="mb-3">
-                            <label class="form-label" for="passphraseConfirmInput">
-                                @L["Passphrase_ConfirmLabel"]
-                            </label>
-                            <input id="passphraseConfirmInput"
-                                   type="password"
-                                   class="form-control"
-                                   autocomplete="new-password"
-                                   @bind="_confirm"
-                                   @bind:event="oninput"
-                                   @onkeydown="OnKeyDown" />
-                        </div>
-
-                        @if (_passphrase.Length > 0 && _confirm.Length > 0 && _passphrase != _confirm)
-                        {
-                            <div class="text-danger small mb-2">@L["Passphrase_Mismatch"]</div>
-                        }
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="passphraseAck"
-                                   @bind="_acknowledged" />
-                            <label class="form-check-label" for="passphraseAck">
-                                @L["Passphrase_Acknowledge"]
-                            </label>
-                        </div>
-                    }
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">
-                        @L["Passphrase_Cancel"]
-                    </button>
-                    <button type="button" class="btn btn-primary" disabled="@(!CanSubmit)" @onclick="Submit">
-                        @(request.Mode == PassphrasePromptMode.Create
-                            ? L["Passphrase_CreateAction"]
-                            : L["Passphrase_UnlockAction"])
-                    </button>
-                </div>
+        @if (request.Mode == PassphrasePromptMode.Create)
+        {
+            <div class="alert alert-warning" role="alert">
+                <strong>@L["Passphrase_NoRecoveryTitle"]</strong>
+                <div>@L["Passphrase_NoRecoveryBody"]</div>
             </div>
-        </div>
-    </div>
-    <div class="modal-backdrop fade show"></div>
+        }
+
+        <FormField Label="@L["Passphrase_Label"].Value" Id="passphraseInput" Context="field">
+            <input id="@field.Id"
+                   type="password"
+                   class="form-control"
+                   autocomplete="@(request.Mode == PassphrasePromptMode.Create ? "new-password" : "current-password")"
+                   @bind="_passphrase"
+                   @bind:event="oninput"
+                   @onkeydown="OnKeyDown" />
+        </FormField>
+
+        @if (request.Mode == PassphrasePromptMode.Create)
+        {
+            <FormField Label="@L["Passphrase_ConfirmLabel"].Value" Id="passphraseConfirmInput" Context="field">
+                <input id="@field.Id"
+                       type="password"
+                       class="form-control"
+                       autocomplete="new-password"
+                       @bind="_confirm"
+                       @bind:event="oninput"
+                       @onkeydown="OnKeyDown" />
+            </FormField>
+
+            @if (_passphrase.Length > 0 && _confirm.Length > 0 && _passphrase != _confirm)
+            {
+                <div class="text-danger small mb-2">@L["Passphrase_Mismatch"]</div>
+            }
+
+            <FormField Label="@L["Passphrase_Acknowledge"].Value"
+                       Id="passphraseAck"
+                       Layout="FormFieldLayout.Checkbox"
+                       CssClass=""
+                       Context="field">
+                <input id="@field.Id" class="form-check-input" type="checkbox" @bind="_acknowledged" />
+            </FormField>
+        }
+    </AppModal>
 }
 
 @code {
@@ -152,13 +136,11 @@
 
     private void OnKeyDown(KeyboardEventArgs e)
     {
+        // Enter only. Escape is AppModal's, and handling it here as well would cancel the prompt
+        // twice as the event bubbles up to the dialog.
         if (e.Key == "Enter" && CanSubmit)
         {
             Submit();
-        }
-        else if (e.Key == "Escape")
-        {
-            Cancel();
         }
     }
 

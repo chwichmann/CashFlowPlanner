@@ -1,0 +1,296 @@
+@using System.Globalization
+
+@*
+    A text box for an amount, formatted and parsed in the user's own culture.
+
+    Money is edited through <input type="number"> across the app. Blazor binds those with the
+    invariant culture, by specification: an amount the same page displays as 12'345.60 turns into
+    12345.6 the moment the field is focused, and a user who types 12'345.60 back gets nothing bound
+    at all. This is type="text" with inputmode="decimal", so the value shown while editing is the
+    value shown while reading.
+
+    This replaces Components/FormattedDecimalInput.razor, which was written for exactly this job,
+    referenced by zero files, and formatted through a hardcoded de-CH - so it would have gone on
+    showing Swiss separators to a user who had picked en-US in Settings.
+*@
+
+@if (HasAddons)
+{
+    <div class="input-group @GroupCssClass">
+        @if (!string.IsNullOrWhiteSpace(Prefix))
+        {
+            <span class="input-group-text" id="@PrefixId">@Prefix</span>
+        }
+
+        @InputElement
+
+        @if (!string.IsNullOrWhiteSpace(Suffix))
+        {
+            <span class="input-group-text" id="@SuffixId">@Suffix</span>
+        }
+    </div>
+}
+else
+{
+    @InputElement
+}
+
+@code {
+    /// <summary>The amount. Two-way bindable with <c>@@bind-Value</c>.</summary>
+    [Parameter]
+    public decimal Value { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Decimal places, both shown and rounded to. Two for money; zero for a whole-franc field such
+    /// as a purchase price; three for an interest rate.
+    /// </summary>
+    [Parameter]
+    public int Decimals { get; set; } = 2;
+
+    /// <summary>The control's id. Take it from a surrounding <see cref="FormField"/>'s context.</summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// Classes on the input. <c>num</c> is in the default because an amount belongs on the right,
+    /// in tabular figures, in a form exactly as much as in a table.
+    /// </summary>
+    [Parameter]
+    public string CssClass { get; set; } = "form-control num";
+
+    /// <summary>Classes on the input group, when a prefix or suffix puts one there.</summary>
+    [Parameter]
+    public string? GroupCssClass { get; set; }
+
+    /// <summary>
+    /// A currency or symbol before the number - rendered as an input-group addon, not folded into
+    /// the text. Keeping it out of the value is what lets the box round-trip: the old component put
+    /// it inside and then had to strip it back off on the way in.
+    /// </summary>
+    [Parameter]
+    public string? Prefix { get; set; }
+
+    /// <summary>A unit after the number, e.g. <c>%</c>. Also an addon.</summary>
+    [Parameter]
+    public string? Suffix { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    /// <summary>Ids of hint and error text, from a <see cref="FormField"/>'s context.</summary>
+    [Parameter]
+    public string? AriaDescribedBy { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string _text = string.Empty;
+    private decimal _renderedValue;
+    private int _renderedDecimals = -1;
+
+    // Bumped to force Blazor to rebuild the element. Without it, text the user typed that
+    // normalises back to the same string - "1234.5" against a bound 1234.50 - leaves the render
+    // tree unchanged, so the diff patches nothing and the box keeps showing the raw typing.
+    private int _resetToken;
+
+    private bool HasAddons =>
+        !string.IsNullOrWhiteSpace(Prefix) || !string.IsNullOrWhiteSpace(Suffix);
+
+    private string? PrefixId => Id is null ? null : $"{Id}-prefix";
+
+    private string? SuffixId => Id is null ? null : $"{Id}-suffix";
+
+    protected override void OnParametersSet()
+    {
+        if (Value == _renderedValue && Decimals == _renderedDecimals)
+        {
+            return;
+        }
+
+        _renderedValue = Value;
+        _renderedDecimals = Decimals;
+        _text = Format(Value);
+    }
+
+    private RenderFragment InputElement => @<input @key="_resetToken"
+                                                  type="text"
+                                                  inputmode="decimal"
+                                                  id="@Id"
+                                                  class="@CssClass"
+                                                  value="@_text"
+                                                  placeholder="@Placeholder"
+                                                  aria-describedby="@AriaDescribedBy"
+                                                  disabled="@Disabled"
+                                                  readonly="@ReadOnly"
+                                                  @attributes="AdditionalAttributes"
+                                                  @onchange="OnChangeAsync" />;
+
+    private async Task OnChangeAsync(ChangeEventArgs args)
+    {
+        var raw = args.Value?.ToString() ?? string.Empty;
+
+        var parsed = TryParse(raw, out var candidate)
+            ? decimal.Round(candidate, Math.Max(0, Decimals), MidpointRounding.AwayFromZero)
+            // Unparseable input reverts to the bound value rather than binding zero. Silently
+            // turning a typo into 0.00 in a cashflow plan is worse than refusing it.
+            : Value;
+
+        var normalised = Format(parsed);
+
+        if (normalised != raw)
+        {
+            // The box is showing something other than what we are about to render. Force the
+            // element to be rebuilt so the browser picks the formatted text back up.
+            _resetToken++;
+        }
+
+        _text = normalised;
+        _renderedValue = parsed;
+
+        if (parsed != Value)
+        {
+            await ValueChanged.InvokeAsync(parsed);
+        }
+    }
+
+    private string Format(decimal value) =>
+        value.ToString(
+            Decimals <= 0 ? "N0" : "N" + Decimals.ToString(CultureInfo.InvariantCulture),
+            CultureInfo.CurrentCulture);
+
+    /// <summary>
+    /// Accepts what the box shows, and a fair bit besides.
+    ///
+    /// Handing the cleaned text straight to <c>decimal.TryParse</c> with the current culture does
+    /// not work, and the way it fails is expensive: <c>NumberStyles.Number</c> allows group
+    /// separators and does not check their spacing, so under de-DE a typed "12.5" parses as 125
+    /// and under de-CH a typed "5,25" parses as 525. Both are silent two-order-of-magnitude errors
+    /// in a plan about money.
+    ///
+    /// So which character is the decimal point is decided from the shape of the text first, and
+    /// only then is the number parsed - invariantly, with the separators already resolved.
+    /// </summary>
+    private static bool TryParse(string raw, out decimal value)
+    {
+        value = 0m;
+
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        var cleaned = Clean(raw);
+
+        if (cleaned.Length == 0)
+        {
+            return false;
+        }
+
+        var decimalSeparator = FindDecimalSeparator(cleaned);
+        var builder = new System.Text.StringBuilder(cleaned.Length);
+
+        foreach (var character in cleaned)
+        {
+            if (character is '.' or ',')
+            {
+                // Whichever one is not the decimal point is a group separator, and goes.
+                if (character == decimalSeparator)
+                {
+                    builder.Append('.');
+                }
+
+                continue;
+            }
+
+            if (character is '-' or '+' && builder.Length > 0)
+            {
+                // A sign only means anything at the front.
+                continue;
+            }
+
+            builder.Append(character);
+        }
+
+        return decimal.TryParse(
+            builder.ToString(),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out value);
+    }
+
+    /// <summary>
+    /// Works out which of "." and "," the user meant as the decimal point, or <c>'\0'</c> when the
+    /// text has none.
+    /// </summary>
+    private static char FindDecimalSeparator(string cleaned)
+    {
+        var dots = cleaned.Count(c => c == '.');
+        var commas = cleaned.Count(c => c == ',');
+
+        if (dots == 0 && commas == 0)
+        {
+            return '\0';
+        }
+
+        // Both kinds present: the last one is the decimal point and the other groups the digits.
+        // "12.345,60" and "12,345.60" are both unambiguous this way, whatever the culture.
+        if (dots > 0 && commas > 0)
+        {
+            return cleaned.LastIndexOf('.') > cleaned.LastIndexOf(',') ? '.' : ',';
+        }
+
+        var candidate = dots > 0 ? '.' : ',';
+        var occurrences = dots > 0 ? dots : commas;
+
+        // More than one of the same character can only be grouping: "1.234.567".
+        if (occurrences > 1)
+        {
+            return '\0';
+        }
+
+        var index = cleaned.LastIndexOf(candidate);
+
+        // A single separator followed by exactly three digits is the ambiguous case - "1.234" is
+        // one thousand two hundred and thirty-four to a German reader and just over one to an
+        // American one. Only here does the culture get a say.
+        var groupSeparator = CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator;
+
+        if (index > 0
+            && cleaned.Length - index - 1 == 3
+            && groupSeparator.Length == 1
+            && groupSeparator[0] == candidate)
+        {
+            return '\0';
+        }
+
+        return candidate;
+    }
+
+    private static string Clean(string raw)
+    {
+        var builder = new System.Text.StringBuilder(raw.Length);
+
+        foreach (var character in raw)
+        {
+            if (char.IsDigit(character) || character is '.' or ',' or '-' or '+')
+            {
+                builder.Append(character);
+            }
+
+            // Everything else - currency symbols and codes, percent signs, apostrophes, ordinary,
+            // non-breaking and narrow non-breaking spaces - is dropped. Pasting "CHF 12'345.60"
+            // out of a bank statement has to work.
+        }
+
+        return builder.ToString();
+    }
+}

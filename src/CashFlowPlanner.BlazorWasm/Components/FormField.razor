@@ -1,0 +1,187 @@
+@using CashFlowPlanner.BlazorWasm.Resources
+@using Microsoft.Extensions.Localization
+
+@inject IStringLocalizer<SharedResource> L
+
+@*
+    A label, a control, an optional hint and an optional validation message - wired together.
+
+    The app has 141 <label> elements and 19 of them carry a for. The other 122 are decoration:
+    clicking one focuses nothing, and a screen reader announces the control as unlabelled. The id
+    is generated here, so a page never has to invent one, remember it twice, or keep the two copies
+    in step when a field is renamed.
+
+    Usage:
+
+        <FormField Label="@L["Account_Name"]" Hint="@L["Account_NameHint"]">
+            <input id="@context.Id" aria-describedby="@context.DescribedBy"
+                   class="form-control" @bind="_name" />
+        </FormField>
+
+        <FormField Label="@L["Active"]" Layout="FormFieldLayout.Checkbox">
+            <input id="@context.Id" class="form-check-input" type="checkbox" @bind="_isActive" />
+        </FormField>
+*@
+
+@if (Layout == FormFieldLayout.Checkbox)
+{
+    <div class="@RootCssClass">
+        <div class="form-check">
+            @*
+                Control first, then label. Bootstrap's .form-check-input/.form-check-label pair
+                only lines up in this order - the page that put a .form-label above the check as
+                well got a duplicated, unassociated label for its trouble.
+            *@
+            @ChildContent(Context)
+
+            <label class="form-check-label" for="@Context.Id">
+                @Label
+                @if (Required)
+                {
+                    @RequiredMarker
+                }
+            </label>
+        </div>
+
+        @Descriptions
+    </div>
+}
+else
+{
+    <div class="@RootCssClass">
+        <label class="form-label @LabelCssClass" for="@Context.Id">
+            @Label
+            @if (Required)
+            {
+                @RequiredMarker
+            }
+        </label>
+
+        @ChildContent(Context)
+
+        @Descriptions
+    </div>
+}
+
+@code {
+    // Blazor WebAssembly runs single-threaded, but Interlocked costs nothing and keeps this honest
+    // if that ever stops being true. A counter rather than a Guid: shorter ids, and a test can read
+    // the rendered markup without wading through 32 hex digits.
+    private static int _sequence;
+
+    /// <summary>The label text. Localize it at the call site; this component does not guess.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The control. Receives a <see cref="FormFieldContext"/> as <c>context</c> carrying the id it
+    /// must use and the ids it should point <c>aria-describedby</c> at.
+    /// </summary>
+    [Parameter]
+    [EditorRequired]
+    public RenderFragment<FormFieldContext> ChildContent { get; set; } = default!;
+
+    /// <summary>
+    /// Fixes the control's id instead of generating one. Only worth setting when something outside
+    /// the field has to reference the control - an external <c>aria-controls</c>, or a test.
+    /// </summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    /// <summary>Explanatory text under the control, announced with it via <c>aria-describedby</c>.</summary>
+    [Parameter]
+    public string? Hint { get; set; }
+
+    /// <summary>
+    /// A validation message. Also announced via <c>aria-describedby</c>, and given
+    /// <c>role="alert"</c> so it is read out when it appears rather than only when the control is
+    /// focused again.
+    /// </summary>
+    [Parameter]
+    public string? ValidationMessage { get; set; }
+
+    /// <summary>Validation as markup, for a <c>&lt;ValidationMessage For="..." /&gt;</c>.</summary>
+    [Parameter]
+    public RenderFragment? ValidationContent { get; set; }
+
+    /// <summary>Stacked or checkbox.</summary>
+    [Parameter]
+    public FormFieldLayout Layout { get; set; } = FormFieldLayout.Stacked;
+
+    /// <summary>Marks the field required: a red asterisk, plus the word for screen readers.</summary>
+    [Parameter]
+    public bool Required { get; set; }
+
+    /// <summary>Classes on the field's wrapper. Defaults to Bootstrap's usual bottom margin.</summary>
+    [Parameter]
+    public string CssClass { get; set; } = "mb-3";
+
+    /// <summary>Extra classes on the label, for a visually-hidden label or a bolder one.</summary>
+    [Parameter]
+    public string? LabelCssClass { get; set; }
+
+    private string _generatedId = string.Empty;
+
+    private string EffectiveId =>
+        string.IsNullOrWhiteSpace(Id) ? _generatedId : Id;
+
+    private string HintId => $"{EffectiveId}-hint";
+
+    private string ErrorId => $"{EffectiveId}-error";
+
+    private bool HasHint => !string.IsNullOrWhiteSpace(Hint);
+
+    private bool HasValidation =>
+        ValidationContent is not null || !string.IsNullOrWhiteSpace(ValidationMessage);
+
+    private string RootCssClass => CssClass ?? string.Empty;
+
+    private FormFieldContext Context => new(EffectiveId, DescribedBy);
+
+    private string? DescribedBy
+    {
+        get
+        {
+            if (HasHint && HasValidation)
+            {
+                return $"{HintId} {ErrorId}";
+            }
+
+            if (HasHint)
+            {
+                return HintId;
+            }
+
+            return HasValidation ? ErrorId : null;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _generatedId = $"ff{System.Threading.Interlocked.Increment(ref _sequence).ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+    }
+
+    private RenderFragment RequiredMarker => @<text><span class="text-danger ms-1" aria-hidden="true">*</span><span class="visually-hidden">@L["Form_Required"]</span></text>;
+
+    private RenderFragment Descriptions => @<text>
+        @if (HasHint)
+        {
+            <div id="@HintId" class="form-text">@Hint</div>
+        }
+
+        @if (HasValidation)
+        {
+            <div id="@ErrorId" class="text-danger small mt-1" role="alert">
+                @if (ValidationContent is not null)
+                {
+                    @ValidationContent
+                }
+                else
+                {
+                    @ValidationMessage
+                }
+            </div>
+        }
+    </text>;
+}

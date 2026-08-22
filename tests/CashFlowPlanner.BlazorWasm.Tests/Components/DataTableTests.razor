@@ -1,0 +1,218 @@
+@namespace CashFlowPlanner.BlazorWasm.Tests.Components
+@inherits ComponentTestBase
+
+@code {
+    private sealed record Row(string Name, decimal Amount);
+
+    private static readonly IReadOnlyList<Row> ThreeRows =
+    [
+        new Row("Rent", -1800m),
+        new Row("Salary", 7200m),
+        new Row("Groceries", -640.55m),
+    ];
+
+    private static decimal Total(IReadOnlyList<Row> rows) => rows.Sum(r => r.Amount);
+
+    [Fact]
+    public void Wraps_every_table_in_a_responsive_container()
+    {
+        // Two of the app's thirty tables had this wrapper. On a phone the other twenty-eight
+        // widened the page instead of scrolling themselves.
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                         </DataTable>);
+
+        Assert.NotNull(cut.Find("div.table-responsive > table"));
+    }
+
+    [Fact]
+    public void Renders_one_header_cell_and_one_body_cell_per_column()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                             <Column TItem="Row" Title="Amount" Align="ColumnAlign.Number" Text="@(r => r.Amount.ToString())" />
+                         </DataTable>);
+
+        Assert.Equal(2, cut.FindAll("thead th").Count);
+        Assert.Equal(3, cut.FindAll("tbody tr").Count);
+        Assert.All(cut.FindAll("tbody tr"), row => Assert.Equal(2, row.QuerySelectorAll("td").Length));
+    }
+
+    [Fact]
+    public void Marks_header_and_cells_of_number_columns_with_num_and_leaves_text_columns_alone()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                             <Column TItem="Row" Title="Amount" Align="ColumnAlign.Number" Text="@(r => r.Amount.ToString())" />
+                         </DataTable>);
+
+        var headers = cut.FindAll("thead th");
+        Assert.DoesNotContain("num", headers[0].ClassList);
+        Assert.Contains("num", headers[1].ClassList);
+
+        foreach (var row in cut.FindAll("tbody tr"))
+        {
+            var cells = row.QuerySelectorAll("td");
+            Assert.DoesNotContain("num", cells[0].ClassList);
+            Assert.Contains("num", cells[1].ClassList);
+        }
+    }
+
+    [Fact]
+    public void Footer_has_exactly_as_many_cells_as_the_header_and_no_colspan()
+    {
+        // Transactions' hand-written totals row carries a colspan one short of the header, so
+        // every figure in it sits under the wrong heading. The footer here is generated from the
+        // same column list as the header, in the same loop, so the counts cannot diverge.
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" FooterText="Total" />
+                             <Column TItem="Row" Title="Amount" Align="ColumnAlign.Number"
+                                     Text="@(r => r.Amount.ToString())"
+                                     FooterValue="@(rows => Total(rows).ToString())" />
+                         </DataTable>);
+
+        var headerCells = cut.FindAll("thead th");
+        var footerCells = cut.FindAll("tfoot td");
+
+        Assert.Equal(headerCells.Count, footerCells.Count);
+        Assert.All(footerCells, cell => Assert.False(cell.HasAttribute("colspan")));
+    }
+
+    [Fact]
+    public void Footer_cells_keep_the_alignment_of_the_column_above_them()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" FooterText="Total" />
+                             <Column TItem="Row" Title="Amount" Align="ColumnAlign.Number"
+                                     Text="@(r => r.Amount.ToString())"
+                                     FooterValue="@(rows => Total(rows).ToString())" />
+                         </DataTable>);
+
+        var footerCells = cut.FindAll("tfoot td");
+
+        Assert.DoesNotContain("num", footerCells[0].ClassList);
+        Assert.Contains("num", footerCells[1].ClassList);
+    }
+
+    [Fact]
+    public void Footer_totals_the_rows_it_is_actually_showing()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" FooterText="Total" />
+                             <Column TItem="Row" Title="Amount"
+                                     Text="@(r => r.Amount.ToString())"
+                                     FooterValue="@(rows => rows.Count.ToString())" />
+                         </DataTable>);
+
+        Assert.Equal("3", cut.FindAll("tfoot td")[1].TextContent.Trim());
+    }
+
+    [Fact]
+    public void Omits_the_footer_when_no_column_defines_one()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                         </DataTable>);
+
+        Assert.Empty(cut.FindAll("tfoot"));
+    }
+
+    [Fact]
+    public void Empty_table_spans_its_message_across_every_column()
+    {
+        var cut = Render(@<DataTable Items="Array.Empty<Row>()" EmptyText="Nothing here">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                             <Column TItem="Row" Title="Amount" Text="@(r => r.Amount.ToString())" />
+                             <Column TItem="Row" Title="Note" Text="@(_ => string.Empty)" />
+                         </DataTable>);
+
+        var cell = cut.Find("tbody td");
+
+        Assert.Equal("3", cell.GetAttribute("colspan"));
+        Assert.Contains("Nothing here", cell.TextContent);
+    }
+
+    [Fact]
+    public void Renders_the_empty_state_rather_than_throwing_when_Items_is_null()
+    {
+        var cut = Render(@<DataTable TItem="Row" Items="null" EmptyText="Nothing here">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                         </DataTable>);
+
+        Assert.Contains("Nothing here", cut.Find("tbody td").TextContent);
+    }
+
+    [Fact]
+    public void Hidden_columns_drop_out_of_header_body_and_footer_together()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" FooterText="Total" />
+                             <Column TItem="Row" Title="Actions" Visible="false" Text="@(_ => "x")" FooterText="" />
+                             <Column TItem="Row" Title="Amount" Text="@(r => r.Amount.ToString())"
+                                     FooterValue="@(rows => Total(rows).ToString())" />
+                         </DataTable>);
+
+        Assert.Equal(2, cut.FindAll("thead th").Count);
+        Assert.Equal(2, cut.FindAll("tfoot td").Count);
+        Assert.All(cut.FindAll("tbody tr"), row => Assert.Equal(2, row.QuerySelectorAll("td").Length));
+    }
+
+    [Fact]
+    public void ChildContent_wins_over_Text_so_a_cell_can_hold_markup()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows">
+                             <Column TItem="Row" Title="Name" Context="row">
+                                 <button type="button" class="btn btn-link">@row.Name</button>
+                             </Column>
+                         </DataTable>);
+
+        Assert.Equal(3, cut.FindAll("tbody td button.btn-link").Count);
+    }
+
+    [Fact]
+    public void Applies_per_row_classes()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows" RowCssClass="@(r => r.Amount < 0 ? "table-danger" : null)">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                         </DataTable>);
+
+        var rows = cut.FindAll("tbody tr");
+
+        Assert.Contains("table-danger", rows[0].ClassList);
+        Assert.DoesNotContain("table-danger", rows[1].ClassList);
+        Assert.Contains("table-danger", rows[2].ClassList);
+    }
+
+    [Fact]
+    public void Renders_a_caption_for_screen_readers_when_asked()
+    {
+        var cut = Render(@<DataTable Items="ThreeRows" Caption="Monthly transactions">
+                             <Column TItem="Row" Title="Name" Text="@(r => r.Name)" />
+                         </DataTable>);
+
+        var caption = cut.Find("table caption");
+
+        Assert.Equal("Monthly transactions", caption.TextContent.Trim());
+        Assert.Contains("visually-hidden", caption.ClassList);
+    }
+
+    [Fact]
+    public void A_Column_outside_a_DataTable_fails_loudly()
+    {
+        var error = Assert.ThrowsAny<Exception>(() => Render(@<Column TItem="Row" Title="Orphan" />));
+
+        Assert.Contains("<DataTable", Flatten(error), StringComparison.Ordinal);
+    }
+
+    private static string Flatten(Exception exception)
+    {
+        var text = exception.Message;
+
+        for (var inner = exception.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            text += " " + inner.Message;
+        }
+
+        return text;
+    }
+}

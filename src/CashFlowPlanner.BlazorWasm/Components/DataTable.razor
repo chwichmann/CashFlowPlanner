@@ -1,0 +1,241 @@
+@typeparam TItem
+@attribute [CascadingTypeParameter(nameof(TItem))]
+
+@*
+    A table whose columns are declared once and whose header, body and footer are all generated
+    from that one declaration.
+
+    Two defects this makes unrepresentable:
+
+    * Thirty tables in the app, two of them wrapped in .table-responsive. On a phone the other
+      twenty-eight push the whole page sideways. The wrapper is emitted here, always.
+    * Totals rows are hand-written with a colspan counting the columns above them. Transactions'
+      totals row counts one column short, so every figure in it sits under the wrong heading. No
+      colspan is written by hand here: the footer emits one cell per visible column, in the same
+      loop the header uses, so the two cannot disagree.
+
+    Usage:
+
+        <DataTable Items="@_rows">
+            <Column Title="@L["Name"]" Text="@(r => r.Name)" />
+            <Column Title="@L["Amount"]" Align="ColumnAlign.Number"
+                    Text="@(r => Formatter.Money(r.Amount))"
+                    FooterValue="@(rows => Formatter.Money(rows.Sum(r => r.Amount)))" />
+        </DataTable>
+
+    TItem flows to the child <Column>s through [CascadingTypeParameter], so pages never spell it out.
+*@
+
+<CascadingValue Value="this" IsFixed="true">
+    @*
+        Renders nothing. Column components emit no markup; they exist to register themselves,
+        which is why this sits outside the table rather than inside <thead>.
+    *@
+    @ChildContent
+</CascadingValue>
+
+<div class="table-responsive">
+    <table class="@TableCssClass">
+        @if (!string.IsNullOrWhiteSpace(Caption))
+        {
+            <caption class="@CaptionCssClass">@Caption</caption>
+        }
+
+        <thead>
+            <tr>
+                @foreach (var column in VisibleColumns)
+                {
+                    <th scope="col" class="@HeaderClass(column)">
+                        @if (column.HeaderContent is not null)
+                        {
+                            @column.HeaderContent
+                        }
+                        else
+                        {
+                            @column.Title
+                        }
+                    </th>
+                }
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Rows.Count == 0)
+            {
+                <tr>
+                    @*
+                        The only colspan in the component, and it is computed rather than typed.
+                        Math.Max keeps it valid during the first render, before the columns have
+                        registered themselves.
+                    *@
+                    <td colspan="@Math.Max(1, VisibleColumns.Count)" class="text-body-secondary">
+                        @if (EmptyContent is not null)
+                        {
+                            @EmptyContent
+                        }
+                        else
+                        {
+                            @EmptyText
+                        }
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var row in Rows)
+                {
+                    <tr @key="RowKey is not null ? RowKey(row) : row!" class="@RowCssClass?.Invoke(row)">
+                        @foreach (var column in VisibleColumns)
+                        {
+                            <td class="@CellClass(column)">
+                                @if (column.ChildContent is not null)
+                                {
+                                    @column.ChildContent(row)
+                                }
+                                else if (column.Text is not null)
+                                {
+                                    @column.Text(row)
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+
+        @if (RendersFooter)
+        {
+            <tfoot class="table-group-divider fw-semibold">
+                <tr>
+                    @foreach (var column in VisibleColumns)
+                    {
+                        <td class="@CellClass(column)">
+                            @if (column.FooterContent is not null)
+                            {
+                                @column.FooterContent(Rows)
+                            }
+                            else if (column.FooterValue is not null)
+                            {
+                                @column.FooterValue(Rows)
+                            }
+                            else
+                            {
+                                @column.FooterText
+                            }
+                        </td>
+                    }
+                </tr>
+            </tfoot>
+        }
+    </table>
+</div>
+
+@code {
+    /// <summary>The rows to render. A null list renders the empty state, not an exception.</summary>
+    [Parameter]
+    public IReadOnlyList<TItem>? Items { get; set; }
+
+    /// <summary>The <see cref="Column{TItem}"/> declarations.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Classes on the <c>&lt;table&gt;</c> itself.</summary>
+    [Parameter]
+    public string TableCssClass { get; set; } = "table table-sm align-middle";
+
+    /// <summary>
+    /// A description of the table for screen readers, visually hidden by default. Worth setting on
+    /// any table whose heading is not immediately above it.
+    /// </summary>
+    [Parameter]
+    public string? Caption { get; set; }
+
+    /// <summary>Set to something visible to show the caption on screen too.</summary>
+    [Parameter]
+    public string CaptionCssClass { get; set; } = "visually-hidden";
+
+    /// <summary>What a table with no rows says.</summary>
+    [Parameter]
+    public string? EmptyText { get; set; }
+
+    /// <summary>What a table with no rows shows, when a sentence is not enough.</summary>
+    [Parameter]
+    public RenderFragment? EmptyContent { get; set; }
+
+    /// <summary>Per-row classes, for highlighting negative balances or inactive records.</summary>
+    [Parameter]
+    public Func<TItem, string?>? RowCssClass { get; set; }
+
+    /// <summary>
+    /// A stable identity per row for Blazor's <c>@@key</c>. Without one, reordering a table reuses
+    /// the wrong DOM nodes and any focus or input state inside a cell follows the position rather
+    /// than the record.
+    /// </summary>
+    [Parameter]
+    public Func<TItem, object>? RowKey { get; set; }
+
+    /// <summary>
+    /// Forces the footer on or off. Left null the footer appears exactly when some column defines
+    /// footer content, which is what you want almost always.
+    /// </summary>
+    [Parameter]
+    public bool? ShowFooter { get; set; }
+
+    private readonly List<Column<TItem>> _columns = new();
+    private bool _layoutDirty;
+
+    private IReadOnlyList<TItem> Rows => Items ?? Array.Empty<TItem>();
+
+    /// <summary>The columns actually drawn, in declaration order. The single source for all three rows.</summary>
+    internal IReadOnlyList<Column<TItem>> VisibleColumns =>
+        _columns.Where(c => c.Visible).ToList();
+
+    private bool RendersFooter =>
+        ShowFooter ?? _columns.Any(c => c.Visible && c.HasFooter);
+
+    internal void AddColumn(Column<TItem> column)
+    {
+        _columns.Add(column);
+        _layoutDirty = true;
+    }
+
+    internal void RemoveColumn(Column<TItem> column)
+    {
+        if (_columns.Remove(column))
+        {
+            _layoutDirty = true;
+        }
+    }
+
+    internal void NotifyColumnChanged() => _layoutDirty = true;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Columns register while this render is being applied, so the first pass draws an empty
+        // table and this schedules the pass that draws the real one. It terminates because a
+        // column only reports a change when its layout signature actually moved.
+        if (!_layoutDirty)
+        {
+            return;
+        }
+
+        _layoutDirty = false;
+        StateHasChanged();
+    }
+
+    private static string HeaderClass(Column<TItem> column) =>
+        Combine(column.Align == ColumnAlign.Number ? "num" : null, column.HeaderCssClass);
+
+    private static string CellClass(Column<TItem> column) =>
+        Combine(column.Align == ColumnAlign.Number ? "num" : null, column.CellCssClass);
+
+    private static string Combine(string? a, string? b)
+    {
+        if (string.IsNullOrWhiteSpace(a))
+        {
+            return b ?? string.Empty;
+        }
+
+        return string.IsNullOrWhiteSpace(b) ? a : $"{a} {b}";
+    }
+}

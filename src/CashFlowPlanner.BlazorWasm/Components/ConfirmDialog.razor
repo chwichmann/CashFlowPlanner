@@ -1,73 +1,90 @@
-﻿@if (_isOpen)
-{
-    <div class="modal-backdrop fade show"></div>
+@using CashFlowPlanner.BlazorWasm.Resources
+@using Microsoft.Extensions.Localization
 
-    <div class="modal fade show d-block"
-         tabindex="-1"
-         role="dialog">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@_title</h5>
+@inject IStringLocalizer<SharedResource> L
 
-                    <button type="button"
-                            class="btn-close"
-                            aria-label="Close"
-                            @onclick="Cancel">
-                    </button>
-                </div>
+@*
+    "Are you sure?" as an awaitable call:
 
-                <div class="modal-body">
-                    <p class="mb-0">@_message</p>
-                </div>
+        var confirmed = await _confirmDialog.ShowAsync(title, message);
 
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            @onclick="Cancel">
-                        Cancel
-                    </button>
+    Everything about how it looks and behaves is now AppModal's problem - backdrop, focus trap,
+    initial focus, focus restore, Escape, the page lock, aria-modal and aria-labelledby, and which
+    side the commit button sits on. What is left here is the one thing this component is for:
+    turning a dialog into a Task<bool>.
 
-                    <button type="button"
-                            class="btn btn-danger"
-                            @onclick="Confirm">
-                        Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+    It also stops being English-only. "Confirm", "Are you sure?", "Cancel", "Delete" and
+    aria-label="Close" were hardcoded in a component sitting in a fully localized app, so a German
+    user got five English words in the middle of a German page - and the Close button was announced
+    in English by a German screen reader.
+*@
+
+<AppModal Visible="_isOpen"
+          Title="@_title"
+          ConfirmText="@_confirmText"
+          ConfirmCssClass="@_confirmCssClass"
+          OnConfirm="Confirm"
+          OnCancel="Cancel">
+    <p class="mb-0">@_message</p>
+</AppModal>
 
 @code {
     private bool _isOpen;
-    private string _title = "Confirm";
-    private string _message = "Are you sure?";
+    private string _title = string.Empty;
+    private string _message = string.Empty;
+    private string _confirmText = string.Empty;
+    private string _confirmCssClass = DangerCssClass;
     private TaskCompletionSource<bool>? _completionSource;
 
+    private const string DangerCssClass = "btn btn-danger";
+
+    /// <summary>
+    /// Shows the dialog and completes with the user's answer. Escape, the close button and Cancel
+    /// all complete with false.
+    /// </summary>
+    public Task<bool> ShowAsync(string title, string message) =>
+        ShowAsync(title, message, confirmText: null, confirmCssClass: null);
+
+    /// <summary>
+    /// As above, with control over the commit button. The default is a red "Delete", because every
+    /// call site today is a deletion - but a confirmation is not always a deletion, and the button
+    /// should say what it does.
+    /// </summary>
     public Task<bool> ShowAsync(
         string title,
-        string message)
+        string message,
+        string? confirmText,
+        string? confirmCssClass)
     {
-        _title = title;
-        _message = message;
+        // A second Show while one is pending would otherwise leave the first caller awaiting a task
+        // that never completes.
+        _completionSource?.TrySetResult(false);
+
+        _title = string.IsNullOrWhiteSpace(title) ? L["Dialog_ConfirmTitle"].Value : title;
+        _message = string.IsNullOrWhiteSpace(message) ? L["Dialog_ConfirmMessage"].Value : message;
+        _confirmText = confirmText ?? L["Delete"].Value;
+        _confirmCssClass = confirmCssClass ?? DangerCssClass;
         _isOpen = true;
-        _completionSource = new TaskCompletionSource<bool>();
+        _completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         StateHasChanged();
 
         return _completionSource.Task;
     }
 
-    private void Confirm()
-    {
-        _isOpen = false;
-        _completionSource?.SetResult(true);
-    }
+    private void Confirm() => Close(true);
 
-    private void Cancel()
+    private void Cancel() => Close(false);
+
+    private void Close(bool result)
     {
         _isOpen = false;
-        _completionSource?.SetResult(false);
+
+        var completionSource = _completionSource;
+        _completionSource = null;
+
+        // TrySetResult, not SetResult: Escape arriving in the same frame as a click on Cancel would
+        // otherwise take the whole render down with an InvalidOperationException.
+        completionSource?.TrySetResult(result);
     }
 }

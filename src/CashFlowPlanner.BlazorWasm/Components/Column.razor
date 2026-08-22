@@ -1,0 +1,109 @@
+@typeparam TItem
+@implements IDisposable
+
+@*
+    One column of a DataTable. Renders no markup of its own: it registers itself with the
+    surrounding DataTable, which draws the header cell, every body cell and the footer cell from
+    the same definition. That is the whole point - a column is declared once and the three rows
+    that make it up can no longer drift apart.
+*@
+
+@code {
+    [CascadingParameter]
+    public DataTable<TItem>? Owner { get; set; }
+
+    /// <summary>Header text. Ignored when <see cref="HeaderContent"/> is set.</summary>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <summary>Header markup, for a column that needs a sort button or an icon.</summary>
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
+
+    /// <summary>Text alignment, and with it the <c>num</c> class. Defaults to <see cref="ColumnAlign.Text"/>.</summary>
+    [Parameter]
+    public ColumnAlign Align { get; set; } = ColumnAlign.Text;
+
+    /// <summary>
+    /// The cell's value as text. The common case; use <see cref="ChildContent"/> when a cell needs
+    /// markup. Setting both is a mistake and <see cref="ChildContent"/> wins.
+    /// </summary>
+    [Parameter]
+    public Func<TItem, string>? Text { get; set; }
+
+    /// <summary>The cell's markup, for badges, links and buttons.</summary>
+    [Parameter]
+    public RenderFragment<TItem>? ChildContent { get; set; }
+
+    /// <summary>A literal footer cell, e.g. a "Total" label in the first column.</summary>
+    [Parameter]
+    public string? FooterText { get; set; }
+
+    /// <summary>
+    /// A footer cell computed from the rows the table is showing - the sum, the count, the average.
+    /// It receives exactly the items rendered above it, so a filtered table totals what the user
+    /// can see.
+    /// </summary>
+    [Parameter]
+    public Func<IReadOnlyList<TItem>, string>? FooterValue { get; set; }
+
+    /// <summary>A footer cell as markup, when text is not enough.</summary>
+    [Parameter]
+    public RenderFragment<IReadOnlyList<TItem>>? FooterContent { get; set; }
+
+    /// <summary>Extra classes for the body and footer cells.</summary>
+    [Parameter]
+    public string? CellCssClass { get; set; }
+
+    /// <summary>Extra classes for the header cell.</summary>
+    [Parameter]
+    public string? HeaderCssClass { get; set; }
+
+    /// <summary>
+    /// Set false to drop the column. Prefer this over wrapping the column in an @@if: the column
+    /// list is built in declaration order as the components initialise, so a column that appears
+    /// only sometimes would register at the end rather than in its declared position.
+    /// </summary>
+    [Parameter]
+    public bool Visible { get; set; } = true;
+
+    /// <summary>True when this column contributes anything to the footer row.</summary>
+    internal bool HasFooter =>
+        FooterContent is not null || FooterValue is not null || !string.IsNullOrEmpty(FooterText);
+
+    private string? _layoutSignature;
+
+    protected override void OnInitialized()
+    {
+        if (Owner is null)
+        {
+            throw new InvalidOperationException(
+                $"<Column> must be placed inside a <DataTable TItem=\"{typeof(TItem).Name}\">.");
+        }
+
+        Owner.AddColumn(this);
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Blazor sets a child's parameters *after* the parent has already built its render tree,
+        // so a changed title or alignment would show up one frame late. Anything that affects the
+        // table's shape is folded into a signature; when it moves, the table is asked to render
+        // again. Delegates are deliberately excluded - a lambda written inline in the page is a new
+        // object on every render and would spin the table forever.
+        var signature = string.Create(
+            System.Globalization.CultureInfo.InvariantCulture,
+            $"{Title}|{Align}|{CellCssClass}|{HeaderCssClass}|{Visible}|{HasFooter}|{HeaderContent is not null}");
+
+        if (signature != _layoutSignature)
+        {
+            _layoutSignature = signature;
+            Owner?.NotifyColumnChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        Owner?.RemoveColumn(this);
+    }
+}
