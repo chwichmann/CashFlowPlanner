@@ -12,7 +12,11 @@
     <AppUpdateBanner />
     <UiFeedbackBanner />
     <main class="app-main">
-        <div class="content px-4 py-3" @key="_appStateRefreshKey">
+        @* .app-container (app.css) is the same class the navbar's inner element
+           uses, so the page content and the brand share a left edge at every
+           viewport width. Do not add horizontal padding utilities here: the
+           container owns the gutter (finding U2). *@
+        <div class="app-container content" @key="_appStateRefreshKey">
             @if (!_cacheInitialized)
             {
                 <div class="alert alert-info">

@@ -67,6 +67,38 @@ table {
 }
 
 /*
+    The one page-width container (finding U2).
+
+    The navbar used Bootstrap's .container-fluid (edge to edge, 0.75rem gutter)
+    while the content wrapper used max-width: 1600px + margin auto + .px-4. The
+    two left edges therefore never matched, and above 1600px the gap grew with
+    the viewport - 65.5px apart at 1710px. Both now use this class, so the brand
+    and the page <h1> line up by construction rather than by coincidence, at
+    every viewport width.
+
+    It is global rather than scoped because two components share it (NavMenu and
+    MainLayout) and scoped .razor.css cannot cross that boundary.
+*/
+.app-container {
+    width: 100%;
+    max-width: var(--app-max-width);
+    margin-inline: auto;
+    padding-inline: var(--app-gutter);
+}
+
+/*
+    Bootstrap gives the navbar's inner element its flex layout by matching the
+    literal .container/.container-fluid class names, so replacing that class
+    means restating the rule here.
+*/
+.navbar > .app-container {
+    display: flex;
+    flex-wrap: inherit;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/*
     Bootstrap 5.3 reads --bs-primary for utilities, links and focus rings, but the
     button variants still bake the literal hex into their own --bs-btn-* block.
     Re-point those at the token so a brand change stays a one-line edit in

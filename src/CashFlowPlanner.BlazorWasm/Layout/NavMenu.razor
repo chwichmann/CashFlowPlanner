@@ -16,7 +16,11 @@
 @inject UiFeedbackService Feedback
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark app-navbar">
-    <div class="container-fluid">
+    @* .app-container, not .container-fluid: the same class MainLayout wraps the
+       page content in, so the brand and the page <h1> share a left edge at every
+       viewport width (finding U2). app.css restates the flex layout Bootstrap
+       only grants its own .container* classes inside a navbar. *@
+    <div class="app-container">
         <NavLink class="navbar-brand" href="" Match="NavLinkMatch.All">
             CashFlow Planner
         </NavLink>
