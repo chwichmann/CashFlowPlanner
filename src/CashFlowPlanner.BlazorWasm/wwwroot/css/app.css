@@ -6,15 +6,62 @@
     that component's scoped .razor.css file, not here.
 */
 
-html, body {
+/*
+    Root font-size is the browser default again (finding L3).
+
+    This file used to declare `html, body { font-size: 14px }`, which put the
+    whole app 12.5% below the 16px baseline every rem value in vendored Bootstrap
+    is authored against: .btn padding, .form-control height, grid gutters and the
+    spacing utilities all silently shrank, and nothing in the app was ever
+    designed at those sizes. Sizing is now explicit instead: the root is 16px and
+    anything that wants to be smaller says so with a token.
+
+    16px rather than 100%: 100% resolves to the browser's configured default font
+    size, which is not always 16 (a reader who has raised it to 20px would get an
+    app 25% larger than every rem in Bootstrap assumes - the same class of bug in
+    the other direction). Page zoom still scales everything.
+*/
+html {
+    font-size: 16px;
+}
+
+body {
     font-family: var(--app-font-sans);
-    font-size: 14px;
+    font-size: var(--app-font-size-base);
+    line-height: var(--app-line-height);
+}
+
+/*
+    Heading scale. Bootstrap's own headings are hardcoded rem values (h1 2.5rem
+    .. h6 1rem) that were only ever tolerable because the root was 14px; at a
+    true 16px root they are far too large for a dense financial UI. Restate them
+    from the 5-step scale so the sizes are a decision rather than a side effect.
+*/
+h1 {
+    font-size: var(--app-font-size-2xl);
+}
+
+h2 {
+    font-size: var(--app-font-size-xl);
+}
+
+h3 {
+    font-size: var(--app-font-size-lg);
+}
+
+h4, h5 {
+    font-size: var(--app-font-size-base);
+}
+
+h6 {
+    font-size: var(--app-font-size-sm);
 }
 
 h1:focus {
     outline: none;
 }
 
+/* Tables carry the most text per pixel, so they take the small step. */
 table {
     font-size: var(--app-font-size-sm);
 }
