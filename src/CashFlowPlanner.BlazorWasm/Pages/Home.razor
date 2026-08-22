@@ -1,6 +1,5 @@
 ﻿@page "/"
 
-@using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core
 @using CashFlowPlanner.BlazorWasm.Services
@@ -9,198 +8,152 @@
 @inherits AppStateAwarePage
 
 @inject CashFlowAppState AppState
+@inject AppFormatter Formatter
 @inject IStringLocalizer<SharedResource> L
 @inject EnumLocalizer EnumL
 
-<PageTitle>CashFlow Planner</PageTitle>
+@*
+    The landing page deliberately does not set RequiresPlan: it is the one route that has to be
+    useful with nothing loaded, and its own PlanEmptyState sits between the two cards rather than
+    replacing the page body.
+*@
+<PageScaffold Title="CashFlow Planner"
+              DocumentTitle="CashFlow Planner"
+              Subtitle='@L["Home_Text"]'>
 
-<h1>CashFlow Planner</h1>
+    @if (AppState.CurrentPlan is null)
+    {
+        <PlanEmptyState Message='@L["Home_NoPlanLoaded"]' />
+    }
+    else
+    {
+        var plan = AppState.CurrentPlan;
 
-<p>
-    @L["Home_Text"]
-</p>
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>@L["Home_LoadedPlan"]</strong>
+            </div>
 
-@if (AppState.CurrentPlan is null)
-{
-    <PlanEmptyState Message='@L["Home_NoPlanLoaded"]' />
-}
-else
-{
-    var plan = AppState.CurrentPlan;
+            <div class="card-body">
+                <h6>@plan.Name</h6>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>@L["Home_LoadedPlan"]</strong>
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">@L["Home_BaseCurrency"]</dt>
+                    <dd class="col-sm-9">@plan.BaseCurrency</dd>
+
+                    <dt class="col-sm-3">@L["Home_Accounts"]</dt>
+                    <dd class="col-sm-9">@plan.Accounts.Count</dd>
+
+                    <dt class="col-sm-3">@L["Home_Transactions"]</dt>
+                    <dd class="col-sm-9">@plan.Transactions.Count</dd>
+
+                    <dt class="col-sm-3">@L["Home_Morgages"]</dt>
+                    <dd class="col-sm-9">@plan.Mortgages.Count</dd>
+
+                    <dt class="col-sm-3">@L["Home_CreditCards"]</dt>
+                    <dd class="col-sm-9">@plan.CreditCards.Count</dd>
+
+                    <dt class="col-sm-3">@L["Home_Persons"]</dt>
+                    <dd class="col-sm-9">@plan.Persons.Count</dd>
+
+                    <dt class="col-sm-3">@L["Home_Simulation"]</dt>
+                    <dd class="col-sm-9">
+                        @Text(
+                            "Home_SimulationDateRange",
+                            Formatter.Date(plan.SimulationSettings.StartDate),
+                            Formatter.Date(plan.SimulationSettings.EndDate))
+                    </dd>
+                </dl>
+            </div>
         </div>
+    }
 
-        <div class="card-body">
-            <h6>@plan.Name</h6>
+    @if (AppState.CurrentSimulationResult is not null && AppState.CurrentPlan is not null)
+    {
+        var result = AppState.CurrentSimulationResult;
+        var plan = AppState.CurrentPlan;
+        var endDate = plan.SimulationSettings.EndDate;
 
-            <dl class="row mb-0">
-                <dt class="col-sm-3">@L["Home_BaseCurrency"]</dt>
-                <dd class="col-sm-9">@plan.BaseCurrency</dd>
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>@L["Home_SimulationResult"]</strong>
+            </div>
 
-                <dt class="col-sm-3">@L["Home_Accounts"]</dt>
-                <dd class="col-sm-9">@plan.Accounts.Count</dd>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">@L["Home_SimulationEvents"]</dt>
+                    <dd class="col-sm-9">@result.Events.Count</dd>
 
-                <dt class="col-sm-3">@L["Home_Transactions"]</dt>
-                <dd class="col-sm-9">@plan.Transactions.Count</dd>
+                    <dt class="col-sm-3">@L["Home_SimulationBalancePoints"]</dt>
+                    <dd class="col-sm-9">@result.BalancePoints.Count</dd>
 
-                <dt class="col-sm-3">@L["Home_Morgages"]</dt>
-                <dd class="col-sm-9">@plan.Mortgages.Count</dd>
+                    <dt class="col-sm-3">@L["Home_SimulationWarnings"]</dt>
+                    <dd class="col-sm-9">@result.Warnings.Count</dd>
+                </dl>
 
-                <dt class="col-sm-3">@L["Home_CreditCards"]</dt>
-                <dd class="col-sm-9">@plan.CreditCards.Count</dd>
+                <h6>@L["Home_EndBalances"]</h6>
 
-                <dt class="col-sm-3">@L["Home_Persons"]</dt>
-                <dd class="col-sm-9">@plan.Persons.Count</dd>
+                <DataTable Items="@plan.Accounts.OrderBy(x => x.Name).ToList()"
+                           RowKey="@(account => account.Id)"
+                           EmptyText='@L["Account_NoAccounts"]'
+                           Caption='@L["Home_EndBalances"]'>
+                    <Column Title='@L["Home_EndBalancesAccount"]' Text="@(account => account.Name)" />
+                    <Column Title='@L["Home_EndBalancesType"]' Text="@(account => EnumL.Translate(account.Type))" />
+                    <Column Title='@L["Home_EndBalancesEndBalance"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(account => Formatter.Money(result.GetBalance(account.Id, endDate)))" />
+                    <Column Title='@L["Home_EndBalancesCurrency"]' Text="@(account => account.Currency)" />
+                </DataTable>
 
-                <dt class="col-sm-3">@L["Home_Simulation"]</dt>
-                <dd class="col-sm-9">
-                    @Text(
-                        "Home_SimulationDateRange",
-                        FormatDate(plan.SimulationSettings.StartDate),
-                        FormatDate(plan.SimulationSettings.EndDate))
-                </dd>
-            </dl>
-        </div>
-    </div>
-}
+                @if (result.Warnings.Count > 0)
+                {
+                    <h6>@L["Home_EndBalancesWarnings"]</h6>
 
-@if (AppState.CurrentSimulationResult is not null && AppState.CurrentPlan is not null)
-{
-    var result = AppState.CurrentSimulationResult;
-    var plan = AppState.CurrentPlan;
+                    <DataTable Items="@result.Warnings.Take(50).ToList()"
+                               Caption='@L["Home_EndBalancesWarnings"]'>
+                        <Column Title='@L["Home_EndBalancesWarningsDate"]'
+                                Text="@(warning => Formatter.Date(warning.Date ?? DateOnly.MinValue))" />
+                        <Column Title='@L["Home_EndBalancesWarningsSeverity"]'
+                                Text="@(warning => warning.Severity.ToString())" />
+                        <Column Title='@L["Home_EndBalancesWarningsCode"]' Text="@(warning => warning.Code)" />
+                        <Column Title='@L["Home_EndBalancesWarningsMessage"]' Text="@(warning => warning.Message)" />
+                    </DataTable>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <strong>@L["Home_SimulationResult"]</strong>
-        </div>
-
-        <div class="card-body">
-            <dl class="row">
-                <dt class="col-sm-3">@L["Home_SimulationEvents"]</dt>
-                <dd class="col-sm-9">@result.Events.Count</dd>
-
-                <dt class="col-sm-3">@L["Home_SimulationBalancePoints"]</dt>
-                <dd class="col-sm-9">@result.BalancePoints.Count</dd>
-
-                <dt class="col-sm-3">@L["Home_SimulationWarnings"]</dt>
-                <dd class="col-sm-9">@result.Warnings.Count</dd>
-            </dl>
-
-            <h6>@L["Home_EndBalances"]</h6>
-
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>@L["Home_EndBalancesAccount"]</th>
-                        <th>@L["Home_EndBalancesType"]</th>
-                        <th class="text-end">@L["Home_EndBalancesEndBalance"]</th>
-                        <th>@L["Home_EndBalancesCurrency"]</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
+                    @if (result.Warnings.Count > 50)
                     {
-                        var balance = result.GetBalance(
-                            account.Id,
-                            plan.SimulationSettings.EndDate);
-
-                        <tr>
-                            <td>@account.Name</td>
-                            <td>@EnumL.Translate(account.Type)</td>
-                            <td class="text-end">@FormatAmount(balance)</td>
-                            <td>@account.Currency</td>
-                        </tr>
+                        <div class="alert alert-info">
+                            @L["Home_EndBalancesWarningsInfo"]
+                        </div>
                     }
-                </tbody>
-            </table>
+                }
 
-            @if (result.Warnings.Count > 0)
-            {
-                <h6>@L["Home_EndBalancesWarnings"]</h6>
+                <h6>@L["Home_UpcomingEvents"]</h6>
 
-                <table class="table table-sm table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>@L["Home_EndBalancesWarningsDate"]</th>
-                            <th>@L["Home_EndBalancesWarningsSeverity"]</th>
-                            <th>@L["Home_EndBalancesWarningsCode"]</th>
-                            <th>@L["Home_EndBalancesWarningsMessage"]</th>
-                        </tr>
-                    </thead>
+                <DataTable Items="@result.Events.Take(100).ToList()"
+                           Caption='@L["Home_UpcomingEvents"]'>
+                    <Column Title='@L["Home_UpcomingEventsDate"]'
+                            Text="@(cashFlowEvent => Formatter.Date(cashFlowEvent.Date))" />
+                    <Column Title='@L["Home_UpcomingEventsName"]' Text="@(cashFlowEvent => cashFlowEvent.Name)" />
+                    <Column Title='@L["Home_UpcomingEventsKind"]'
+                            Text="@(cashFlowEvent => EnumL.Translate(cashFlowEvent.Kind))" />
+                    <Column Title='@L["Home_UpcomingEventsAmount"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(cashFlowEvent => Formatter.Money(cashFlowEvent.Amount))" />
+                    <Column Title='@L["Home_UpcomingEventsCurrency"]' Text="@(cashFlowEvent => cashFlowEvent.Currency)" />
+                </DataTable>
 
-                    <tbody>
-                        @foreach (var warning in result.Warnings.Take(50))
-                        {
-                            <tr>
-                                <td>@FormatDate(warning.Date ?? DateOnly.MinValue)</td>
-                                <td>@warning.Severity</td>
-                                <td>@warning.Code</td>
-                                <td>@warning.Message</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-
-                @if (result.Warnings.Count > 50)
+                @if (result.Events.Count > 100)
                 {
                     <div class="alert alert-info">
-                        @L["Home_EndBalancesWarningsInfo"]
+                        @L["Home_UpcomingEventsInfo"]
                     </div>
                 }
-            }
-
-            <h6>@L["Home_UpcomingEvents"]</h6>
-
-            <table class="table table-sm table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th>@L["Home_UpcomingEventsDate"]</th>
-                        <th>@L["Home_UpcomingEventsName"]</th>
-                        <th>@L["Home_UpcomingEventsKind"]</th>
-                        <th class="text-end">@L["Home_UpcomingEventsAmount"]</th>
-                        <th>@L["Home_UpcomingEventsCurrency"]</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var cashFlowEvent in result.Events.Take(100))
-                    {
-                        <tr>
-                            <td>@FormatDate(cashFlowEvent.Date)</td>
-                            <td>@cashFlowEvent.Name</td>
-                            <td>@EnumL.Translate(cashFlowEvent.Kind)</td>
-                            <td class="text-end">@FormatAmount(cashFlowEvent.Amount)</td>
-                            <td>@cashFlowEvent.Currency</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-
-            @if (result.Events.Count > 100)
-            {
-                <div class="alert alert-info">
-                    @L["Home_UpcomingEventsInfo"]
-                </div>
-            }
+            </div>
         </div>
-    </div>
-}
+    }
+</PageScaffold>
 
 @code {
-    private static string FormatAmount(decimal amount)
-    {
-        return amount.ToString("N2", CultureInfo.CurrentCulture);
-    }
-
-    private static string FormatDate(DateOnly date)
-    {
-        return date.ToString("d", CultureInfo.CurrentCulture);
-    }
-
     private string Text(string key, params object[] arguments)
     {
         return L[key, arguments].Value;
