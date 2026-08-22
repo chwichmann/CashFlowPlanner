@@ -104,7 +104,12 @@ public sealed class SimulationEngine
             plan.Mortgages,
             simulationStart,
             simulationEnd,
-            plan.BaseCurrency);
+            plan.BaseCurrency,
+
+            // Mortgage payment dates step back off the plan's bank-off days, exactly as
+            // transaction schedules already do. Without this a quarterly instalment could
+            // fall on 1 August while the standing order next to it correctly moved.
+            plan);
 
         var mortgageEvents = mortgageGeneration.Events;
 

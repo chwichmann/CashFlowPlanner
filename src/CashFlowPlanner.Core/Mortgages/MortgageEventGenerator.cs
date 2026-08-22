@@ -25,7 +25,8 @@ public sealed class MortgageEventGenerator
     IEnumerable<MortgageContract> mortgages,
     DateOnly simulationStart,
     DateOnly simulationEnd,
-    string baseCurrency = "CHF")
+    string baseCurrency = "CHF",
+    CashFlowPlan? bankCalendar = null)
     {
         var events = new List<CashFlowEvent>();
         var principalPoints = new List<MortgagePrincipalPoint>();
@@ -39,7 +40,8 @@ public sealed class MortgageEventGenerator
                 mortgage,
                 simulationStart,
                 simulationEnd,
-                baseCurrency);
+                baseCurrency,
+                bankCalendar);
 
             events.AddRange(result.Events);
             principalPoints.AddRange(result.PrincipalPoints);
@@ -67,7 +69,8 @@ public sealed class MortgageEventGenerator
     MortgageContract mortgage,
     DateOnly simulationStart,
     DateOnly simulationEnd,
-    string baseCurrency)
+    string baseCurrency,
+    CashFlowPlan? bankCalendar)
     {
         if (mortgage.BillingCalendar != MortgageBillingCalendar.BankQuarters)
         {
@@ -100,6 +103,7 @@ public sealed class MortgageEventGenerator
             mortgage.GetCalculationPrincipal(),
             calculationPrincipalDate,
             effectiveSimulationStart,
+            bankCalendar,
             out var rolledInstalments);
 
         if (calculationPrincipalDate > effectiveSimulationStart)
@@ -144,7 +148,8 @@ public sealed class MortgageEventGenerator
         var periods = _billingPeriodGenerator.GeneratePeriods(
             mortgage.PaymentInterval,
             effectiveSimulationStart,
-            simulationEnd);
+            simulationEnd,
+            bankCalendar);
 
         if (mortgage.EndDate is not null)
         {
@@ -285,6 +290,7 @@ public sealed class MortgageEventGenerator
         decimal knownPrincipal,
         DateOnly knownAtDate,
         DateOnly targetDate,
+        CashFlowPlan? bankCalendar,
         out int rolledInstalments)
     {
         rolledInstalments = 0;
@@ -310,7 +316,7 @@ public sealed class MortgageEventGenerator
         var toExclusive = Max(knownAtDate, targetDate);
 
         var billedPaymentDates = _billingPeriodGenerator
-            .GeneratePeriods(mortgage.PaymentInterval, fromInclusive, toExclusive)
+            .GeneratePeriods(mortgage.PaymentInterval, fromInclusive, toExclusive, bankCalendar)
             .Where(x => x.PaymentDate < toExclusive)
             .Where(x => IsBilledPeriod(mortgage, x))
             .ToList();

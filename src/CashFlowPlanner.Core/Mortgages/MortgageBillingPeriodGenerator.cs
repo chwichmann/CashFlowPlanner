@@ -15,7 +15,8 @@ public sealed class MortgageBillingPeriodGenerator
     public IReadOnlyList<MortgageBillingPeriod> GeneratePeriods(
         MortgagePaymentInterval interval,
         DateOnly simulationStart,
-        DateOnly simulationEnd)
+        DateOnly simulationEnd,
+        CashFlowPlan? bankCalendar = null)
     {
         if (simulationEnd < simulationStart)
         {
@@ -39,7 +40,14 @@ public sealed class MortgageBillingPeriodGenerator
         {
             for (var month = 1; month <= 12; month += intervalMonths)
             {
-                AddPeriod(periods, year, month, intervalMonths, simulationStart, simulationEnd);
+                AddPeriod(
+                    periods,
+                    year,
+                    month,
+                    intervalMonths,
+                    simulationStart,
+                    simulationEnd,
+                    bankCalendar);
             }
         }
 
@@ -51,24 +59,42 @@ public sealed class MortgageBillingPeriodGenerator
     /// <summary>Quarterly periods. Kept because most callers and tests mean exactly this.</summary>
     public IReadOnlyList<MortgageBillingPeriod> GenerateBankQuarterPeriods(
         DateOnly simulationStart,
-        DateOnly simulationEnd)
+        DateOnly simulationEnd,
+        CashFlowPlan? bankCalendar = null)
     {
         return GeneratePeriods(
             MortgagePaymentInterval.Quarterly,
             simulationStart,
-            simulationEnd);
+            simulationEnd,
+            bankCalendar);
     }
 
-    public static DateOnly PreviousBusinessDayStrict(DateOnly date)
+    /// <summary>
+    /// The last business day strictly before <paramref name="date"/>.
+    ///
+    /// With a <paramref name="bankCalendar"/> this honours the plan's own bank-off days and
+    /// its weekend setting, the same calendar every transaction schedule already uses. Without
+    /// one it skips weekends only, which is what this did before the plan was available here -
+    /// and it is why a quarterly mortgage payment could land on 1 August or 25 December while
+    /// every ordinary standing order beside it correctly stepped back.
+    /// </summary>
+    public static DateOnly PreviousBusinessDayStrict(
+        DateOnly date,
+        CashFlowPlan? bankCalendar = null)
     {
         var current = date.AddDays(-1);
 
-        while (IsWeekend(current))
+        if (bankCalendar is null)
         {
-            current = current.AddDays(-1);
+            while (IsWeekend(current))
+            {
+                current = current.AddDays(-1);
+            }
+
+            return current;
         }
 
-        return current;
+        return BankCalendarCalculator.MoveToPreviousBankBusinessDay(current, bankCalendar);
     }
 
     private static void AddPeriod(
@@ -77,11 +103,12 @@ public sealed class MortgageBillingPeriodGenerator
         int periodStartMonth,
         int intervalMonths,
         DateOnly simulationStart,
-        DateOnly simulationEnd)
+        DateOnly simulationEnd,
+        CashFlowPlan? bankCalendar)
     {
         var periodStart = new DateOnly(year, periodStartMonth, 1);
         var periodEndExclusive = periodStart.AddMonths(intervalMonths);
-        var paymentDate = PreviousBusinessDayStrict(periodEndExclusive);
+        var paymentDate = PreviousBusinessDayStrict(periodEndExclusive, bankCalendar);
 
         if (paymentDate < simulationStart || paymentDate > simulationEnd)
         {
