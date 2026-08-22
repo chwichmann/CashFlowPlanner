@@ -1,3 +1,6 @@
+﻿using CashFlowPlanner.BlazorWasm.Resources;
+using Microsoft.Extensions.Localization;
+
 namespace CashFlowPlanner.BlazorWasm.Services;
 
 /// <summary>
@@ -23,22 +26,20 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
     private readonly PlanFileService _planFiles;
     private readonly DiskAutoSaveService _disk;
     private readonly UiFeedbackService _feedback;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly TimeSpan _debounceDelay;
 
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private CancellationTokenSource? _debounceCts;
     private bool _pendingWrite;
 
-    // Reported once per lapse, not once per debounce. A revoked grant would otherwise raise a
-    // banner every time the user typed.
-    private bool _reportedPermissionLapse;
-
     public DiskAutoSaveCoordinator(
         CashFlowAppState appState,
         PlanFileService planFiles,
         DiskAutoSaveService disk,
-        UiFeedbackService feedback)
-        : this(appState, planFiles, disk, feedback, DefaultDebounceDelay)
+        UiFeedbackService feedback,
+        IStringLocalizer<SharedResource> localizer)
+        : this(appState, planFiles, disk, feedback, localizer, DefaultDebounceDelay)
     {
     }
 
@@ -47,12 +48,14 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
         PlanFileService planFiles,
         DiskAutoSaveService disk,
         UiFeedbackService feedback,
+        IStringLocalizer<SharedResource> localizer,
         TimeSpan debounceDelay)
     {
         _appState = appState;
         _planFiles = planFiles;
         _disk = disk;
         _feedback = feedback;
+        _localizer = localizer;
         _debounceDelay = debounceDelay;
     }
 
@@ -176,7 +179,6 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
         if (result.Ok)
         {
             LastWrittenAt = DateTimeOffset.UtcNow;
-            _reportedPermissionLapse = false;
 
             SetBehind(false);
 
@@ -187,15 +189,21 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
 
         if (result.NeedsPermission)
         {
-            if (_reportedPermissionLapse)
-            {
-                return;
-            }
-
-            _reportedPermissionLapse = true;
+            // Not an error. Browsers drop the grant after a reload unless the app is installed,
+            // so this is the expected one-click case. DiskReconnectBanner watches the status and
+            // offers the button, which is the thing a user can actually act on; raising a red
+            // alert here said "something broke" about something that had not, and then did not
+            // offer the remedy.
+            return;
         }
 
-        _feedback.Error(result.Message ?? "The linked file could not be written.");
+        // A genuine failure. The message from the browser is English and technical, so it is
+        // shown as detail behind a localized sentence rather than on its own.
+        var fileName = _disk.Status.FileName ?? string.Empty;
+
+        _feedback.Error(string.IsNullOrWhiteSpace(result.Message)
+            ? string.Format(_localizer["Disk_WriteFailedNoDetail"].Value, fileName)
+            : string.Format(_localizer["Disk_WriteFailed"].Value, fileName, result.Message));
     }
 
     private void SetBehind(bool behind)

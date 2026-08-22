@@ -2490,4 +2490,19 @@
   <data name="Settings_DiskInstallHint" xml:space="preserve">
     <value>Installiere die App, um den Klick zum erneuten Verbinden ganz zu sparen - eine installierte App behält den Zugriff.</value>
   </data>
+  <data name="Disk_ReconnectPrompt" xml:space="preserve">
+    <value>Verbinde dich erneut mit {0}, um weiter dorthin zu speichern. Browser fragen nach einem Neuladen erneut - ein Klick genügt.</value>
+  </data>
+  <data name="Disk_ReconnectAction" xml:space="preserve">
+    <value>Erneut verbinden</value>
+  </data>
+  <data name="Disk_ReconnectDismiss" xml:space="preserve">
+    <value>Jetzt nicht</value>
+  </data>
+  <data name="Disk_WriteFailed" xml:space="preserve">
+    <value>{0} konnte nicht geschrieben werden: {1}</value>
+  </data>
+  <data name="Disk_WriteFailedNoDetail" xml:space="preserve">
+    <value>{0} konnte nicht geschrieben werden.</value>
+  </data>
 </root>

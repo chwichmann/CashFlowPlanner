@@ -1,0 +1,81 @@
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using Microsoft.Extensions.Localization
+
+@implements IDisposable
+
+@inject DiskAutoSaveService Disk
+@inject DiskAutoSaveCoordinator DiskCoordinator
+@inject IStringLocalizer<SharedResource> L
+
+@*
+    Offers the one click that reconnects the linked file.
+
+    A browser drops the grant on a FileSystemFileHandle after a reload unless the app is
+    installed, and re-granting it requires a user gesture - the app cannot do it for itself,
+    by design. So this is a normal, expected, once-per-session step, not a failure, and it is
+    styled as one.
+
+    The first version reported it through the error channel: a red "Access to the linked file
+    needs to be granted again." in an otherwise German UI, with the button that fixes it buried
+    in Settings. It said something had broken, about something that had not, and then did not
+    offer the remedy.
+*@
+
+@if (Show)
+{
+    <div class="alert alert-warning d-flex align-items-center justify-content-between mb-0 rounded-0 py-2"
+         role="status">
+        <span>
+            @string.Format(L["Disk_ReconnectPrompt"].Value, Disk.Status.FileName)
+        </span>
+
+        <span class="ms-3 text-nowrap">
+            <button type="button" class="btn btn-sm btn-primary" @onclick="ReconnectAsync">
+                @L["Disk_ReconnectAction"]
+            </button>
+            <button type="button" class="btn btn-sm btn-link" @onclick="() => _dismissed = true">
+                @L["Disk_ReconnectDismiss"]
+            </button>
+        </span>
+    </div>
+}
+
+@code {
+    private bool _dismissed;
+
+    private bool Show => Disk.Status.State == DiskLinkState.NeedsPermission && !_dismissed;
+
+    protected override void OnInitialized()
+    {
+        Disk.StatusChanged += OnChanged;
+        DiskCoordinator.Changed += OnChanged;
+    }
+
+    private void OnChanged()
+    {
+        // A fresh lapse should be offered again even if the last one was dismissed.
+        if (Disk.Status.State != DiskLinkState.NeedsPermission)
+        {
+            _dismissed = false;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ReconnectAsync()
+    {
+        // Straight off the click: requestPermission needs a user gesture and throws without one.
+        if (await Disk.ReconnectAsync())
+        {
+            // Catch the file up with whatever changed while it was disconnected.
+            await DiskCoordinator.FlushAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        Disk.StatusChanged -= OnChanged;
+        DiskCoordinator.Changed -= OnChanged;
+    }
+}

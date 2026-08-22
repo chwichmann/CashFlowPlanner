@@ -223,6 +223,12 @@ loading it, not by building.
 runtime is already close to a plain relink. It costs a workload install and an
 emcc relink on every CI run. Keep it only if AOT is planned; otherwise drop it.
 
+### Requested, not yet done
+
+- **Move bank import onto the Accounts page** and drop it from the navigation bar.
+  Importing a statement is something you do *to an account*, so it belongs there,
+  and the bar is carrying 12 destinations on one row. Requested 2026-08-22.
+
 ### Wave 3 — UI system
 
 Token layer (`tokens.css` overriding Bootstrap's own `--bs-*`), the six shared

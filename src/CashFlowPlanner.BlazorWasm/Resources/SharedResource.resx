@@ -2490,4 +2490,19 @@
   <data name="Settings_DiskInstallHint" xml:space="preserve">
     <value>Install the app to skip the reconnect click entirely - an installed app keeps its access.</value>
   </data>
+  <data name="Disk_ReconnectPrompt" xml:space="preserve">
+    <value>Reconnect to {0} to keep saving there. Browsers ask again after a reload, so this takes one click.</value>
+  </data>
+  <data name="Disk_ReconnectAction" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="Disk_ReconnectDismiss" xml:space="preserve">
+    <value>Not now</value>
+  </data>
+  <data name="Disk_WriteFailed" xml:space="preserve">
+    <value>{0} could not be written: {1}</value>
+  </data>
+  <data name="Disk_WriteFailedNoDetail" xml:space="preserve">
+    <value>{0} could not be written.</value>
+  </data>
 </root>
