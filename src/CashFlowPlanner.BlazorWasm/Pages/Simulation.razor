@@ -1,6 +1,5 @@
 ﻿@page "/simulation"
 
-@using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core
 @using CashFlowPlanner.BlazorWasm.Services
@@ -13,29 +12,23 @@
 
 @inject MonthlyCashflowSummaryService MonthlySummaryService
 @inject CashFlowAppState AppState
+@inject AppFormatter Formatter
 @inject IStringLocalizer<SharedResource> L
 @inject EnumLocalizer EnumL
 
-<PageTitle>@L["Simulation"] - CashFlow Planner</PageTitle>
+<PageScaffold Title='@L["Simulation"]'
+              RequiresPlan="true"
+              EmptyStateMessage='@L["Simulation_NoPlanLoaded"]'>
 
-<h1>@L["Simulation"]</h1>
-
-@if (AppState.CurrentPlan is null)
-{
-    <PlanEmptyState Message='@L["Simulation_NoPlanLoaded"]' />
-}
-else
-{
-    var plan = AppState.CurrentPlan;
-
-    @if (AppState.CurrentSimulationResult is null)
+    @if (AppState.CurrentPlan is null || AppState.CurrentSimulationResult is null)
     {
-        <div class="alert alert-info">
+        <div class="alert alert-info" role="alert">
             @L["Simulation_NoSimulationResult"]
         </div>
     }
     else
     {
+        var plan = AppState.CurrentPlan;
         var result = AppState.CurrentSimulationResult;
         var monthlySummaries = MonthlySummaryService.CreateMonthlySummary(plan, result);
         var fullMonthSummaries = monthlySummaries
@@ -50,7 +43,7 @@ else
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-3">@L["Simulation_Range"]</dt>
-                    <dd class="col-sm-9">@FormatDate(result.StartDate) - @FormatDate(result.EndDate)</dd>
+                    <dd class="col-sm-9">@Formatter.Date(result.StartDate) - @Formatter.Date(result.EndDate)</dd>
 
                     <dt class="col-sm-3">@L["Simulation_Events"]</dt>
                     <dd class="col-sm-9">@result.Events.Count</dd>
@@ -69,56 +62,38 @@ else
 
         <h4>@L["Simulation_MonthlyCashflowSummary"]</h4>
 
-        @if (fullMonthSummaries.Count == 0)
-        {
-            <div class="alert alert-info">
-                @L["Simulation_NoCompleteMonthCovered"]
-            </div>
-        }
-        else
-        {
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>@L["Simulation_Month"]</th>
-                        <th class="text-end">@L["Simulation_Income"]</th>
-                        <th class="text-end">@L["Simulation_Expenses"]</th>
-                        <th class="text-end">@L["Simulation_InternalOut"]</th>
-                        <th class="text-end">@L["Simulation_InternalIn"]</th>
-                        <th class="text-end">@L["Simulation_MortgagePayments"]</th>
-                        <th class="text-end">@L["Simulation_NetCashflow"]</th>
-                        <th class="text-end">@L["Simulation_EndLiquidBalance"]</th>
-                        <th class="text-end">@L["Simulation_Warnings"]</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var month in fullMonthSummaries)
+        <DataTable Items="fullMonthSummaries"
+                   RowKey="@(month => month.Label)"
+                   EmptyText='@L["Simulation_NoCompleteMonthCovered"]'
+                   Caption='@L["Simulation_MonthlyCashflowSummary"]'>
+            <Column Title='@L["Simulation_Month"]' Text="@(month => Formatter.MonthLabel(month.Label))" />
+            <Column Title='@L["Simulation_Income"]' Align="ColumnAlign.Number"
+                    Text="@(month => Formatter.Money(month.Income))" />
+            <Column Title='@L["Simulation_Expenses"]' Align="ColumnAlign.Number"
+                    Text="@(month => Formatter.Money(month.Expenses))" />
+            <Column Title='@L["Simulation_InternalOut"]' Align="ColumnAlign.Number"
+                    Text="@(month => Formatter.Money(month.InternalTransfersOut))" />
+            <Column Title='@L["Simulation_InternalIn"]' Align="ColumnAlign.Number"
+                    Text="@(month => Formatter.Money(month.InternalTransfersIn))" />
+            <Column Title='@L["Simulation_MortgagePayments"]' Align="ColumnAlign.Number"
+                    Text="@(month => Formatter.Money(month.MortgagePayments))" />
+            <Column Title='@L["Simulation_NetCashflow"]' Align="ColumnAlign.Number"
+                    Text="@(month => Formatter.Money(month.NetCashflow))" />
+            <Column Title='@L["Simulation_EndLiquidBalance"]' Align="ColumnAlign.Number"
+                    Text="@(month => Formatter.Money(month.EndLiquidBalance))" />
+            <Column Title='@L["Simulation_Warnings"]' Align="ColumnAlign.Number">
+                <ChildContent>
+                    @if (context.WarningCount > 0)
                     {
-                        <tr>
-                            <td>@FormatMonthLabel(month.Label)</td>
-                            <td class="text-end">@FormatAmount(month.Income)</td>
-                            <td class="text-end">@FormatAmount(month.Expenses)</td>
-                            <td class="text-end">@FormatAmount(month.InternalTransfersOut)</td>
-                            <td class="text-end">@FormatAmount(month.InternalTransfersIn)</td>
-                            <td class="text-end">@FormatAmount(month.MortgagePayments)</td>
-                            <td class="text-end">@FormatAmount(month.NetCashflow)</td>
-                            <td class="text-end">@FormatAmount(month.EndLiquidBalance)</td>
-                            <td class="text-end">
-                                @if (month.WarningCount > 0)
-                                {
-                                    <span class="badge bg-warning text-dark">@month.WarningCount</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">0</span>
-                                }
-                            </td>
-                        </tr>
+                        <span class="badge bg-warning text-dark">@context.WarningCount</span>
                     }
-                </tbody>
-            </table>
-        }
+                    else
+                    {
+                        <span class="text-muted">0</span>
+                    }
+                </ChildContent>
+            </Column>
+        </DataTable>
 
         @* If/when a monthly chart is added here, use fullMonthSummaries as its data source.
            Do not use monthlySummaries directly, because monthlySummaries can contain partial edge months. *@
@@ -127,83 +102,38 @@ else
         {
             <h4>@L["Simulation_MortgageSummary"]</h4>
 
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>@L["Simulation_Mortgage"]</th>
-                        <th>@L["Type"]</th>
-                        <th>@L["Simulation_Amortisation"]</th>
-                        <th class="text-end">@L["Simulation_StartPrincipal"]</th>
-                        <th class="text-end">@L["Simulation_ProjectedEndPrincipal"]</th>
-                        <th class="text-end">@L["Simulation_PrincipalChange"]</th>
-                        <th>@L["Currency"]</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var mortgage in plan.Mortgages.OrderBy(x => x.Name))
-                    {
-                        var startPrincipal = mortgage.CalculationPrincipal ?? mortgage.InitialPrincipal;
-                        var endPrincipal = GetProjectedMortgagePrincipal(
-                            mortgage,
-                            result,
-                            result.EndDate);
-                        var change = endPrincipal - startPrincipal;
-
-                        <tr>
-                            <td>@mortgage.Name</td>
-                            <td>@EnumL.Translate(mortgage.Type)</td>
-                            <td>@EnumL.Translate(mortgage.AmortisationMode)</td>
-                            <td class="text-end">@FormatAmount(startPrincipal)</td>
-                            <td class="text-end">@FormatAmount(endPrincipal)</td>
-                            <td class="text-end">@FormatAmount(change)</td>
-                            <td>@plan.BaseCurrency</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <DataTable Items="@plan.Mortgages.OrderBy(x => x.Name).ToList()"
+                       RowKey="@(mortgage => mortgage.Id)"
+                       Caption='@L["Simulation_MortgageSummary"]'>
+                <Column Title='@L["Simulation_Mortgage"]' Text="@(mortgage => mortgage.Name)" />
+                <Column Title='@L["Type"]' Text="@(mortgage => EnumL.Translate(mortgage.Type))" />
+                <Column Title='@L["Simulation_Amortisation"]'
+                        Text="@(mortgage => EnumL.Translate(mortgage.AmortisationMode))" />
+                <Column Title='@L["Simulation_StartPrincipal"]' Align="ColumnAlign.Number"
+                        Text="@(mortgage => Formatter.Money(GetStartPrincipal(mortgage)))" />
+                <Column Title='@L["Simulation_ProjectedEndPrincipal"]' Align="ColumnAlign.Number"
+                        Text="@(mortgage => Formatter.Money(GetProjectedMortgagePrincipal(mortgage, result, result.EndDate)))" />
+                <Column Title='@L["Simulation_PrincipalChange"]' Align="ColumnAlign.Number"
+                        Text="@(mortgage => Formatter.Money(
+                                   GetProjectedMortgagePrincipal(mortgage, result, result.EndDate)
+                                   - GetStartPrincipal(mortgage)))" />
+                <Column Title='@L["Currency"]' Text="@(mortgage => plan.BaseCurrency)" />
+            </DataTable>
 
             <h4>@L["Simulation_MortgageProjection"]</h4>
 
-            @if (result.MortgagePrincipalPoints.Count == 0)
-            {
-                <div class="alert alert-info">
-                    @L["Simulation_NoMortgagePrincipalProjection"]
-                </div>
-            }
-            else
-            {
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>@L["Date"]</th>
-                            <th>@L["Simulation_Mortgage"]</th>
-                            <th>@L["Type"]</th>
-                            <th>@L["Simulation_Amortisation"]</th>
-                            <th class="text-end">@L["Simulation_Principal"]</th>
-                            <th>@L["Currency"]</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach (var point in result.MortgagePrincipalPoints
-                            .OrderBy(x => x.Date)
-                            .ThenBy(x => x.MortgageName))
-                        {
-                            var mortgage = plan.Mortgages.SingleOrDefault(x => x.Id == point.MortgageId);
-
-                            <tr>
-                                <td>@FormatDate(point.Date)</td>
-                                <td>@point.MortgageName</td>
-                                <td>@(mortgage is null ? string.Empty : EnumL.Translate(mortgage.Type))</td>
-                                <td>@(mortgage is null ? string.Empty : EnumL.Translate(mortgage.AmortisationMode))</td>
-                                <td class="text-end">@FormatAmount(point.Principal)</td>
-                                <td>@point.Currency</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+            <DataTable Items="@result.MortgagePrincipalPoints.OrderBy(x => x.Date).ThenBy(x => x.MortgageName).ToList()"
+                       EmptyText='@L["Simulation_NoMortgagePrincipalProjection"]'
+                       Caption='@L["Simulation_MortgageProjection"]'>
+                <Column Title='@L["Date"]' Text="@(point => Formatter.Date(point.Date))" />
+                <Column Title='@L["Simulation_Mortgage"]' Text="@(point => point.MortgageName)" />
+                <Column Title='@L["Type"]' Text="@(point => GetMortgageTypeName(plan, point.MortgageId))" />
+                <Column Title='@L["Simulation_Amortisation"]'
+                        Text="@(point => GetMortgageAmortisationName(plan, point.MortgageId))" />
+                <Column Title='@L["Simulation_Principal"]' Align="ColumnAlign.Number"
+                        Text="@(point => Formatter.Money(point.Principal))" />
+                <Column Title='@L["Currency"]' Text="@(point => point.Currency)" />
+            </DataTable>
 
             var mortgageIds = plan.Mortgages
                 .Select(x => x.Id)
@@ -218,43 +148,18 @@ else
 
             <h4>@L["Simulation_MortgageEvents"]</h4>
 
-            @if (mortgageEvents.Count == 0)
-            {
-                <div class="alert alert-info">
-                    @L["Simulation_NoMortgageEvents"]
-                </div>
-            }
-            else
-            {
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>@L["Date"]</th>
-                            <th>@L["Name"]</th>
-                            <th>@L["Kind"]</th>
-                            <th>@L["Transaction_FromAccount"]</th>
-                            <th>@L["Transaction_ToAccount"]</th>
-                            <th class="text-end">@L["Amount"]</th>
-                            <th>@L["Category"]</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach (var cashFlowEvent in mortgageEvents)
-                        {
-                            <tr>
-                                <td>@FormatDate(cashFlowEvent.Date)</td>
-                                <td>@cashFlowEvent.Name</td>
-                                <td>@EnumL.Translate(cashFlowEvent.Kind)</td>
-                                <td>@GetAccountName(cashFlowEvent.FromAccountId)</td>
-                                <td>@GetAccountName(cashFlowEvent.ToAccountId)</td>
-                                <td class="text-end">@FormatAmount(cashFlowEvent.Amount) @cashFlowEvent.Currency</td>
-                                <td>@cashFlowEvent.Category</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+            <DataTable Items="mortgageEvents"
+                       EmptyText='@L["Simulation_NoMortgageEvents"]'
+                       Caption='@L["Simulation_MortgageEvents"]'>
+                <Column Title='@L["Date"]' Text="@(x => Formatter.Date(x.Date))" />
+                <Column Title='@L["Name"]' Text="@(x => x.Name)" />
+                <Column Title='@L["Kind"]' Text="@(x => EnumL.Translate(x.Kind))" />
+                <Column Title='@L["Transaction_FromAccount"]' Text="@(x => GetAccountName(x.FromAccountId))" />
+                <Column Title='@L["Transaction_ToAccount"]' Text="@(x => GetAccountName(x.ToAccountId))" />
+                <Column Title='@L["Amount"]' Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.Amount, x.Currency))" />
+                <Column Title='@L["Category"]' Text="@(x => x.Category ?? string.Empty)" />
+            </DataTable>
         }
 
         @if (plan.CreditCards.Count > 0)
@@ -272,41 +177,17 @@ else
 
             <h4>@L["Simulation_CreditCardPaymentEvents"]</h4>
 
-            @if (creditCardEvents.Count == 0)
-            {
-                <div class="alert alert-info">
-                    @L["Simulation_NoCreditCardPaymentEvents"]
-                </div>
-            }
-            else
-            {
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>@L["Date"]</th>
-                            <th>@L["Name"]</th>
-                            <th>@L["Transaction_FromAccount"]</th>
-                            <th>@L["Transaction_ToAccount"]</th>
-                            <th class="text-end">@L["Amount"]</th>
-                            <th>@L["CreditCard_Method"]</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach (var cashFlowEvent in creditCardEvents)
-                        {
-                            <tr>
-                                <td>@FormatDate(cashFlowEvent.Date)</td>
-                                <td>@cashFlowEvent.Name</td>
-                                <td>@GetAccountName(cashFlowEvent.FromAccountId)</td>
-                                <td>@GetAccountName(cashFlowEvent.ToAccountId)</td>
-                                <td class="text-end">@FormatAmount(cashFlowEvent.Amount) @cashFlowEvent.Currency</td>
-                                <td>@EnumL.Translate(cashFlowEvent.PaymentMethod)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+            <DataTable Items="creditCardEvents"
+                       EmptyText='@L["Simulation_NoCreditCardPaymentEvents"]'
+                       Caption='@L["Simulation_CreditCardPaymentEvents"]'>
+                <Column Title='@L["Date"]' Text="@(x => Formatter.Date(x.Date))" />
+                <Column Title='@L["Name"]' Text="@(x => x.Name)" />
+                <Column Title='@L["Transaction_FromAccount"]' Text="@(x => GetAccountName(x.FromAccountId))" />
+                <Column Title='@L["Transaction_ToAccount"]' Text="@(x => GetAccountName(x.ToAccountId))" />
+                <Column Title='@L["Amount"]' Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.Amount, x.Currency))" />
+                <Column Title='@L["CreditCard_Method"]' Text="@(x => EnumL.Translate(x.PaymentMethod))" />
+            </DataTable>
         }
 
         var timelineRows = BuildTimelineRows(result)
@@ -315,78 +196,70 @@ else
 
         <h4>@L["Simulation_EventsAndWarnings"]</h4>
 
-        @if (timelineRows.Count == 0)
+        <DataTable Items="timelineRows"
+                   RowCssClass="@(row => row.RowCssClass)"
+                   EmptyText='@L["Simulation_NoEventsOrWarnings"]'
+                   Caption='@L["Simulation_EventsAndWarnings"]'>
+            <Column Title='@L["Date"]' Text="@(row => Formatter.Date(row.Date))" />
+            <Column Title='@L["Type"]'>
+                <ChildContent>
+                    @if (context.IsWarning)
+                    {
+                        <span class="badge bg-warning text-dark">@L["Simulation_Warning"]</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@L["Simulation_Event"]</span>
+                    }
+                </ChildContent>
+            </Column>
+            <Column Title='@L["Simulation_NameOrCode"]' Text="@(row => row.Title)" />
+            <Column Title='@L["Simulation_KindOrSeverity"]' Text="@(row => row.KindOrSeverity)" />
+            <Column Title='@L["Transaction_FromAccount"]' Text="@(row => row.FromAccountName)" />
+            <Column Title='@L["Transaction_ToAccount"]' Text="@(row => row.ToAccountName)" />
+            <Column Title='@L["Amount"]' Align="ColumnAlign.Number" Text="@(row => row.AmountText)" />
+            <Column Title='@L["Currency"]' Text="@(row => row.Currency)" />
+            <Column Title='@L["Simulation_CategoryOrMessage"]' Text="@(row => row.MessageOrCategory)" />
+        </DataTable>
+
+        @if (result.Events.Count + result.Warnings.Count > timelineRows.Count)
         {
             <div class="alert alert-info">
-                @L["Simulation_NoEventsOrWarnings"]
+                @Text("Simulation_ShowingFirstCombinedRowsOnly", timelineRows.Count)
             </div>
         }
-        else
-        {
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>@L["Date"]</th>
-                        <th>@L["Type"]</th>
-                        <th>@L["Simulation_NameOrCode"]</th>
-                        <th>@L["Simulation_KindOrSeverity"]</th>
-                        <th>@L["Transaction_FromAccount"]</th>
-                        <th>@L["Transaction_ToAccount"]</th>
-                        <th class="text-end">@L["Amount"]</th>
-                        <th>@L["Currency"]</th>
-                        <th>@L["Simulation_CategoryOrMessage"]</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @foreach (var row in timelineRows)
-                    {
-                        <tr class="@row.RowCssClass">
-                            <td>@FormatDate(row.Date)</td>
-                            <td>
-                                @if (row.IsWarning)
-                                {
-                                    <span class="badge bg-warning text-dark">@L["Simulation_Warning"]</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">@L["Simulation_Event"]</span>
-                                }
-                            </td>
-                            <td>@row.Title</td>
-                            <td>@row.KindOrSeverity</td>
-                            <td>@row.FromAccountName</td>
-                            <td>@row.ToAccountName</td>
-                            <td class="text-end">@row.AmountText</td>
-                            <td>@row.Currency</td>
-                            <td>@row.MessageOrCategory</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-
-            @if (result.Events.Count + result.Warnings.Count > timelineRows.Count)
-            {
-                <div class="alert alert-info">
-                    @Text("Simulation_ShowingFirstCombinedRowsOnly", timelineRows.Count)
-                </div>
-            }
-        }
     }
-}
+</PageScaffold>
 
 @code {
     private string GetAccountName(Guid? accountId)
     {
         if (accountId is null || AppState.CurrentPlan is null)
         {
-            return "-";
+            return AppFormatter.EmptyMarker;
         }
 
         return AppState.CurrentPlan.Accounts
             .SingleOrDefault(x => x.Id == accountId.Value)
             ?.Name ?? "?";
     }
+
+    private string GetMortgageTypeName(CashFlowPlan plan, Guid mortgageId)
+    {
+        var mortgage = plan.Mortgages.SingleOrDefault(x => x.Id == mortgageId);
+
+        return mortgage is null ? string.Empty : EnumL.Translate(mortgage.Type);
+    }
+
+    private string GetMortgageAmortisationName(CashFlowPlan plan, Guid mortgageId)
+    {
+        var mortgage = plan.Mortgages.SingleOrDefault(x => x.Id == mortgageId);
+
+        return mortgage is null ? string.Empty : EnumL.Translate(mortgage.AmortisationMode);
+    }
+
+    private static decimal GetStartPrincipal(MortgageContract mortgage) =>
+        mortgage.CalculationPrincipal ?? mortgage.InitialPrincipal;
 
     private static decimal GetProjectedMortgagePrincipal(
         MortgageContract mortgage,
@@ -402,7 +275,7 @@ else
             return projectedPrincipal;
         }
 
-        return mortgage.CalculationPrincipal ?? mortgage.InitialPrincipal;
+        return GetStartPrincipal(mortgage);
     }
 
     private static bool IsFullMonthInsideSimulationRange(
@@ -473,7 +346,7 @@ else
                 KindOrSeverity = EnumL.Translate(cashFlowEvent.Kind),
                 FromAccountName = GetAccountName(cashFlowEvent.FromAccountId),
                 ToAccountName = GetAccountName(cashFlowEvent.ToAccountId),
-                AmountText = FormatAmount(cashFlowEvent.Amount),
+                AmountText = Formatter.Money(cashFlowEvent.Amount),
                 Currency = cashFlowEvent.Currency,
                 MessageOrCategory = cashFlowEvent.Category ?? string.Empty,
                 RowCssClass = string.Empty
@@ -490,9 +363,9 @@ else
                 Title = warning.Code,
                 KindOrSeverity = warning.Severity.ToString(),
                 FromAccountName = warning.AccountId is null
-                    ? "-"
+                    ? AppFormatter.EmptyMarker
                     : GetAccountName(warning.AccountId),
-                ToAccountName = "-",
+                ToAccountName = AppFormatter.EmptyMarker,
                 AmountText = string.Empty,
                 Currency = string.Empty,
                 MessageOrCategory = warning.Message,
@@ -506,26 +379,6 @@ else
             .ThenBy(x => x.IsWarning)
             .ThenBy(x => x.Title)
             .ToList();
-    }
-
-    private static string FormatDate(DateOnly date)
-    {
-        return date.ToString("d", CultureInfo.CurrentCulture);
-    }
-
-    private static string FormatAmount(decimal amount)
-    {
-        return amount.ToString("N2", CultureInfo.CurrentCulture);
-    }
-
-    private static string FormatMonthLabel(string monthLabel)
-    {
-        if (!TryParseMonthLabel(monthLabel, out var monthStart, out _))
-        {
-            return monthLabel;
-        }
-
-        return monthStart.ToString("Y", CultureInfo.CurrentCulture);
     }
 
     private string Text(string key, params object[] arguments)
