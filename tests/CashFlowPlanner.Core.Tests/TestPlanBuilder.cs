@@ -84,7 +84,7 @@ public static class TestPlanBuilder
     }
 
     /// <summary>
-    /// A Pillar 3a account that passes <see cref="Validation.AccountValidator"/>:
+    /// A Pillar 3a account that passes <see cref="CashFlowPlanner.Core.Validation.AccountValidator"/>:
     /// it needs exactly one owner and a subtype, so a plan-level test has to
     /// supply the person who owns it.
     /// </summary>

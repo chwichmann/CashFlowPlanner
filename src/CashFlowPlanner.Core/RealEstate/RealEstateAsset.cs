@@ -63,12 +63,6 @@ public sealed class RealEstateAsset
     public string? Notes { get; init; }
 
     /// <summary>
-    /// The assumed market value on <paramref name="date"/>.
-    ///
-    /// This is the market value only. Whether the household owns it on that date
-    /// is <see cref="IsOwnedOn"/>, and the net-worth series asks both.
-    /// </summary>
-    /// <summary>
     /// Whether the property is on the household's balance sheet on
     /// <paramref name="date"/>. With no acquisition or disposal date - the
     /// default - it always is, which is the previous behaviour exactly.
@@ -89,6 +83,12 @@ public sealed class RealEstateAsset
         return DisposalDate is null || date < DisposalDate.Value;
     }
 
+    /// <summary>
+    /// The assumed market value on <paramref name="date"/>.
+    ///
+    /// This is the market value only. Whether the household owns it on that date
+    /// is <see cref="IsOwnedOn"/>, and the net-worth series asks both.
+    /// </summary>
     public decimal GetValueOn(DateOnly date)
     {
         if (AnnualValueGrowthPercent == 0m || ValuationDate is null)

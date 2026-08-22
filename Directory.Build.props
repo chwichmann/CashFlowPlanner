@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
 
   <!--
     Repository-wide build properties.
@@ -12,7 +12,23 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      On, so the compiler reads the XML comments instead of ignoring them.
+
+      This codebase carries a lot of reasoning in doc comments, and none of it was
+      being checked: a doc block can drift onto the wrong member when a method is
+      inserted above it (CS1571), a cref can name something that no longer exists
+      (CS1574), and the XML itself can be malformed (CS1570) - all silently, because
+      nothing parsed any of it. With warnings as errors, turning this on makes those
+      build failures.
+
+      CS1591 - "missing XML comment for publicly visible type or member" - stays
+      suppressed. Requiring a comment on every public member produces ceremony, and
+      ceremony is what makes people stop reading comments. The rule here is that a
+      comment which exists must be correct, not that one must exist.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <!--
