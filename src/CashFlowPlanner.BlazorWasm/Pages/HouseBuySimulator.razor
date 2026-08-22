@@ -1,6 +1,5 @@
 ﻿@page "/house-buy-simulator"
 
-@using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core.RealEstate
 @using CashFlowPlanner.Core
@@ -11,568 +10,516 @@
 @inherits AppStateAwarePage
 
 @inject CashFlowAppState AppState
+@inject AppFormatter Formatter
 @inject IStringLocalizer<SharedResource> L
 
-<div class="page-header">
-    <h1>@L["HouseBuy_Title"]</h1>
-    <p>@L["HouseBuy_Subtitle"]</p>
-</div>
+@*
+    Swiss house-buy affordability simulator.
 
-@if (AppState.CurrentPlan is null)
-{
-    <section class="card">
-        <p>@L["HouseBuy_LoadPlanFirst"]</p>
-    </section>
-}
-else
-{
-    <section class="card">
-    <div class="section-header">
-        <div>
-            <h2>@L["HouseBuy_Scenarios"]</h2>
-            <p>@L["HouseBuy_ScenariosText"]</p>
-        </div>
+    This page used to carry an 877-line scoped stylesheet: its own colours, its own control
+    sizing, its own .btn variants, its own breakpoints at 600/900/1100/1400px. None of it was
+    reachable from a child component either - CSS isolation stamps its scope attribute only onto
+    elements written here, so every rule aimed at an <InputNumber>'s <input> matched nothing until
+    a round of ::deep patched it up. The stylesheet is gone: the page is built from PageScaffold,
+    FormField, MoneyInput and DataTable, which need no page-local CSS at all, and everything else
+    is a Bootstrap utility reading the tokens in wwwroot/css/tokens.css.
+*@
 
-        <span class="status-pill @(CurrentScenarioExists ? "status-ok" : "status-fail")">
-            @(CurrentScenarioExists ? L["HouseBuy_Saved"] : L["HouseBuy_Unsaved"])
-        </span>
-    </div>
+<ConfirmDialog @ref="_confirmDialog" />
 
-    <div class="scenario-toolbar">
-        <div class="scenario-select-row">
-            <label>@L["HouseBuy_SelectedScenario"]</label>
+<PageScaffold Title="@L["HouseBuy_Title"]"
+              Subtitle="@L["HouseBuy_Subtitle"]"
+              RequiresPlan="true"
+              EmptyStateMessage="@L["HouseBuy_LoadPlanFirst"]">
 
-            <select class="select-input scenario-select"
-                    value="@GetScenarioIdString(CurrentScenarioId)"
-                    @onchange="OnScenarioSelected">
-                @if (SavedScenarios.Count == 0 || !CurrentScenarioExists)
-                {
-                    <option value="">@L["HouseBuy_CurrentUnsavedScenario"]</option>
-                }
-
-                @foreach (var scenario in SavedScenarios)
-                {
-                    <option value="@scenario.Id">@scenario.Name</option>
-                }
-            </select>
-        </div>
-
-        <div class="scenario-name-row">
-            <label>@L["HouseBuy_ScenarioName"]</label>
-            <InputText class="text-input scenario-name-input" @bind-Value="ScenarioName" />
-        </div>
-
-        <div class="scenario-button-row">
-            <button type="button" class="btn btn-primary" @onclick="SaveScenario">
-                @L["Save"]
-            </button>
-
-            <button type="button" class="btn btn-secondary" @onclick="CreateNewScenario">
-                @L["New"]
-            </button>
-
-            <button type="button"
-                    class="btn btn-secondary"
-                    @onclick="DuplicateScenario">
-                @L["Duplicate"]
-            </button>
-
-            <button type="button"
-                    class="btn btn-danger"
-                    disabled="@(!CurrentScenarioExists)"
-                    @onclick="DeleteScenario">
-                @L["Delete"]
-            </button>
-        </div>
-    </div>
-</section>
-
-    <div class="simulator-grid">
-
-        <section class="card">
-            <h2>@L["HouseBuy_CurrentRealEstateSale"]</h2>
-
-            <div class="field-stack">
-                <div class="field-row">
-                    <label>@L["HouseBuy_ExpectedSalePrice"]</label>
-                    <div class="field-control">
-                        <InputNumber class="currency-input" @bind-Value="SalePrice" />
-                    </div>
+    @* ---------------------------------------------------------------- Scenarios *@
+    <section class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">@L["HouseBuy_Scenarios"]</h2>
+                    <p class="text-body-secondary small mb-0">@L["HouseBuy_ScenariosText"]</p>
                 </div>
 
-                <div class="field-row">
-                    <label>@L["HouseBuy_RemainingMortgagePrincipal"]</label>
-                    <div class="field-control">
-                        <InputNumber class="currency-input" @bind-Value="SaleRemainingMortgage" />
-                    </div>
-                </div>
-
-                <div class="field-row">
-                    <label>@L["HouseBuy_SellingCosts"]</label>
-                    <div class="field-control">
-                        <InputNumber class="currency-input" @bind-Value="SaleCosts" />
-                    </div>
-                </div>
-
-                <div class="field-row">
-                    <label>@L["HouseBuy_Pillar2BoundAmount"]</label>
-                    <div class="field-control">
-                        <InputNumber class="currency-input" @bind-Value="SalePillar2BoundAmount" />
-                    </div>
-                </div>
+                <span class="badge rounded-pill @StatusPillCssClass(CurrentScenarioExists)">
+                    @(CurrentScenarioExists ? L["HouseBuy_Saved"] : L["HouseBuy_Unsaved"])
+                </span>
             </div>
 
-            @if (SaleResult is not null)
-            {
-                <div class="kv-list">
-                    <div class="kv-row">
-                        <span>@L["HouseBuy_NetProceeds"]</span>
-                        <strong>@Money(SaleResult.NetProceeds)</strong>
-                    </div>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-xl-4">
+                    <FormField Label='@L["HouseBuy_SelectedScenario"]' CssClass="mb-0">
+                        <select id="@context.Id"
+                                class="form-select"
+                                value="@GetScenarioIdString(CurrentScenarioId)"
+                                @onchange="OnScenarioSelected">
+                            @if (SavedScenarios.Count == 0 || !CurrentScenarioExists)
+                            {
+                                <option value="">@L["HouseBuy_CurrentUnsavedScenario"]</option>
+                            }
 
-                    <div class="kv-row">
-                        <span>@L["HouseBuy_FreeCash"]</span>
-                        <strong>@Money(SaleResult.FreeCashAmount)</strong>
-                    </div>
-
-                    <div class="kv-row">
-                        <span>@L["HouseBuy_PurposeBoundPillar2"]</span>
-                        <strong>@Money(SaleResult.Pillar2BoundAmount)</strong>
-                    </div>
-
-                    <div class="kv-row kv-total">
-                        <span>@L["HouseBuy_TotalUsableForNextPurchase"]</span>
-                        <strong>@Money(SaleResult.TotalAvailable)</strong>
-                    </div>
+                            @foreach (var scenario in SavedScenarios)
+                            {
+                                <option value="@scenario.Id">@scenario.Name</option>
+                            }
+                        </select>
+                    </FormField>
                 </div>
 
-                <div class="button-row">
-                    <button type="button" class="btn btn-secondary" @onclick="UseSaleProceedsAsEquity">
-                        @L["HouseBuy_UseSaleProceedsAsEquity"]
+                <div class="col-12 col-xl-4">
+                    <FormField Label='@L["HouseBuy_ScenarioName"]' CssClass="mb-0">
+                        <InputText id="@context.Id" class="form-control" @bind-Value="ScenarioName" />
+                    </FormField>
+                </div>
+
+                <div class="col-12 col-xl-4 d-flex flex-wrap gap-2 justify-content-xl-end">
+                    <button type="button" class="btn btn-primary" @onclick="SaveScenario">
+                        @L["Save"]
+                    </button>
+
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CreateNewScenario">
+                        @L["New"]
+                    </button>
+
+                    <button type="button" class="btn btn-outline-secondary" @onclick="DuplicateScenario">
+                        @L["Duplicate"]
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-danger"
+                            disabled="@(!CurrentScenarioExists)"
+                            @onclick="DeleteScenarioAsync">
+                        @L["Delete"]
                     </button>
                 </div>
-            }
-        </section>
-
-        <section class="card">
-            <h2>@L["HouseBuy_NewRealEstate"]</h2>
-
-            <div class="field-stack">
-                <div class="field-row">
-                    <label>@L["HouseBuy_BuyPrice"]</label>
-                    <div class="field-control">
-                        <InputNumber class="currency-input" @bind-Value="BuyPrice" />
-                    </div>
-                </div>
-
-                <div class="field-row">
-                    <label>@L["HouseBuy_RenovationPrice"]</label>
-                    <div class="field-control">
-                        <InputNumber class="currency-input" @bind-Value="RenovationPrice" />
-                    </div>
-                </div>
-
-                <div class="field-row">
-                    <label>@L["HouseBuy_DesiredMortgage"]</label>
-                    <div class="field-control">
-                        <InputNumber class="currency-input" @bind-Value="DesiredMortgage" />
-                    </div>
-                </div>
-
-                <div class="field-row">
-                    <label>@L["HouseBuy_TotalFinancingBasis"]</label>
-                    <div class="field-control">
-                        <strong>@Money(TotalPrice)</strong>
-                    </div>
-                </div>
             </div>
+        </div>
+    </section>
 
-            <div class="button-row">
-                <button type="button" class="btn btn-secondary" @onclick="SetMortgageToMaximum80Percent">
-                    @L["HouseBuy_SetMortgageToMax80"]
-                </button>
+    <div class="row g-3">
 
-                <button type="button" class="btn btn-secondary" @onclick="SetMortgageFromEquity">
-                    @L["HouseBuy_SetMortgageFromCurrentEquity"]
-                </button>
-            </div>
-        </section>
+        @* ------------------------------------------------ Sale of the current property *@
+        <div class="col-12 col-lg-6 col-xxl-4">
+            <section class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">@L["HouseBuy_CurrentRealEstateSale"]</h2>
 
-        <section class="card">
-            <h2>@L["HouseBuy_PersonsAndIncome"]</h2>
-            <p>@L["HouseBuy_PersonsAndIncomeText"]</p>
+                    <FormField Label='@L["HouseBuy_ExpectedSalePrice"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    Prefix="@Currency"
+                                    @bind-Value="SalePrice" />
+                    </FormField>
 
-            <div class="data-table">
-                <div class="data-table-header person-grid">
-                    <div>@L["Name"]</div>
-                    <div>@L["HouseBuy_GrossSalaryYear"]</div>
-                    <div></div>
+                    <FormField Label='@L["HouseBuy_RemainingMortgagePrincipal"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    Prefix="@Currency"
+                                    @bind-Value="SaleRemainingMortgage" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_SellingCosts"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    Prefix="@Currency"
+                                    @bind-Value="SaleCosts" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_Pillar2BoundAmount"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    Prefix="@Currency"
+                                    @bind-Value="SalePillar2BoundAmount" />
+                    </FormField>
+
+                    @if (SaleResult is not null)
+                    {
+                        <ul class="list-group list-group-flush border-top mb-0">
+                            @ValueRow(L["HouseBuy_NetProceeds"], Money(SaleResult.NetProceeds), itemCssClass: FlushItem)
+                            @ValueRow(L["HouseBuy_FreeCash"], Money(SaleResult.FreeCashAmount), itemCssClass: FlushItem)
+                            @ValueRow(L["HouseBuy_PurposeBoundPillar2"], Money(SaleResult.Pillar2BoundAmount), itemCssClass: FlushItem)
+                            @ValueRow(L["HouseBuy_TotalUsableForNextPurchase"], Money(SaleResult.TotalAvailable), emphasis: true, itemCssClass: FlushItem)
+                        </ul>
+
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="UseSaleProceedsAsEquity">
+                                @L["HouseBuy_UseSaleProceedsAsEquity"]
+                            </button>
+                        </div>
+                    }
                 </div>
+            </section>
+        </div>
 
-                @foreach (var person in Persons)
-                {
-                    <div class="data-table-row person-grid">
-                        <InputText class="text-input" @bind-Value="person.Name" />
-                        <InputNumber class="currency-input" @bind-Value="person.GrossAnnualIncome" />
+        @* ------------------------------------------------------------ New property *@
+        <div class="col-12 col-lg-6 col-xxl-4">
+            <section class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">@L["HouseBuy_NewRealEstate"]</h2>
 
-                        <button type="button"
-                                class="btn btn-danger btn-sm"
-                                @onclick="() => RemovePerson(person.Id)">
-                            @L["Remove"]
+                    <FormField Label='@L["HouseBuy_BuyPrice"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    Prefix="@Currency"
+                                    @bind-Value="BuyPrice" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_RenovationPrice"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    Prefix="@Currency"
+                                    @bind-Value="RenovationPrice" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_DesiredMortgage"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    Prefix="@Currency"
+                                    @bind-Value="DesiredMortgage" />
+                    </FormField>
+
+                    <ul class="list-group list-group-flush border-top mb-0">
+                        @ValueRow(L["HouseBuy_TotalFinancingBasis"], Money(TotalPrice), emphasis: true, itemCssClass: FlushItem)
+                    </ul>
+
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="SetMortgageToMaximum80Percent">
+                            @L["HouseBuy_SetMortgageToMax80"]
                         </button>
-                    </div>
-                }
-            </div>
 
-            <div class="button-row">
-                <button type="button" class="btn btn-secondary" @onclick="AddPerson">
-                    @L["HouseBuy_AddPerson"]
-                </button>
-            </div>
-
-            <div class="kv-list">
-                <div class="kv-row">
-                    <span>@L["HouseBuy_TotalGrossIncomeYear"]</span>
-                    <strong>@Money(TotalGrossIncome)</strong>
-                </div>
-
-                <div class="kv-row">
-                    <span>@L["HouseBuy_MaxYearlyHousingCost"]</span>
-                    <strong>@Money(TotalGrossIncome * Rules.MaxAffordabilityPercent / 100m)</strong>
-                </div>
-
-                <div class="kv-row">
-                    <span>@L["HouseBuy_MaxMonthlyHousingCost"]</span>
-                    <strong>@Money(TotalGrossIncome * Rules.MaxAffordabilityPercent / 100m / 12m)</strong>
-                </div>
-            </div>
-        </section>
-
-        <section class="card span-2">
-            <h2>@L["HouseBuy_EquitySources"]</h2>
-            <p>@L["HouseBuy_EquitySourcesText"]</p>
-
-            <div class="data-table">
-                <div class="data-table-header equity-grid">
-                    <div>@L["Name"]</div>
-                    <div>@L["HouseBuy_Person"]</div>
-                    <div>@L["Type"]</div>
-                    <div>@L["Amount"]</div>
-                    <div></div>
-                </div>
-
-                @foreach (var equity in EquitySources)
-                {
-                    <div class="data-table-row equity-grid">
-                        <InputText class="text-input" @bind-Value="equity.Name" />
-
-                        <select class="select-input"
-                                value="@GetPersonIdString(equity.PersonId)"
-                                @onchange="e => SetEquityPerson(equity.Id, e.Value?.ToString())">
-                            <option value="">@L["HouseBuy_HouseholdUnassigned"]</option>
-                            @foreach (var person in Persons)
-                            {
-                                <option value="@person.Id.ToString()">@person.Name</option>
-                            }
-                        </select>
-
-                        <select class="select-input"
-                                value="@equity.Type.ToString()"
-                                @onchange="e => SetEquityType(equity.Id, e.Value?.ToString())">
-                            <option value="@EquitySourceType.Cash.ToString()">@L["HouseBuy_Cash"]</option>
-                            <option value="@EquitySourceType.Pillar2Bvg.ToString()">@L["HouseBuy_Pillar2Bvg"]</option>
-                        </select>
-
-                        <InputNumber class="currency-input" @bind-Value="equity.Amount" />
-
-                        <button type="button"
-                                class="btn btn-danger btn-sm"
-                                @onclick="() => RemoveEquitySource(equity.Id)">
-                            @L["Remove"]
-                        </button>
-                    </div>
-                }
-            </div>
-
-            <div class="equity-actions-summary">
-                <div class="equity-actions">
-                    <div class="button-row">
-                        <button type="button" class="btn btn-secondary" @onclick="AddEquitySource">
-                            @L["HouseBuy_AddEquitySource"]
+                        <button type="button" class="btn btn-outline-secondary" @onclick="SetMortgageFromEquity">
+                            @L["HouseBuy_SetMortgageFromCurrentEquity"]
                         </button>
                     </div>
                 </div>
+            </section>
+        </div>
 
-                <div class="equity-summary">
-                    <div class="kv-list equity-kv">
-                        <div class="kv-row">
-                            <span>@L["HouseBuy_CashEquity"]</span>
-                            <strong>@Money(CashEquity)</strong>
-                        </div>
+        @* ------------------------------------------------------- Persons and income *@
+        <div class="col-12 col-lg-6 col-xxl-4">
+            <section class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-1">@L["HouseBuy_PersonsAndIncome"]</h2>
+                    <p class="text-body-secondary small">@L["HouseBuy_PersonsAndIncomeText"]</p>
 
-                        <div class="kv-row">
-                            <span>@L["HouseBuy_Pillar2BvgEquity"]</span>
-                            <strong>@Money(Pillar2Equity)</strong>
-                        </div>
+                    <DataTable Items="Persons" RowKey="@(person => person.Id)">
+                        <Column Title='@L["Name"]'>
+                            <ChildContent Context="person">
+                                <InputText class="form-control form-control-sm"
+                                           aria-label='@L["Name"]'
+                                           @bind-Value="person.Name" />
+                            </ChildContent>
+                        </Column>
 
-                        <div class="kv-row kv-total">
-                            <span>@L["HouseBuy_TotalEquity"]</span>
-                            <strong>@Money(TotalEquity)</strong>
-                        </div>
+                        <Column Title='@L["HouseBuy_GrossSalaryYear"]' Align="ColumnAlign.Number">
+                            <ChildContent Context="person">
+                                <MoneyInput Decimals="0"
+                                            CssClass="form-control form-control-sm num"
+                                            AdditionalAttributes="@AriaLabel(L["HouseBuy_GrossSalaryYear"])"
+                                            @bind-Value="person.GrossAnnualIncome" />
+                            </ChildContent>
+                        </Column>
 
-                        <div class="kv-row">
-                            <span>@L["HouseBuy_RequiredTotalEquity"]</span>
-                            <strong>@Money(TotalPrice * Rules.MinTotalEquityPercent / 100m)</strong>
-                        </div>
+                        <Column>
+                            <HeaderContent>
+                                <span class="visually-hidden">@L["Actions"]</span>
+                            </HeaderContent>
+                            <ChildContent Context="person">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger text-nowrap"
+                                        @onclick="() => RemovePerson(person.Id)">
+                                    @L["Remove"]
+                                </button>
+                            </ChildContent>
+                        </Column>
+                    </DataTable>
 
-                        <div class="kv-row">
-                            <span>@L["HouseBuy_RequiredHardEquity"]</span>
-                            <strong>@Money(TotalPrice * Rules.MinHardEquityPercent / 100m)</strong>
-                        </div>
-
-                        <div class="kv-row">
-                            <span>@L["HouseBuy_MaxPillar2Bvg"]</span>
-                            <strong>@Money(TotalPrice * Rules.MaxPillar2Percent / 100m)</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="card bank-assumptions-card">
-            <h2>@L["HouseBuy_BankAssumptions"]</h2>
-
-            <div class="settings-table">
-                <div class="settings-row">
-                    <label>@L["HouseBuy_ImputedInterestRatePercent"]</label>
-                    <InputNumber class="percent-input" @bind-Value="ImputedInterestPercent" />
-                </div>
-
-                <div class="settings-row">
-                    <label>@L["HouseBuy_MaintenancePercent"]</label>
-                    <InputNumber class="percent-input" @bind-Value="MaintenancePercent" />
-                </div>
-
-                <div class="settings-row">
-                    <label>@L["HouseBuy_AffordabilityLimitPercent"]</label>
-                    <InputNumber class="percent-input" @bind-Value="MaxAffordabilityPercent" />
-                </div>
-
-                <div class="settings-row">
-                    <label>@L["HouseBuy_FirstMortgageThresholdPercent"]</label>
-                    <InputNumber class="percent-input" @bind-Value="FirstMortgageThresholdPercent" />
-                </div>
-
-                <div class="settings-row">
-                    <label>@L["HouseBuy_AmortisationYears"]</label>
-                    <InputNumber class="year-input" @bind-Value="AmortisationYearsDecimal" />
-                </div>
-            </div>
-        </section>
-
-        @if (Result is not null)
-        {
-            <section class="card wide-card result-rule-card">
-                <div class="section-header">
-                    <div class="result-title">
-                        <span class="result-title-icon @(Result.IsViable ? "result-title-ok" : "result-title-fail")">
-                            @if (Result.IsViable)
-                            {
-                                <svg class="icon-svg icon-svg-lg"
-                                     width="22"
-                                     height="22"
-                                     viewBox="0 0 24 24"
-                                     fill="none"
-                                     stroke="currentColor"
-                                     stroke-width="3"
-                                     stroke-linecap="round"
-                                     stroke-linejoin="round"
-                                     aria-hidden="true">
-                                    <path d="M20 6L9 17l-5-5" />
-                                </svg>
-                                <span class="visually-hidden">@L["HouseBuy_Viable"]</span>
-                            }
-                            else
-                            {
-                                <svg class="icon-svg icon-svg-lg"
-                                     width="22"
-                                     height="22"
-                                     viewBox="0 0 24 24"
-                                     fill="none"
-                                     stroke="currentColor"
-                                     stroke-width="3"
-                                     stroke-linecap="round"
-                                     stroke-linejoin="round"
-                                     aria-hidden="true">
-                                    <path d="M18 6L6 18" />
-                                    <path d="M6 6l12 12" />
-                                </svg>
-                                <span class="visually-hidden">@L["HouseBuy_NotViable"]</span>
-                            }
-                        </span>
-
-                        <div>
-                            <h2>@L["HouseBuy_SummaryAndRuleChecks"]</h2>
-                            <p>@L["HouseBuy_SummaryAndRuleChecksText"]</p>
-                        </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="AddPerson">
+                            @L["HouseBuy_AddPerson"]
+                        </button>
                     </div>
 
-                    <span class="status-pill @(Result.IsViable ? "status-ok" : "status-fail")">
-                        @(Result.IsViable ? L["HouseBuy_Viable"] : L["HouseBuy_NotViable"])
-                    </span>
+                    <ul class="list-group list-group-flush border-top mt-3 mb-0">
+                        @ValueRow(L["HouseBuy_TotalGrossIncomeYear"], Money(TotalGrossIncome), itemCssClass: FlushItem)
+                        @ValueRow(L["HouseBuy_MaxYearlyHousingCost"], Money(TotalGrossIncome * Rules.MaxAffordabilityPercent / 100m), itemCssClass: FlushItem)
+                        @ValueRow(L["HouseBuy_MaxMonthlyHousingCost"], Money(TotalGrossIncome * Rules.MaxAffordabilityPercent / 100m / 12m), itemCssClass: FlushItem)
+                    </ul>
                 </div>
+            </section>
+        </div>
 
-                <div class="result-rule-layout">
-                    <div class="result-panel">
-                        <h3>@L["HouseBuy_Summary"]</h3>
+        @* ----------------------------------------------------------- Equity sources *@
+        <div class="col-12 col-xxl-8">
+            <section class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-1">@L["HouseBuy_EquitySources"]</h2>
+                    <p class="text-body-secondary small">@L["HouseBuy_EquitySourcesText"]</p>
 
-                        <div class="summary-table">
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_TotalPrice"]</span>
-                                <strong>@Money(Result.TotalPrice)</strong>
-                            </div>
+                    <DataTable Items="EquitySources" RowKey="@(equity => equity.Id)">
+                        <Column Title='@L["Name"]'>
+                            <ChildContent Context="equity">
+                                <InputText class="form-control form-control-sm"
+                                           aria-label='@L["Name"]'
+                                           @bind-Value="equity.Name" />
+                            </ChildContent>
+                        </Column>
 
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_Mortgage"]</span>
-                                <strong>@Money(DesiredMortgage)</strong>
-                            </div>
+                        <Column Title='@L["HouseBuy_Person"]'>
+                            <ChildContent Context="equity">
+                                <select class="form-select form-select-sm"
+                                        aria-label='@L["HouseBuy_Person"]'
+                                        value="@GetPersonIdString(equity.PersonId)"
+                                        @onchange="e => SetEquityPerson(equity.Id, e.Value?.ToString())">
+                                    <option value="">@L["HouseBuy_HouseholdUnassigned"]</option>
+                                    @foreach (var person in Persons)
+                                    {
+                                        <option value="@person.Id">@person.Name</option>
+                                    }
+                                </select>
+                            </ChildContent>
+                        </Column>
 
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_LoanToValue"]</span>
-                                <strong>@Percent(Result.LoanToValuePercent)</strong>
-                            </div>
+                        <Column Title='@L["Type"]'>
+                            <ChildContent Context="equity">
+                                <select class="form-select form-select-sm"
+                                        aria-label='@L["Type"]'
+                                        value="@equity.Type.ToString()"
+                                        @onchange="e => SetEquityType(equity.Id, e.Value?.ToString())">
+                                    <option value="@EquitySourceType.Cash">@L["HouseBuy_Cash"]</option>
+                                    <option value="@EquitySourceType.Pillar2Bvg">@L["HouseBuy_Pillar2Bvg"]</option>
+                                </select>
+                            </ChildContent>
+                        </Column>
 
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_CashEquity"]</span>
-                                <strong>@Money(Result.CashEquity)</strong>
-                            </div>
+                        <Column Title='@L["Amount"]' Align="ColumnAlign.Number">
+                            <ChildContent Context="equity">
+                                <MoneyInput Decimals="0"
+                                            CssClass="form-control form-control-sm num"
+                                            AdditionalAttributes="@AriaLabel(L["Amount"])"
+                                            @bind-Value="equity.Amount" />
+                            </ChildContent>
+                        </Column>
 
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_Pillar2BvgEquity"]</span>
-                                <strong>@Money(Result.Pillar2Equity)</strong>
-                            </div>
+                        <Column>
+                            <HeaderContent>
+                                <span class="visually-hidden">@L["Actions"]</span>
+                            </HeaderContent>
+                            <ChildContent Context="equity">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger text-nowrap"
+                                        @onclick="() => RemoveEquitySource(equity.Id)">
+                                    @L["Remove"]
+                                </button>
+                            </ChildContent>
+                        </Column>
+                    </DataTable>
 
-                            <div class="summary-table-row summary-table-total">
-                                <span>@L["HouseBuy_TotalEquity"]</span>
-                                <strong>@Money(Result.TotalEquity)</strong>
-                            </div>
-
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_GrossIncomeYear"]</span>
-                                <strong>@Money(Result.GrossAnnualIncome)</strong>
-                            </div>
-
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_MaxAllowedYearlyCost"]</span>
-                                <strong>@Money(Result.MaxAllowedYearlyCost)</strong>
-                            </div>
-
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_TheoreticalYearlyCost"]</span>
-                                <strong>@Money(Result.TheoreticalYearlyCost)</strong>
-                            </div>
-
-                            <div class="summary-table-row">
-                                <span>@L["HouseBuy_TheoreticalMonthlyCost"]</span>
-                                <strong>@Money(Result.TheoreticalYearlyCost / 12m)</strong>
-                            </div>
-
-                            <div class="summary-table-row summary-table-total">
-                                <span>@L["HouseBuy_AffordabilityRatio"]</span>
-                                <strong>@AffordabilityRatioText(Result.AffordabilityRatio)</strong>
+                    <div class="row g-3 mt-1">
+                        <div class="col-12 col-lg-6">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-outline-secondary" @onclick="AddEquitySource">
+                                    @L["HouseBuy_AddEquitySource"]
+                                </button>
                             </div>
                         </div>
 
-                        @if (!Result.IsAffordable)
-                        {
-                            <div class="warning-box">
-                                <strong>@L["HouseBuy_RequiredIncomeForAffordabilityTarget"]</strong>
-                                <div>@Text("HouseBuy_PerYearAmount", Money(Result.RequiredGrossAnnualIncomeForAffordability))</div>
-                                <div>@Text("HouseBuy_MissingIncomePerYear", Money(Result.MissingGrossAnnualIncomeForAffordability))</div>
-                            </div>
-                        }
-                    </div>
-
-                    <div class="rule-panel">
-                        <h3>@L["HouseBuy_RuleChecks"]</h3>
-
-                        <div class="checklist">
-                            @foreach (var check in Result.Checks)
-                            {
-                                <div class="checklist-item @(check.Passed ? "checklist-ok" : "checklist-fail")">
-                                    <div class="checklist-icon">
-                                        @if (check.Passed)
-                                        {
-                                            <svg class="icon-svg"
-                                                 width="20"
-                                                 height="20"
-                                                 viewBox="0 0 24 24"
-                                                 fill="none"
-                                                 stroke="currentColor"
-                                                 stroke-width="3"
-                                                 stroke-linecap="round"
-                                                 stroke-linejoin="round"
-                                                 aria-hidden="true">
-                                                <path d="M20 6L9 17l-5-5" />
-                                            </svg>
-                                            <span class="visually-hidden">@L["HouseBuy_Passed"]</span>
-                                        }
-                                        else
-                                        {
-                                            <svg class="icon-svg"
-                                                 width="20"
-                                                 height="20"
-                                                 viewBox="0 0 24 24"
-                                                 fill="none"
-                                                 stroke="currentColor"
-                                                 stroke-width="3"
-                                                 stroke-linecap="round"
-                                                 stroke-linejoin="round"
-                                                 aria-hidden="true">
-                                                <path d="M18 6L6 18" />
-                                                <path d="M6 6l12 12" />
-                                            </svg>
-                                            <span class="visually-hidden">@L["HouseBuy_Failed"]</span>
-                                        }
-                                    </div>
-
-                                    <div class="checklist-content">
-                                        <div class="checklist-title-row">
-                                            <strong>@RuleTitle(check.Code)</strong>
-
-                                            <span class="mini-pill @(check.Passed ? "mini-ok" : "mini-fail")">
-                                                @(check.Passed ? L["HouseBuy_Ok"] : L["HouseBuy_Failed"])
-                                            </span>
-                                        </div>
-
-                                        <div class="checklist-description">
-                                            @RuleDescription(check.Code, check.Description)
-                                        </div>
-
-                                        <div class="checklist-values">
-                                            <div>
-                                                <span>@L["HouseBuy_Actual"]</span>
-                                                <strong>@Money(check.ActualValue)</strong>
-                                            </div>
-
-                                            <div>
-                                                <span>@L["HouseBuy_Limit"]</span>
-                                                <strong>@Money(check.RequiredValue)</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
+                        <div class="col-12 col-lg-6">
+                            <ul class="list-group list-group-flush border-top mb-0">
+                                @ValueRow(L["HouseBuy_CashEquity"], Money(CashEquity), itemCssClass: FlushItem)
+                                @ValueRow(L["HouseBuy_Pillar2BvgEquity"], Money(Pillar2Equity), itemCssClass: FlushItem)
+                                @ValueRow(L["HouseBuy_TotalEquity"], Money(TotalEquity), emphasis: true, itemCssClass: FlushItem)
+                                @ValueRow(L["HouseBuy_RequiredTotalEquity"], Money(TotalPrice * Rules.MinTotalEquityPercent / 100m), itemCssClass: FlushItem)
+                                @ValueRow(L["HouseBuy_RequiredHardEquity"], Money(TotalPrice * Rules.MinHardEquityPercent / 100m), itemCssClass: FlushItem)
+                                @ValueRow(L["HouseBuy_MaxPillar2Bvg"], Money(TotalPrice * Rules.MaxPillar2Percent / 100m), itemCssClass: FlushItem)
+                            </ul>
                         </div>
                     </div>
                 </div>
             </section>
+        </div>
+
+        @* -------------------------------------------------------- Bank assumptions *@
+        <div class="col-12 col-lg-6 col-xxl-4">
+            <section class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">@L["HouseBuy_BankAssumptions"]</h2>
+
+                    <FormField Label='@L["HouseBuy_ImputedInterestRatePercent"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="2"
+                                    Suffix="%"
+                                    @bind-Value="ImputedInterestPercent" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_MaintenancePercent"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="2"
+                                    Suffix="%"
+                                    @bind-Value="MaintenancePercent" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_AffordabilityLimitPercent"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="2"
+                                    Suffix="%"
+                                    @bind-Value="MaxAffordabilityPercent" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_FirstMortgageThresholdPercent"]'>
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="2"
+                                    Suffix="%"
+                                    @bind-Value="FirstMortgageThresholdPercent" />
+                    </FormField>
+
+                    <FormField Label='@L["HouseBuy_AmortisationYears"]' CssClass="mb-0">
+                        <MoneyInput Id="@context.Id"
+                                    AriaDescribedBy="@context.DescribedBy"
+                                    Decimals="0"
+                                    @bind-Value="AmortisationYearsDecimal" />
+                    </FormField>
+                </div>
+            </section>
+        </div>
+
+        @* --------------------------------------------------- Summary and rule checks *@
+        @if (Result is not null)
+        {
+            <div class="col-12">
+                <section class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                            <div class="d-flex align-items-start gap-3">
+                                <span class="badge rounded-pill d-inline-flex align-items-center p-2 flex-shrink-0 @(Result.IsViable ? "text-bg-success" : "text-bg-danger")">
+                                    @(Result.IsViable ? CheckIcon : CrossIcon)
+                                    <span class="visually-hidden">
+                                        @(Result.IsViable ? L["HouseBuy_Viable"] : L["HouseBuy_NotViable"])
+                                    </span>
+                                </span>
+
+                                <div>
+                                    <h2 class="h5 mb-1">@L["HouseBuy_SummaryAndRuleChecks"]</h2>
+                                    <p class="text-body-secondary small mb-0">@L["HouseBuy_SummaryAndRuleChecksText"]</p>
+                                </div>
+                            </div>
+
+                            <span class="badge rounded-pill @StatusPillCssClass(Result.IsViable)">
+                                @(Result.IsViable ? L["HouseBuy_Viable"] : L["HouseBuy_NotViable"])
+                            </span>
+                        </div>
+
+                        <div class="row g-4">
+                            <div class="col-12 col-xl-6">
+                                <h3 class="h6 mb-3">@L["HouseBuy_Summary"]</h3>
+
+                                <ul class="list-group mb-0">
+                                    @ValueRow(L["HouseBuy_TotalPrice"], Money(Result.TotalPrice))
+                                    @ValueRow(L["HouseBuy_Mortgage"], Money(DesiredMortgage))
+                                    @ValueRow(L["HouseBuy_LoanToValue"], Formatter.Percent(Result.LoanToValuePercent))
+                                    @ValueRow(L["HouseBuy_CashEquity"], Money(Result.CashEquity))
+                                    @ValueRow(L["HouseBuy_Pillar2BvgEquity"], Money(Result.Pillar2Equity))
+                                    @ValueRow(L["HouseBuy_TotalEquity"], Money(Result.TotalEquity), emphasis: true, itemCssClass: TotalItem)
+                                    @ValueRow(L["HouseBuy_GrossIncomeYear"], Money(Result.GrossAnnualIncome))
+                                    @ValueRow(L["HouseBuy_MaxAllowedYearlyCost"], Money(Result.MaxAllowedYearlyCost))
+                                    @ValueRow(L["HouseBuy_TheoreticalYearlyCost"], Money(Result.TheoreticalYearlyCost))
+                                    @ValueRow(L["HouseBuy_TheoreticalMonthlyCost"], Money(Result.TheoreticalYearlyCost / 12m))
+                                    @ValueRow(L["HouseBuy_AffordabilityRatio"], AffordabilityRatioText(Result.AffordabilityRatio), emphasis: true, itemCssClass: TotalItem)
+                                </ul>
+
+                                @if (!Result.IsAffordable)
+                                {
+                                    <div class="alert alert-warning mt-3 mb-0" role="alert">
+                                        <strong>@L["HouseBuy_RequiredIncomeForAffordabilityTarget"]</strong>
+                                        <div>@Text("HouseBuy_PerYearAmount", MoneyOrNotApplicable(Result.RequiredGrossAnnualIncomeForAffordability))</div>
+                                        <div>@Text("HouseBuy_MissingIncomePerYear", MoneyOrNotApplicable(Result.MissingGrossAnnualIncomeForAffordability))</div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="col-12 col-xl-6">
+                                <h3 class="h6 mb-3">@L["HouseBuy_RuleChecks"]</h3>
+
+                                <div class="d-flex flex-column gap-2">
+                                    @foreach (var check in Result.Checks)
+                                    {
+                                        <div class="d-flex gap-3 p-3 rounded border @(check.Passed ? "border-success-subtle bg-success-subtle" : "border-danger-subtle bg-danger-subtle")">
+                                            <span class="badge rounded-pill d-inline-flex align-items-center align-self-start p-2 flex-shrink-0 @(check.Passed ? "text-bg-success" : "text-bg-danger")">
+                                                @(check.Passed ? CheckIcon : CrossIcon)
+                                                <span class="visually-hidden">
+                                                    @(check.Passed ? L["HouseBuy_Passed"] : L["HouseBuy_Failed"])
+                                                </span>
+                                            </span>
+
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                                    <strong>@RuleTitle(check.Code)</strong>
+
+                                                    @* Solid rather than subtle: this pill sits on an already-tinted card. *@
+                                                    <span class="badge rounded-pill @(check.Passed ? "text-bg-success" : "text-bg-danger")">
+                                                        @(check.Passed ? L["HouseBuy_Ok"] : L["HouseBuy_Failed"])
+                                                    </span>
+                                                </div>
+
+                                                <div class="small text-body-secondary mt-1">
+                                                    @RuleDescription(check.Code, check.Description)
+                                                </div>
+
+                                                <div class="row g-2 mt-1">
+                                                    <div class="col-12 col-sm-6">
+                                                        <div class="border rounded bg-body p-2">
+                                                            <div class="small fw-bold text-uppercase text-body-secondary">@L["HouseBuy_Actual"]</div>
+                                                            <div class="fw-semibold num text-nowrap">@Money(check.ActualValue)</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-12 col-sm-6">
+                                                        <div class="border rounded bg-body p-2">
+                                                            <div class="small fw-bold text-uppercase text-body-secondary">@L["HouseBuy_Limit"]</div>
+                                                            <div class="fw-semibold num text-nowrap">@Money(check.RequiredValue)</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         }
     </div>
-}
+</PageScaffold>
 
 @code {
+    /// <summary>
+    /// The currency shown as an input-group addon on every amount field. The page is Swiss-rules
+    /// specific and every figure it produces already said CHF before this rebuild.
+    /// </summary>
+    private const string Currency = "CHF";
+
+    /// <summary>Classes for a key/value row in a borderless, flush summary list.</summary>
+    private const string FlushItem = "px-0 bg-transparent";
+
+    /// <summary>Classes for a highlighted total row inside a bordered summary list.</summary>
+    private const string TotalItem = "list-group-item-primary";
+
     private readonly HouseBuyScenarioManager _scenarioManager = new();
+
+    private ConfirmDialog? _confirmDialog;
 
     private Guid CurrentScenarioId { get; set; } = Guid.NewGuid();
 
@@ -764,20 +711,6 @@ else
             scenarioToSave.Id);
     }
 
-    private void LoadSavedScenario()
-    {
-        var scenario = AppState.CurrentPlan?.HouseBuyScenarios
-            .OrderBy(x => x.Name)
-            .FirstOrDefault();
-
-        if (scenario is null)
-        {
-            return;
-        }
-
-        LoadScenarioIntoUi(scenario);
-    }
-
     private void CreateNewScenario()
     {
         var plan = AppState.CurrentPlan;
@@ -825,7 +758,11 @@ else
             duplicateResult.Scenario.Id);
     }
 
-    private void DeleteScenario()
+    /// <summary>
+    /// Deleting a saved scenario used to happen on the first click, with nothing to undo it. It
+    /// now goes through <see cref="ConfirmDialog"/> like every other destructive action in the app.
+    /// </summary>
+    private async Task DeleteScenarioAsync()
     {
         var plan = AppState.CurrentPlan;
 
@@ -835,6 +772,20 @@ else
         }
 
         if (!CurrentScenarioExists)
+        {
+            return;
+        }
+
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("Delete"),
+            Text("Dialog_ConfirmMessage"));
+
+        if (!confirmed)
         {
             return;
         }
@@ -879,8 +830,8 @@ else
     }
 
     private void ReplaceHouseBuyScenariosAndSelect(
-    List<HouseBuySimulatorScenario> scenarios,
-    Guid? scenarioIdToSelect)
+        List<HouseBuySimulatorScenario> scenarios,
+        Guid? scenarioIdToSelect)
     {
         var plan = AppState.CurrentPlan;
 
@@ -1163,14 +1114,29 @@ else
         };
     }
 
-    private static string Money(decimal value)
+    /// <summary>
+    /// A whole-franc amount with its currency, e.g. <c>CHF 12'346</c>.
+    ///
+    /// The number comes from <see cref="AppFormatter"/> so it follows the region the user picked
+    /// in Settings. The page used to format it itself and, alone in the app, ignored that
+    /// preference - setting the region to en-US left this one page speaking Swiss German.
+    /// </summary>
+    private string Money(decimal value)
     {
-        return $"CHF {value.ToString("N0", CultureInfo.CurrentCulture)}";
+        return $"{Currency} {Formatter.MoneyRounded(value)}";
     }
 
-    private static string Percent(decimal value)
+    /// <summary>
+    /// <see cref="SwissMortgageAffordabilityCalculator"/> signals "no income to divide by" with
+    /// <see cref="decimal.MaxValue"/> and passes that sentinel into three result fields:
+    /// <c>AffordabilityRatio</c>, <c>RequiredGrossAnnualIncomeForAffordability</c> and, through it,
+    /// <c>MissingGrossAnnualIncomeForAffordability</c>. Rendered as money that is a 29-digit
+    /// number in the middle of a mortgage summary. The calculator is Core and stays as it is; the
+    /// sentinel is caught here, on every field that can carry it, rather than on one of them.
+    /// </summary>
+    private string MoneyOrNotApplicable(decimal value)
     {
-        return $"{value.ToString("N2", CultureInfo.CurrentCulture)}%";
+        return value == decimal.MaxValue ? Text("NotApplicable") : Money(value);
     }
 
     private string AffordabilityRatioText(decimal ratio)
@@ -1180,7 +1146,19 @@ else
             return Text("NotApplicable");
         }
 
-        return Percent(ratio * 100m);
+        return Formatter.Percent(ratio * 100m);
+    }
+
+    private static string StatusPillCssClass(bool ok)
+    {
+        return ok
+            ? "bg-success-subtle text-success-emphasis"
+            : "bg-danger-subtle text-danger-emphasis";
+    }
+
+    private static IReadOnlyDictionary<string, object> AriaLabel(string label)
+    {
+        return new Dictionary<string, object> { ["aria-label"] = label };
     }
 
     private string Text(string key)
@@ -1192,6 +1170,38 @@ else
     {
         return L[key, arguments].Value;
     }
+
+    private RenderFragment CheckIcon => @<svg width="20"
+                                              height="20"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="3"
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              aria-hidden="true"
+                                              class="d-block"><path d="M20 6L9 17l-5-5" /></svg>;
+
+    private RenderFragment CrossIcon => @<svg width="20"
+                                              height="20"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              stroke-width="3"
+                                              stroke-linecap="round"
+                                              stroke-linejoin="round"
+                                              aria-hidden="true"
+                                              class="d-block"><path d="M18 6L6 18" /><path d="M6 6l12 12" /></svg>;
+
+    /// <summary>
+    /// One label/value line of a summary. The whole page used to spell this out as a two-column
+    /// CSS grid with its own colours and rules; a Bootstrap list group draws the same thing.
+    /// </summary>
+    private RenderFragment ValueRow(string label, string value, bool emphasis = false, string? itemCssClass = null) =>
+        @<li class="list-group-item d-flex justify-content-between align-items-baseline gap-3 @itemCssClass">
+            <span class="@(emphasis ? "fw-bold" : null)">@label</span>
+            <span class="num text-nowrap @(emphasis ? "fw-bold" : "fw-semibold")">@value</span>
+        </li>;
 
     private sealed class PersonUiModel
     {
