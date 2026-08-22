@@ -22,6 +22,92 @@
 @* Outside the scaffold: the dialog has to survive the body being replaced by the empty state. *@
 <ConfirmDialog @ref="_confirmDialog" />
 
+@*
+    Creating the Pillar 3a account without leaving the contract.
+
+    A user who has never made one has nothing to pick, and sending them to the Accounts page to
+    come back afterwards is exactly the detour that leaves contracts unlinked. AccountValidator
+    insists on precisely one owner and a subtype for this account type, so both are asked for here
+    rather than discovered on the next export.
+*@
+@if (_accountEditModel is { } accountEdit)
+{
+    <AppModal Visible="true"
+              Title='@L["Pillar3a_CreateAccountTitle"]'
+              ConfirmText='@L["Save"]'
+              CancelText='@L["Cancel"]'
+              OnConfirm="SavePillar3aAccount"
+              OnCancel="CancelPillar3aAccount">
+
+        @if (!string.IsNullOrWhiteSpace(_accountErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@_accountErrorMessage</div>
+        }
+
+        <div class="row g-3">
+            <div class="col-md-8">
+                <FormField Label='@L["Name"]' Required="true" CssClass="mb-0">
+                    <input id="@context.Id" class="form-control" @bind="accountEdit.Name" />
+                </FormField>
+            </div>
+
+            <div class="col-md-4">
+                <FormField Label='@L["Currency"]' CssClass="mb-0">
+                    <input id="@context.Id" class="form-control" @bind="accountEdit.Currency" />
+                </FormField>
+            </div>
+
+            <div class="col-md-6">
+                <FormField Label='@L["Owner"]'
+                           Required="true"
+                           Hint='@L["Pillar3a_AccountOwnerHint"]'
+                           CssClass="mb-0">
+                    <select id="@context.Id"
+                            aria-describedby="@context.DescribedBy"
+                            class="form-select"
+                            @bind="accountEdit.OwnerPersonId">
+                        <option value="">@L["Pillar3a_SelectOwner"]</option>
+                        @foreach (var person in PersonList.OrderBy(x => x.DisplayName))
+                        {
+                            <option value="@person.Id">@person.DisplayName</option>
+                        }
+                    </select>
+                </FormField>
+            </div>
+
+            <div class="col-md-6">
+                <FormField Label='@L["Account_Pillar3aSubType"]'
+                           Required="true"
+                           CssClass="mb-0">
+                    <select id="@context.Id" class="form-select" @bind="accountEdit.Pillar3aSubtype">
+                        <option value="">@L["Account_Pillar3aSelectSubType"]</option>
+                        @foreach (var subtype in Enum.GetValues<Pillar3aAccountSubtype>())
+                        {
+                            <option value="@subtype">@EnumL.Translate(subtype)</option>
+                        }
+                    </select>
+                </FormField>
+            </div>
+
+            <div class="col-md-6">
+                <FormField Label='@L["Account_OpeningBalance"]'
+                           Hint='@L["Pillar3a_AccountOpeningBalanceHint"]'
+                           CssClass="mb-0">
+                    <MoneyInput Id="@context.Id"
+                                AriaDescribedBy="@context.DescribedBy"
+                                @bind-Value="accountEdit.OpeningBalance" />
+                </FormField>
+            </div>
+
+            <div class="col-md-6">
+                <FormField Label='@L["Account_OpeningDate"]' CssClass="mb-0">
+                    <input id="@context.Id" type="date" class="form-control" @bind="accountEdit.OpeningDate" />
+                </FormField>
+            </div>
+        </div>
+    </AppModal>
+}
+
 <PageScaffold Title='@L["Pillar3a_Title"]'
               RequiresPlan="true"
               EmptyStateMessage='@L["Pillar3a_NoPlanLoaded"]'>
@@ -85,6 +171,26 @@
             var contractProjectionRows = BuildContractProjectionRows(contracts, projectionResults);
         }
 
+        @*
+            The H8 warnings, at the top of the page that can fix them rather than three hundred
+            rows down the simulation timeline. The button jumps straight into the contract's
+            editor, where the account picker is.
+        *@
+        <SimulationWarningPanel Warnings="AppState.CurrentSimulationResult?.Warnings"
+                                Codes="Pillar3aWarningCodes"
+                                DescribeSource="DescribeWarningSource">
+            <ActionContent Context="sourceId">
+                @if (FindContract(sourceId) is { } warnedContract)
+                {
+                    <button type="button"
+                            class="btn btn-sm btn-primary text-nowrap"
+                            @onclick="() => EditContract(warnedContract)">
+                        @L["Pillar3a_FixLinkAction"]
+                    </button>
+                }
+            </ActionContent>
+        </SimulationWarningPanel>
+
         @if (_editModel is not null)
         {
             <div class="card mb-3">
@@ -124,6 +230,58 @@
                                     }
                                 </select>
                             </FormField>
+                        </div>
+
+                        @*
+                            The account link, given a box of its own because it is the difference
+                            between a contract that saves money and one whose contributions the
+                            simulation destroys (finding H8). Amber while it is unset - not because
+                            the contract is invalid, it is not, but because leaving it unset is
+                            almost never what the user means.
+                        *@
+                        <div class="col-12">
+                            <div class="alert @(_editModel.AccountId is null ? "alert-warning" : "alert-light") mb-0">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-6">
+                                        <FormField Label='@L["Pillar3a_ContractAccount"]'
+                                                   Hint='@L["Pillar3a_ContractAccountHint"]'
+                                                   CssClass="mb-0">
+                                            <select id="@context.Id"
+                                                    aria-describedby="@context.DescribedBy"
+                                                    class="form-select"
+                                                    @bind="_editModel.AccountId">
+                                                <option value="">@L["Pillar3a_ContractAccountNotLinked"]</option>
+                                                @foreach (var account in Pillar3aAccounts.OrderBy(x => x.Name))
+                                                {
+                                                    <option value="@account.Id">@account.Name</option>
+                                                }
+                                            </select>
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <button type="button"
+                                                class="btn btn-outline-primary"
+                                                @onclick="NewPillar3aAccount">
+                                            @L["Pillar3a_CreateAccount"]
+                                        </button>
+
+                                        @if (Pillar3aAccounts.Count == 0)
+                                        {
+                                            <div class="form-text">
+                                                @L["Pillar3a_NoPillar3aAccountsYet"]
+                                            </div>
+                                        }
+                                    </div>
+
+                                    @if (_editModel.AccountId is null)
+                                    {
+                                        <div class="col-12">
+                                            <p class="mb-0 small">@L["Pillar3a_UnlinkedConsequence"]</p>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-md-2">
@@ -333,6 +491,117 @@
                         }
                     }
 
+                    <hr />
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">@L["Pillar3a_Withdrawals"]</h6>
+
+                        <button class="btn btn-sm btn-outline-primary" @onclick="AddWithdrawal">
+                            @L["Pillar3a_AddWithdrawal"]
+                        </button>
+                    </div>
+
+                    <p class="text-muted small">@L["Pillar3a_WithdrawalsHint"]</p>
+
+                    @if (_editModel.Withdrawals.Count == 0)
+                    {
+                        <div class="alert alert-info">
+                            @L["Pillar3a_NoWithdrawalsConfigured"]
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var withdrawal in _editModel.Withdrawals)
+                        {
+                            @* The class names one block apart from the contribution schedule
+                               blocks above, which are laid out identically. *@
+                            <div class="border rounded p-3 mb-3 pillar3a-withdrawal">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <strong>@L["Pillar3a_Withdrawal"]</strong>
+
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            @onclick="() => RemoveWithdrawal(withdrawal)">
+                                        @L["Remove"]
+                                    </button>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <FormField Label='@L["Date"]' CssClass="">
+                                            <input id="@context.Id" type="date" class="form-control" @bind="withdrawal.Date" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <FormField Label='@L["Pillar3a_WithdrawalReason"]' CssClass="">
+                                            <select id="@context.Id" class="form-select" @bind="withdrawal.Reason">
+                                                @foreach (var reason in Enum.GetValues<Pillar3aWithdrawalReason>())
+                                                {
+                                                    <option value="@reason">@EnumL.Translate(reason)</option>
+                                                }
+                                            </select>
+                                        </FormField>
+                                    </div>
+
+                                    @*
+                                        Nullable on purpose. Empty means "sweep whatever is left",
+                                        which only makes sense on a closing withdrawal - and which
+                                        misses interest the linked account earned, hence the hint.
+                                    *@
+                                    <div class="col-md-3">
+                                        <FormField Label='@L["Amount"]'
+                                                   Hint='@(withdrawal.Amount is null && withdrawal.CloseContract
+                                                             ? Text("Pillar3a_WithdrawalSweepHint")
+                                                             : null)'
+                                                   CssClass="">
+                                            <MoneyInput Id="@context.Id"
+                                                        AriaDescribedBy="@context.DescribedBy"
+                                                        @bind-Value="withdrawal.Amount" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <FormField Label='@L["Pillar3a_WithdrawalTargetAccount"]'
+                                                   Hint='@(withdrawal.TargetAccountId is null && _editModel.AccountId is null
+                                                             ? Text("Pillar3a_WithdrawalNotPostedHint")
+                                                             : null)'
+                                                   CssClass="">
+                                            <select id="@context.Id"
+                                                    aria-describedby="@context.DescribedBy"
+                                                    class="form-select"
+                                                    @bind="withdrawal.TargetAccountId">
+                                                <option value="">@L["Pillar3a_SelectAccount"]</option>
+                                                @foreach (var account in PaymentAccounts.OrderBy(x => x.Name))
+                                                {
+                                                    <option value="@account.Id">@account.Name</option>
+                                                }
+                                            </select>
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <FormField Label='@L["Pillar3a_CloseContract"]'
+                                                   Hint='@L["Pillar3a_CloseContractHint"]'
+                                                   Layout="FormFieldLayout.Checkbox"
+                                                   CssClass="">
+                                            <input id="@context.Id"
+                                                   type="checkbox"
+                                                   class="form-check-input"
+                                                   aria-describedby="@context.DescribedBy"
+                                                   @bind="withdrawal.CloseContract" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <FormField Label='@L["Notes"]' CssClass="">
+                                            <input id="@context.Id" class="form-control" @bind="withdrawal.Notes" />
+                                        </FormField>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+
                     <div class="mt-3">
                         <button class="btn btn-primary" @onclick="SaveContract">
                             @L["Save"]
@@ -501,6 +770,26 @@
 
             <Column Title='@L["Owner"]' Text="@(x => x.OwnerName)" />
 
+            @*
+                The link, in the list rather than only inside the editor: an unlinked contract is
+                money the simulation throws away, and that has to be visible without opening
+                anything.
+            *@
+            <Column Title='@L["Pillar3a_ContractAccount"]'>
+                <ChildContent Context="row">
+                    @if (row.AccountName is null)
+                    {
+                        <span class="badge bg-warning text-dark">
+                            @L["Pillar3a_ContractAccountNotLinked"]
+                        </span>
+                    }
+                    else
+                    {
+                        @row.AccountName
+                    }
+                </ChildContent>
+            </Column>
+
             <Column Title='@L["Type"]' Text="@(x => EnumL.Translate(x.Contract.Type))" />
 
             <Column Title='@L["Pillar3a_Provider"]'
@@ -544,6 +833,26 @@
                     else
                     {
                         @Formatter.Money(row.ProjectedValue.Value, row.ProjectedValueCurrency)
+                    }
+                </ChildContent>
+            </Column>
+
+            @*
+                Two readings of the same money, side by side rather than one of them picked. The
+                projection grows OpeningValue by the contract's assumed return; net worth counts
+                the linked account's simulated balance. They disagree whenever the account's
+                opening balance and the contract's opening value disagree, and that disagreement is
+                information, not an error to be hidden.
+            *@
+            <Column Title='@L["Pillar3a_SimulatedAccountBalance"]' Align="ColumnAlign.Number">
+                <ChildContent Context="row">
+                    @if (row.SimulatedAccountBalance is null)
+                    {
+                        <span class="text-muted">@L["NotApplicable"]</span>
+                    }
+                    else
+                    {
+                        @Formatter.Money(row.SimulatedAccountBalance.Value, row.Contract.Currency)
                     }
                 </ChildContent>
             </Column>
@@ -716,6 +1025,14 @@
 
             <h5>@L["Pillar3a_SimulatedContributionEvents"]</h5>
 
+            @*
+                Handoff §2.7. Contributions are generated from the contract and carry no
+                indexation, so the amount stays as entered even though the statutory maximum
+                drifts upward every few years. That maximum is a legislative figure rather than
+                CPI, and the app does not invent one.
+            *@
+            <p class="text-muted small">@L["Pillar3a_ContributionsNotIndexedHint"]</p>
+
             @if (AppState.CurrentSimulationResult is null)
             {
                 <div class="alert alert-info">
@@ -763,6 +1080,9 @@
     private string? _errorMessage;
     private string? _infoMessage;
 
+    private AccountEditModel? _accountEditModel;
+    private string? _accountErrorMessage;
+
     private ConfirmDialog? _confirmDialog;
 
     private int _taxYear = DateTime.Today.Year;
@@ -774,6 +1094,24 @@
         PersonList
             .Where(x => x.Pillar3aEligibility == Pillar3aEligibilityType.WithPensionFund)
             .ToList();
+
+    /// <summary>
+    /// The codes this page is the right place to act on. Everything else stays on the simulation
+    /// page: a warning shown where it cannot be fixed is noise.
+    /// </summary>
+    private static readonly string[] Pillar3aWarningCodes =
+    [
+        "PILLAR3A_CONTRACT_NOT_LINKED",
+        "PILLAR3A_ACCOUNT_NOT_SIMULATED",
+        "PILLAR3A_WITHDRAWAL_NOT_POSTED",
+        "PILLAR3A_CLOSE_IGNORES_GROWTH"
+    ];
+
+    private IReadOnlyList<Account> Pillar3aAccounts =>
+        AppState.CurrentPlan?.Accounts
+            .Where(x => x.Type == AccountType.Pillar3a)
+            .ToList()
+        ?? [];
 
     private IReadOnlyList<Account> PaymentAccounts =>
         AppState.CurrentPlan?.Accounts
@@ -921,6 +1259,135 @@
         _editModel?.ContributionSchedules.Remove(schedule);
     }
 
+    private void AddWithdrawal()
+    {
+        if (_editModel is null)
+        {
+            return;
+        }
+
+        // No amount and no target pre-filled: both are real decisions, and a default target
+        // account would post a payout into an account the user never chose.
+        _editModel.Withdrawals.Add(new Pillar3aWithdrawalEditModel
+        {
+            Id = Guid.NewGuid(),
+            Date = DateOnly.FromDateTime(DateTime.Today),
+            Reason = Pillar3aWithdrawalReason.Retirement
+        });
+    }
+
+    private void RemoveWithdrawal(Pillar3aWithdrawalEditModel withdrawal)
+    {
+        _editModel?.Withdrawals.Remove(withdrawal);
+    }
+
+    private void NewPillar3aAccount()
+    {
+        _accountErrorMessage = null;
+
+        var plan = AppState.CurrentPlan;
+
+        _accountEditModel = new AccountEditModel
+        {
+            Id = Guid.NewGuid(),
+            Name = _editModel is { Name.Length: > 0 } contract
+                ? contract.Name
+                : Text("Pillar3a_DefaultAccountName"),
+            Type = AccountType.Pillar3a,
+            Currency = _editModel?.Currency ?? plan?.BaseCurrency ?? "CHF",
+            OpeningDate = _editModel?.OpeningDate ?? DateOnly.FromDateTime(DateTime.Today),
+
+            // The contract's opening value, because the two are the same money seen twice and a
+            // mismatch is exactly what makes the projection and the net-worth series disagree.
+            OpeningBalance = _editModel?.OpeningValue ?? 0m,
+
+            // The contract's owner, which is also the only owner AccountValidator will accept.
+            OwnerPersonId = _editModel?.OwnerPersonId,
+            IsActive = true
+        };
+    }
+
+    private void CancelPillar3aAccount()
+    {
+        _accountEditModel = null;
+        _accountErrorMessage = null;
+    }
+
+    private void SavePillar3aAccount()
+    {
+        if (_accountEditModel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_accountEditModel.Name))
+            {
+                throw new InvalidOperationException(Text("Account_ErrorNameRequired"));
+            }
+
+            // AccountValidator rejects a Pillar 3a account with anything other than exactly one
+            // owner, and one without a subtype. Both are asked here so the plan cannot be left in
+            // a state that only fails at export time.
+            if (_accountEditModel.OwnerPersonId is null)
+            {
+                throw new InvalidOperationException(Text("Account_ErrorPillar3aOwnerRequired"));
+            }
+
+            if (_accountEditModel.Pillar3aSubtype is null)
+            {
+                throw new InvalidOperationException(Text("Account_ErrorPillar3aSubtypeRequired"));
+            }
+
+            var account = _accountEditModel.ToAccount();
+
+            AppState.AddOrUpdateAccount(account);
+
+            if (_editModel is not null)
+            {
+                _editModel.AccountId = account.Id;
+            }
+
+            _accountEditModel = null;
+            _accountErrorMessage = null;
+            _infoMessage = Text("Pillar3a_AccountCreated", account.Name);
+        }
+        catch (Exception ex)
+        {
+            _accountErrorMessage = ex.Message;
+        }
+    }
+
+    private Pillar3aContract? FindContract(Guid? contractId)
+    {
+        if (contractId is null)
+        {
+            return null;
+        }
+
+        return AppState.CurrentPlan?.Pillar3aContracts
+            .SingleOrDefault(x => x.Id == contractId.Value);
+    }
+
+    /// <summary>
+    /// The name the localized warning texts interpolate. The engine's own message already carries
+    /// it, in English; this is what lets the German text carry it too.
+    /// </summary>
+    private string? DescribeWarningSource(SimulationWarning warning)
+    {
+        var contract = FindContract(warning.SourceId);
+
+        if (contract is not null)
+        {
+            return contract.Name;
+        }
+
+        return warning.AccountId is null
+            ? null
+            : GetAccountName(warning.AccountId);
+    }
+
     private Person? GetPerson(Guid personId)
     {
         return AppState.CurrentPlan?.Persons
@@ -943,6 +1410,22 @@
             .SingleOrDefault(x => x.Id == accountId.Value)
             ?.Name
             ?? "?";
+    }
+
+    /// <summary>
+    /// The simulated end balance of the account this contract is linked to, or null when it is
+    /// linked to none - in which case there is no balance anywhere, which is the whole problem.
+    /// </summary>
+    private decimal? GetSimulatedAccountBalance(Pillar3aContract contract)
+    {
+        var result = AppState.CurrentSimulationResult;
+
+        if (contract.AccountId is null || result is null)
+        {
+            return null;
+        }
+
+        return result.GetBalance(contract.AccountId.Value, result.EndDate);
     }
 
     private bool HasActiveScheduledPillar3aContribution(Guid personId)
@@ -1055,6 +1538,10 @@
                 {
                     Contract = contract,
                     OwnerName = GetPersonName(contract.OwnerPersonId),
+                    AccountName = contract.AccountId is null
+                        ? null
+                        : GetAccountName(contract.AccountId),
+                    SimulatedAccountBalance = GetSimulatedAccountBalance(contract),
                     RetirementDate = owner?.RetirementDate,
                     RemainingYears = FormatRemainingYears(owner?.RetirementDate),
                     ProjectedValue = finalPoint?.Value,
@@ -1297,6 +1784,8 @@
     {
         public required Pillar3aContract Contract { get; init; }
         public string OwnerName { get; init; } = string.Empty;
+        public string? AccountName { get; init; }
+        public decimal? SimulatedAccountBalance { get; init; }
         public DateOnly? RetirementDate { get; init; }
         public string RemainingYears { get; init; } = string.Empty;
         public decimal? ProjectedValue { get; init; }

@@ -35,6 +35,15 @@
             .Where(x => IsFullMonthInsideSimulationRange(x.Label, result.StartDate, result.EndDate))
             .ToList();
 
+        @*
+            The warnings, before the numbers they qualify. They were only in the timeline table at
+            the bottom of the page - as a raw code and an English sentence, sorted in among a few
+            hundred events - which is a log rather than a warning. The table stays; this is the
+            part a user actually reads.
+        *@
+        <SimulationWarningPanel Warnings="result.Warnings"
+                                DescribeSource="DescribeWarningSource" />
+
         <div class="card mb-4">
             <div class="card-header">
                 <strong>@L["Simulation_Result"]</strong>
@@ -242,6 +251,36 @@
         return AppState.CurrentPlan.Accounts
             .SingleOrDefault(x => x.Id == accountId.Value)
             ?.Name ?? "?";
+    }
+
+    /// <summary>
+    /// The name of whatever a warning points at, so the localized text can say which contract,
+    /// mortgage or account it means. The engine's own message already names it, in English.
+    /// </summary>
+    private string? DescribeWarningSource(SimulationWarning warning)
+    {
+        var plan = AppState.CurrentPlan;
+
+        if (plan is null)
+        {
+            return null;
+        }
+
+        if (warning.SourceId is { } sourceId)
+        {
+            var named =
+                plan.Pillar3aContracts.SingleOrDefault(x => x.Id == sourceId)?.Name
+                ?? plan.Mortgages.SingleOrDefault(x => x.Id == sourceId)?.Name
+                ?? plan.CreditCards.SingleOrDefault(x => x.Id == sourceId)?.Name
+                ?? plan.Transactions.SingleOrDefault(x => x.Id == sourceId)?.Name;
+
+            if (named is not null)
+            {
+                return named;
+            }
+        }
+
+        return warning.AccountId is null ? null : GetAccountName(warning.AccountId);
     }
 
     private string GetMortgageTypeName(CashFlowPlan plan, Guid mortgageId)

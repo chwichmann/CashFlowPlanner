@@ -31,6 +31,16 @@
         var summary = SummaryService.CreateSummary(plan, result);
         var endDate = plan.SimulationSettings.EndDate;
 
+        @*
+            Only the codes that make the numbers on this page wrong, not every warning the run
+            produced - the full list lives on the Simulation page. An unlinked Pillar 3a contract
+            means the net-worth tile below is understated by everything that contract holds, and a
+            withdrawal that could not be posted means a payout the plan shows nowhere.
+        *@
+        <SimulationWarningPanel Warnings="result.Warnings"
+                                Codes="NetWorthAffectingWarningCodes"
+                                DescribeSource="DescribeWarningSource" />
+
         <div class="row g-3 mb-4">
             <div class="col-md-3">
                 <div class="card">
@@ -137,6 +147,24 @@
 </PageScaffold>
 
 @code {
+    private static readonly string[] NetWorthAffectingWarningCodes =
+    [
+        "PILLAR3A_CONTRACT_NOT_LINKED",
+        "PILLAR3A_ACCOUNT_NOT_SIMULATED",
+        "PILLAR3A_WITHDRAWAL_NOT_POSTED"
+    ];
+
+    private string? DescribeWarningSource(SimulationWarning warning)
+    {
+        var plan = AppState.CurrentPlan;
+
+        if (plan is null || warning.SourceId is not { } sourceId)
+        {
+            return null;
+        }
+
+        return plan.Pillar3aContracts.SingleOrDefault(x => x.Id == sourceId)?.Name;
+    }
 
     private static decimal GetProjectedMortgagePrincipal(
         MortgageContract mortgage,

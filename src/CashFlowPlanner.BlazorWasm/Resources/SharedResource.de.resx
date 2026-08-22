@@ -2589,4 +2589,115 @@
   <data name="BankImport_AddedFromImport" xml:space="preserve">
     <value>Aus {0}-Import übernommen.</value>
   </data>
+  <data name="Pillar3a_ContractAccount" xml:space="preserve">
+    <value>Säule-3a-Konto</value>
+  </data>
+  <data name="Pillar3a_ContractAccountHint" xml:space="preserve">
+    <value>Das Konto, auf dem das Geld dieses Vertrags liegt. Beiträge werden darauf überwiesen, und sein Saldo ist es, der im Vermögen gezählt wird.</value>
+  </data>
+  <data name="Pillar3a_ContractAccountNotLinked" xml:space="preserve">
+    <value>Nicht verknüpft</value>
+  </data>
+  <data name="Pillar3a_UnlinkedConsequence" xml:space="preserve">
+    <value>Ohne Konto belastet die Simulation das Zahlungskonto und schreibt nichts gut: Jeder eingezahlte Franken verlässt den Plan, und der Saldo dieses Vertrags zählt nicht zum Vermögen.</value>
+  </data>
+  <data name="Pillar3a_NoPillar3aAccountsYet" xml:space="preserve">
+    <value>Dieser Plan hat noch kein Säule-3a-Konto.</value>
+  </data>
+  <data name="Pillar3a_CreateAccount" xml:space="preserve">
+    <value>Säule-3a-Konto erstellen</value>
+  </data>
+  <data name="Pillar3a_CreateAccountTitle" xml:space="preserve">
+    <value>Neues Säule-3a-Konto</value>
+  </data>
+  <data name="Pillar3a_DefaultAccountName" xml:space="preserve">
+    <value>Säule-3a-Konto</value>
+  </data>
+  <data name="Pillar3a_AccountOwnerHint" xml:space="preserve">
+    <value>Ein Säule-3a-Konto gehört genau einer Person.</value>
+  </data>
+  <data name="Pillar3a_AccountOpeningBalanceHint" xml:space="preserve">
+    <value>Der heutige Saldo des Kontos. Üblicherweise derselbe Betrag wie der Anfangswert des Vertrags - weichen die beiden ab, weichen auch Hochrechnung und Vermögensverlauf voneinander ab.</value>
+  </data>
+  <data name="Pillar3a_AccountCreated" xml:space="preserve">
+    <value>Säule-3a-Konto «{0}» wurde erstellt und mit diesem Vertrag verknüpft.</value>
+  </data>
+  <data name="Pillar3a_FixLinkAction" xml:space="preserve">
+    <value>Vertrag öffnen</value>
+  </data>
+  <data name="Pillar3a_SimulatedAccountBalance" xml:space="preserve">
+    <value>Kontosaldo (Simulation)</value>
+  </data>
+  <data name="Pillar3a_Withdrawal" xml:space="preserve">
+    <value>Bezug</value>
+  </data>
+  <data name="Pillar3a_AddWithdrawal" xml:space="preserve">
+    <value>Bezug hinzufügen</value>
+  </data>
+  <data name="Pillar3a_NoWithdrawalsConfigured" xml:space="preserve">
+    <value>Keine Bezüge geplant.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalsHint" xml:space="preserve">
+    <value>Geplante Auszahlungen aus diesem Vertrag. Sie werden simuliert: Das Geld wird dem verknüpften Säule-3a-Konto entnommen und dem Zielkonto gutgeschrieben.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalReason" xml:space="preserve">
+    <value>Grund</value>
+  </data>
+  <data name="Pillar3a_WithdrawalTargetAccount" xml:space="preserve">
+    <value>Zielkonto</value>
+  </data>
+  <data name="Pillar3a_CloseContract" xml:space="preserve">
+    <value>Schliesst den Vertrag</value>
+  </data>
+  <data name="Pillar3a_CloseContractHint" xml:space="preserve">
+    <value>Beiträge enden an diesem Datum: In einen ausbezahlten und geschlossenen Vertrag kann nichts mehr einbezahlt werden.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalSweepHint" xml:space="preserve">
+    <value>Bleibt das Feld leer, zahlt der Schlussbezug aus, was übrig ist. Zinsen, die das Konto erwirtschaftet hat, sind darin nicht enthalten - geben Sie den Betrag explizit an, um diese Näherung zu vermeiden.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalNotPostedHint" xml:space="preserve">
+    <value>Dieser Bezug nennt weder ein Säule-3a-Konto beim Vertrag noch ein Zielkonto und kann deshalb gar nicht gebucht werden.</value>
+  </data>
+  <data name="Pillar3a_ContributionsNotIndexedHint" xml:space="preserve">
+    <value>Säule-3a-Beiträge werden nicht der Teuerung angepasst: Der Betrag bleibt so, wie er erfasst wurde, obwohl der gesetzliche Höchstbetrag alle paar Jahre steigt. Dieser Höchstbetrag ist eine gesetzgeberische Grösse und kein Preisindex; die App erfindet dafür keinen Wert - erhöhen Sie den Betrag selbst, wenn sich der Höchstbetrag ändert.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Title" xml:space="preserve">
+    <value>Säule-3a-Vertrag «{0}» ist mit keinem Konto verknüpft</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Text" xml:space="preserve">
+    <value>Die Beiträge werden dem Zahlungskonto belastet und nirgends gutgeschrieben - das Geld verlässt also den Plan. Der Saldo des Vertrags zählt zudem nicht zum Vermögen.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Fix" xml:space="preserve">
+    <value>Verknüpfen Sie den Vertrag mit einem Säule-3a-Konto oder erstellen Sie im Vertragseditor eines.</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Title" xml:space="preserve">
+    <value>Säule-3a-Vertrag «{0}» verweist auf ein Konto, das nicht simuliert wird</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Text" xml:space="preserve">
+    <value>Das verknüpfte Konto ist nicht Teil dieser Simulation; die Beiträge verlassen den Plan also genauso, wie wenn gar keine Verknüpfung bestünde.</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Fix" xml:space="preserve">
+    <value>Prüfen Sie, ob das Konto inaktiv ist und von den Simulationseinstellungen ausgeschlossen wird, und wählen Sie ein simuliertes Konto.</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Title" xml:space="preserve">
+    <value>Ein Bezug aus «{0}» konnte nicht gebucht werden</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Text" xml:space="preserve">
+    <value>Der Bezug nennt weder ein Säule-3a-Konto beim Vertrag noch ein Zielkonto; es wurde kein Ereignis erzeugt und die Auszahlung erscheint nirgends.</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Fix" xml:space="preserve">
+    <value>Geben Sie dem Bezug ein Zielkonto oder verknüpfen Sie den Vertrag mit einem Säule-3a-Konto.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Title" xml:space="preserve">
+    <value>Die Schlussauszahlung von «{0}» enthält die erwirtschafteten Zinsen nicht</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Text" xml:space="preserve">
+    <value>Der Vertrag wird ohne angegebenen Betrag geschlossen; die Auszahlung wurde deshalb nur aus dem Anfangssaldo und den Beiträgen berechnet. Dem verknüpften Konto gutgeschriebene Zinsen bleiben darauf liegen.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Fix" xml:space="preserve">
+    <value>Geben Sie den Bezugsbetrag explizit an, um die Näherung zu entfernen.</value>
+  </data>
+  <data name="Warning_Occurrences" xml:space="preserve">
+    <value>{0} Vorkommen, erstmals am {1}.</value>
+  </data>
 </root>

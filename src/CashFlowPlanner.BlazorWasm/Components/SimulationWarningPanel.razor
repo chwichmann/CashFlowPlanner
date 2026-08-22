@@ -1,0 +1,172 @@
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.Core
+@using Microsoft.Extensions.Localization
+
+@inject IStringLocalizer<SharedResource> L
+@inject AppFormatter Formatter
+
+@*
+    Simulation warnings, said in the user's language and next to the thing that caused them.
+
+    The Simulation page already listed every warning in a timeline table, as a code and the
+    engine's English sentence, sorted in among a few hundred events. That is a log, not a
+    notification: PILLAR3A_CONTRACT_NOT_LINKED means "the simulation is destroying this contract's
+    money", and it was three hundred rows down a table on a page the user has no reason to open.
+
+    So a warning has two texts here. The engine's Message stays as the fallback and is what an
+    unrecognised code still shows - a warning nobody translated must not vanish. A code this
+    component knows gets a localized title, an explanation and the fix, keyed
+    Warning_<CODE>_Title / _Text / _Fix, with the affected contract or account named.
+*@
+
+@if (Rows.Count > 0)
+{
+    <div class="@CssClass">
+        @foreach (var row in Rows)
+        {
+            <div class="alert @AlertCssClass(row.Severity) d-flex gap-3 align-items-start"
+                 role="@AlertRole(row.Severity)">
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">@row.Title</div>
+                    <div>@row.Text</div>
+
+                    @if (!string.IsNullOrWhiteSpace(row.Fix))
+                    {
+                        <div class="small mt-1">@row.Fix</div>
+                    }
+
+                    @if (row.Occurrences > 1)
+                    {
+                        <div class="small text-body-secondary mt-1">
+                            @Occurrences(row)
+                        </div>
+                    }
+                    else if (row.Date is not null)
+                    {
+                        <div class="small text-body-secondary mt-1">
+                            @L["Date"]: @Formatter.Date(row.Date.Value)
+                        </div>
+                    }
+                </div>
+
+                @if (ActionContent is not null && row.Severity != WarningSeverity.Info)
+                {
+                    <div class="flex-shrink-0">
+                        @ActionContent(row.SourceId)
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The warnings to consider. Usually <c>SimulationResult.Warnings</c>.</summary>
+    [Parameter]
+    public IReadOnlyList<SimulationWarning>? Warnings { get; set; }
+
+    /// <summary>
+    /// Show only these codes. Left null every warning is shown, which is what the Simulation page
+    /// wants; a page about one subject passes the codes that belong to it.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyCollection<string>? Codes { get; set; }
+
+    /// <summary>
+    /// Resolves the name of whatever a warning points at, from its <c>SourceId</c> or
+    /// <c>AccountId</c>. Without it the localized texts fall back to the engine's message, which
+    /// already contains the name in English.
+    /// </summary>
+    [Parameter]
+    public Func<SimulationWarning, string?>? DescribeSource { get; set; }
+
+    /// <summary>
+    /// An optional per-warning button, receiving the warning's <c>SourceId</c> - "link this
+    /// contract now", typically.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<Guid?>? ActionContent { get; set; }
+
+    /// <summary>Classes on the wrapper.</summary>
+    [Parameter]
+    public string CssClass { get; set; } = "mb-3";
+
+    private IReadOnlyList<WarningRow> Rows => BuildRows();
+
+    private IReadOnlyList<WarningRow> BuildRows()
+    {
+        if (Warnings is null || Warnings.Count == 0)
+        {
+            return [];
+        }
+
+        return Warnings
+            .Where(warning => Codes is null || Codes.Contains(warning.Code))
+            // Collapsed per subject, not per occurrence. NEGATIVE_BALANCE is raised once per day
+            // the account is overdrawn, and eight hundred identical red boxes is a page the user
+            // scrolls past rather than a page that warns them.
+            .GroupBy(warning => (warning.Code, warning.SourceId, warning.AccountId))
+            // Critical first: a withdrawal that could not be posted outranks a contract whose
+            // payout excludes interest, and a user who reads only the top one should read that.
+            .OrderByDescending(group => group.Max(x => x.Severity))
+            .ThenBy(group => group.Min(x => x.Date ?? DateOnly.MaxValue))
+            .Select(BuildRow)
+            .ToList();
+    }
+
+    private WarningRow BuildRow(IGrouping<(string Code, Guid? SourceId, Guid? AccountId), SimulationWarning> group)
+    {
+        var warning = group.First();
+        var name = DescribeSource?.Invoke(warning);
+
+        var title = Translate($"Warning_{warning.Code}_Title", name);
+
+        return new WarningRow
+        {
+            Severity = group.Max(x => x.Severity),
+            SourceId = warning.SourceId,
+            Date = group.Min(x => x.Date),
+            Occurrences = group.Count(),
+
+            // An untranslated code keeps the engine's own sentence rather than showing a bare
+            // identifier: a warning nobody got round to translating must still be readable.
+            Title = title ?? warning.Code,
+            Text = Translate($"Warning_{warning.Code}_Text", name) ?? warning.Message,
+            Fix = Translate($"Warning_{warning.Code}_Fix", name)
+        };
+    }
+
+    private string Occurrences(WarningRow row) =>
+        L["Warning_Occurrences", row.Occurrences, Formatter.Date(row.Date)].Value;
+
+    private string? Translate(string key, string? name)
+    {
+        var localized = L[key, name ?? string.Empty];
+
+        return localized.ResourceNotFound ? null : localized.Value;
+    }
+
+    private static string AlertCssClass(WarningSeverity severity) => severity switch
+    {
+        WarningSeverity.Critical => "alert-danger",
+        WarningSeverity.Warning => "alert-warning",
+        _ => "alert-info"
+    };
+
+    // Only the critical ones interrupt a screen reader. A page carrying six advisory warnings that
+    // all announce themselves is a page nobody listens to.
+    private static string AlertRole(WarningSeverity severity) =>
+        severity == WarningSeverity.Critical ? "alert" : "status";
+
+    private sealed class WarningRow
+    {
+        public WarningSeverity Severity { get; init; }
+        public Guid? SourceId { get; init; }
+        public DateOnly? Date { get; init; }
+        public int Occurrences { get; init; }
+        public string Title { get; init; } = string.Empty;
+        public string Text { get; init; } = string.Empty;
+        public string? Fix { get; init; }
+    }
+}

@@ -2589,4 +2589,115 @@
   <data name="BankImport_AddedFromImport" xml:space="preserve">
     <value>Added from {0} import.</value>
   </data>
+  <data name="Pillar3a_ContractAccount" xml:space="preserve">
+    <value>Pillar 3a account</value>
+  </data>
+  <data name="Pillar3a_ContractAccountHint" xml:space="preserve">
+    <value>The account this contract's money is held in. Contributions are transferred into it, and its balance is what the net-worth figures count.</value>
+  </data>
+  <data name="Pillar3a_ContractAccountNotLinked" xml:space="preserve">
+    <value>Not linked</value>
+  </data>
+  <data name="Pillar3a_UnlinkedConsequence" xml:space="preserve">
+    <value>Without an account the simulation debits the payment account and credits nothing: every franc paid in leaves the plan, and this contract's balance is not part of your net worth.</value>
+  </data>
+  <data name="Pillar3a_NoPillar3aAccountsYet" xml:space="preserve">
+    <value>This plan has no Pillar 3a account yet.</value>
+  </data>
+  <data name="Pillar3a_CreateAccount" xml:space="preserve">
+    <value>Create Pillar 3a account</value>
+  </data>
+  <data name="Pillar3a_CreateAccountTitle" xml:space="preserve">
+    <value>New Pillar 3a account</value>
+  </data>
+  <data name="Pillar3a_DefaultAccountName" xml:space="preserve">
+    <value>Pillar 3a account</value>
+  </data>
+  <data name="Pillar3a_AccountOwnerHint" xml:space="preserve">
+    <value>A Pillar 3a account belongs to exactly one person.</value>
+  </data>
+  <data name="Pillar3a_AccountOpeningBalanceHint" xml:space="preserve">
+    <value>The balance the account holds today. Usually the same figure as the contract's opening value - where the two differ, the projection and the net-worth series will differ too.</value>
+  </data>
+  <data name="Pillar3a_AccountCreated" xml:space="preserve">
+    <value>Pillar 3a account '{0}' was created and linked to this contract.</value>
+  </data>
+  <data name="Pillar3a_FixLinkAction" xml:space="preserve">
+    <value>Open contract</value>
+  </data>
+  <data name="Pillar3a_SimulatedAccountBalance" xml:space="preserve">
+    <value>Account balance (simulation)</value>
+  </data>
+  <data name="Pillar3a_Withdrawal" xml:space="preserve">
+    <value>Withdrawal</value>
+  </data>
+  <data name="Pillar3a_AddWithdrawal" xml:space="preserve">
+    <value>Add withdrawal</value>
+  </data>
+  <data name="Pillar3a_NoWithdrawalsConfigured" xml:space="preserve">
+    <value>No withdrawals planned.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalsHint" xml:space="preserve">
+    <value>Planned payouts from this contract. They are simulated: the money is taken from the linked Pillar 3a account and paid into the target account.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalReason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="Pillar3a_WithdrawalTargetAccount" xml:space="preserve">
+    <value>Target account</value>
+  </data>
+  <data name="Pillar3a_CloseContract" xml:space="preserve">
+    <value>Closes the contract</value>
+  </data>
+  <data name="Pillar3a_CloseContractHint" xml:space="preserve">
+    <value>Contributions stop on this date: nothing can be paid into a contract that has been paid out and shut.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalSweepHint" xml:space="preserve">
+    <value>Left empty, the closing withdrawal pays out whatever is left. Interest the account has earned is not included in that sweep - enter the amount explicitly to avoid the approximation.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalNotPostedHint" xml:space="preserve">
+    <value>This withdrawal names neither a Pillar 3a account on the contract nor a target account, so it cannot be posted at all.</value>
+  </data>
+  <data name="Pillar3a_ContributionsNotIndexedHint" xml:space="preserve">
+    <value>Pillar 3a contributions are not indexed to inflation: the amount stays as entered even though the statutory maximum rises every few years. That maximum is a legislative figure, not a price index, and this app does not invent one - raise the amount yourself when the limit changes.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Title" xml:space="preserve">
+    <value>Pillar 3a contract '{0}' is not linked to an account</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Text" xml:space="preserve">
+    <value>Its contributions are debited from the payment account and credited to nothing, so the money leaves the plan. The contract's balance is not counted in your net worth either.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Fix" xml:space="preserve">
+    <value>Link the contract to a Pillar 3a account, or create one from the contract editor.</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Title" xml:space="preserve">
+    <value>Pillar 3a contract '{0}' points at an account that is not simulated</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Text" xml:space="preserve">
+    <value>The linked account is not part of this simulation, so the contributions leave the plan just as they would with no link at all.</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Fix" xml:space="preserve">
+    <value>Check whether the account is inactive and excluded by the simulation settings, and pick an account that is simulated.</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Title" xml:space="preserve">
+    <value>A withdrawal from '{0}' could not be posted</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Text" xml:space="preserve">
+    <value>The withdrawal names neither a Pillar 3a account on the contract nor a target account, so no event was produced and the payout does not appear anywhere.</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Fix" xml:space="preserve">
+    <value>Give the withdrawal a target account, or link the contract to a Pillar 3a account.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Title" xml:space="preserve">
+    <value>The closing payout of '{0}' excludes the interest earned</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Text" xml:space="preserve">
+    <value>The contract closes without a stated amount, so the payout was computed from the opening balance and the contributions only. Interest credited to the linked account stays behind on it.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Fix" xml:space="preserve">
+    <value>State the withdrawal amount explicitly to remove the approximation.</value>
+  </data>
+  <data name="Warning_Occurrences" xml:space="preserve">
+    <value>{0} occurrences, first on {1}.</value>
+  </data>
 </root>
