@@ -1,0 +1,8 @@
+Datum;Buchungstext;Betrag;Währung
+15.01.2026;Miete Januar 2026;-2'400.00;CHF
+16.01.2026;COOP PRONTO ZUERICH HB;-4.50;CHF
+16.01.2026;COOP PRONTO ZUERICH HB;-4.50;CHF
+25.01.2026;Lohn Januar;7'350.55;CHF
+28.01.2026;"Rueckerstattung; Krankenkasse";128.40;CHF
+31.01.2026;"Zahlung
+ueber zwei Zeilen";-12'345.60;CHF

@@ -1,0 +1,4 @@
+Datum;Buchungstext;Belastung;Gutschrift;Saldo
+15.01.2026;Miete Januar;2'400.00;;12'600.00
+25.01.2026;Lohn Januar;;7'350.55;19'950.55
+28.01.2026;Kartenzahlung Restaurant;45.60;;19'904.95

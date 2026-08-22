@@ -1,0 +1,11 @@
+###############################################################################
+# CSV import fixtures - byte-exact test data, never normalised.
+#
+# The repository root normalises everything git detects as text to LF. These
+# files must not be: the CRLF line endings are what Swiss bank exports actually
+# use and are part of what the reader is tested against, Latin1.csv is Latin-1
+# rather than UTF-8 on purpose, and Utf8Bom.csv carries a byte-order mark.
+# Normalising any of that would quietly disarm the tests that exist to catch a
+# decoder or a line-ending assumption going wrong.
+###############################################################################
+*.csv -text

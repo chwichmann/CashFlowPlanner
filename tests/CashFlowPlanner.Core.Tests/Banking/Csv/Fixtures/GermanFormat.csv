@@ -1,0 +1,4 @@
+Buchungstag;Valuta;Verwendungszweck;Empfänger;Betrag;Währung
+15.01.2026;15.01.2026;Miete Januar;Immobilien AG;-2.400,00;CHF
+16.01.2026;17.01.2026;Einkauf Lebensmittel;Migros;-1.234,56;CHF
+25.01.2026;25.01.2026;Lohn Januar;Beispiel AG;7.350,55;CHF

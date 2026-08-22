@@ -37,4 +37,10 @@ public sealed class BankStatementImportPreview
     public bool ReconciliationBalanced { get; init; }
 
     public decimal? ReconciliationDifference { get; init; }
+
+    /// <summary>
+    /// The column mapping and format decisions, for CSV imports only. Null for MT940 and
+    /// camt.053, which describe themselves and have nothing to confirm.
+    /// </summary>
+    public BankStatementImportCsvDetails? Csv { get; init; }
 }

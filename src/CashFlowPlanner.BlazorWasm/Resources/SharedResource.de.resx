@@ -1990,7 +1990,7 @@
     <value>Kontoauszug hochladen</value>
   </data>
   <data name="BankImport_UploadDescription" xml:space="preserve">
-    <value>Lade einen CAMT.053-Export (ISO-20022-XML) oder einen MT940-Export hoch. Das Format wird aus dem Inhalt der Datei erkannt, nicht aus dem Dateinamen. Die Datei wird verwendet, um tatsächliche Kontobewegungen lokal im Browser-Cache zu speichern.</value>
+    <value>Laden Sie einen CAMT.053- (ISO-20022-XML), MT940- oder CSV-Export hoch. Das Format wird aus dem Dateiinhalt erkannt, nicht aus dem Namen. CSV hat keinen Standard, deshalb zeigt der Import vor dem Übernehmen, welche Spalte er als Betrag gelesen hat. Die Datei dient dazu, tatsächliche Kontobuchungen in den lokalen Browser-Cache zu importieren.</value>
   </data>
   <data name="BankImport_SelectedFile" xml:space="preserve">
     <value>Ausgewählte Datei: {0} ({1})</value>
@@ -2591,5 +2591,215 @@
   </data>
   <data name="BankImport_AddedFromImport" xml:space="preserve">
     <value>Aus {0}-Import übernommen.</value>
+  </data>
+  <data name="BankImport_CsvProfile" xml:space="preserve">
+    <value>CSV-Formatprofil</value>
+  </data>
+  <data name="BankImport_CsvProfileHint" xml:space="preserve">
+    <value>Lassen Sie die automatische Erkennung eingestellt, ausser die Spaltenzuordnung unten stimmt nicht. Die automatische Erkennung prüft ihre Annahmen gegen jede Zeile der Datei.</value>
+  </data>
+  <data name="BankImport_CsvProfileAuto" xml:space="preserve">
+    <value>Automatische Erkennung</value>
+  </data>
+  <data name="BankImport_CsvProfileSwissSemicolon" xml:space="preserve">
+    <value>Semikolon, Schweizer Zahlen (1'234.56), 15.01.2026</value>
+  </data>
+  <data name="BankImport_CsvProfileSwissComma" xml:space="preserve">
+    <value>Komma, Schweizer Zahlen (1'234.56), 15.01.2026</value>
+  </data>
+  <data name="BankImport_CsvProfileGermanSemicolon" xml:space="preserve">
+    <value>Semikolon, deutsche Zahlen (1.234,56), 15.01.2026</value>
+  </data>
+  <data name="BankImport_CsvProfileDebitCreditSemicolon" xml:space="preserve">
+    <value>Semikolon, getrennte Spalten für Belastung und Gutschrift</value>
+  </data>
+  <data name="BankImport_CsvProfileIsoComma" xml:space="preserve">
+    <value>Komma, 1234.56, 2026-01-15</value>
+  </data>
+  <data name="BankImport_CsvProfileTabSeparated" xml:space="preserve">
+    <value>Tabulatorgetrennt</value>
+  </data>
+  <data name="BankImport_CsvDetectedFormat" xml:space="preserve">
+    <value>Erkanntes Format</value>
+  </data>
+  <data name="BankImport_CsvDelimiter" xml:space="preserve">
+    <value>Trennzeichen</value>
+  </data>
+  <data name="BankImport_CsvDecimalSeparator" xml:space="preserve">
+    <value>Dezimaltrennzeichen</value>
+  </data>
+  <data name="BankImport_CsvDateFormat" xml:space="preserve">
+    <value>Datumsformat</value>
+  </data>
+  <data name="BankImport_CsvEncoding" xml:space="preserve">
+    <value>Zeichenkodierung</value>
+  </data>
+  <data name="BankImport_CsvHeaderRow" xml:space="preserve">
+    <value>Kopfzeile</value>
+  </data>
+  <data name="BankImport_CsvPreambleLines" xml:space="preserve">
+    <value>Zeilen vor der Kopfzeile übersprungen</value>
+  </data>
+  <data name="BankImport_CsvAmountConvention" xml:space="preserve">
+    <value>Betragsspalten</value>
+  </data>
+  <data name="BankImport_CsvTab" xml:space="preserve">
+    <value>Tabulator</value>
+  </data>
+  <data name="BankImport_CsvColumnMapping" xml:space="preserve">
+    <value>Spaltenzuordnung</value>
+  </data>
+  <data name="BankImport_CsvColumnMappingHint" xml:space="preserve">
+    <value>Eine CSV-Datei sagt nicht, was ihre Spalten bedeuten - das hier hat der Import ermittelt. Prüfen Sie vor dem Übernehmen, ob Betrag, Datum und Text auf die richtigen Spalten zeigen.</value>
+  </data>
+  <data name="BankImport_CsvColumnNumber" xml:space="preserve">
+    <value>Spalte</value>
+  </data>
+  <data name="BankImport_CsvColumnHeader" xml:space="preserve">
+    <value>Titel in der Datei</value>
+  </data>
+  <data name="BankImport_CsvUnmappedColumns" xml:space="preserve">
+    <value>Spalten ohne erkannte Bedeutung: {0}</value>
+  </data>
+  <data name="BankImport_CsvWarnings" xml:space="preserve">
+    <value>Bitte prüfen</value>
+  </data>
+  <data name="BankImport_CsvUnreadableRows" xml:space="preserve">
+    <value>Nicht lesbare Zeilen</value>
+  </data>
+  <data name="BankImport_CsvUnreadableRowsHint" xml:space="preserve">
+    <value>Diese Zeilen wurden nicht importiert. Alles andere in der Datei schon.</value>
+  </data>
+  <data name="BankImport_CsvUnreadableRowsLimited" xml:space="preserve">
+    <value>Es werden die ersten {0} von {1} nicht lesbaren Zeilen angezeigt.</value>
+  </data>
+  <data name="BankImport_CsvLine" xml:space="preserve">
+    <value>Zeile</value>
+  </data>
+  <data name="BankImport_CsvProblem" xml:space="preserve">
+    <value>Problem</value>
+  </data>
+  <data name="BankImport_CsvRowContent" xml:space="preserve">
+    <value>Zeileninhalt</value>
+  </data>
+  <data name="BankImport_CsvConfirmMapping" xml:space="preserve">
+    <value>Ich habe die Spaltenzuordnung oben geprüft</value>
+  </data>
+  <data name="BankImport_CsvConfirmMappingRequired" xml:space="preserve">
+    <value>Bitte bestätigen Sie die Spaltenzuordnung, bevor Sie den Import übernehmen.</value>
+  </data>
+  <data name="BankImport_CsvDecimalSeparator_Auto" xml:space="preserve">
+    <value>Automatisch erkannt</value>
+  </data>
+  <data name="BankImport_CsvDecimalSeparator_Dot" xml:space="preserve">
+    <value>Punkt - 1'234.56</value>
+  </data>
+  <data name="BankImport_CsvDecimalSeparator_Comma" xml:space="preserve">
+    <value>Komma - 1.234,56</value>
+  </data>
+  <data name="BankImport_CsvEncoding_Auto" xml:space="preserve">
+    <value>Automatisch erkannt</value>
+  </data>
+  <data name="BankImport_CsvEncoding_Utf8" xml:space="preserve">
+    <value>UTF-8</value>
+  </data>
+  <data name="BankImport_CsvEncoding_Latin1" xml:space="preserve">
+    <value>Latin-1 (ISO-8859-1)</value>
+  </data>
+  <data name="BankImport_CsvAmountConvention_Auto" xml:space="preserve">
+    <value>Automatisch erkannt</value>
+  </data>
+  <data name="BankImport_CsvAmountConvention_SignedAmount" xml:space="preserve">
+    <value>Eine Betragsspalte mit Vorzeichen</value>
+  </data>
+  <data name="BankImport_CsvAmountConvention_SeparateDebitCredit" xml:space="preserve">
+    <value>Getrennte Spalten für Belastung und Gutschrift</value>
+  </data>
+  <data name="BankImport_CsvAmountConvention_AmountWithIndicator" xml:space="preserve">
+    <value>Betrag plus separate Soll/Haben-Spalte</value>
+  </data>
+  <data name="BankImport_CsvRole_BookingDate" xml:space="preserve">
+    <value>Buchungsdatum</value>
+  </data>
+  <data name="BankImport_CsvRole_ValueDate" xml:space="preserve">
+    <value>Valutadatum</value>
+  </data>
+  <data name="BankImport_CsvRole_Amount" xml:space="preserve">
+    <value>Betrag</value>
+  </data>
+  <data name="BankImport_CsvRole_Debit" xml:space="preserve">
+    <value>Belastung</value>
+  </data>
+  <data name="BankImport_CsvRole_Credit" xml:space="preserve">
+    <value>Gutschrift</value>
+  </data>
+  <data name="BankImport_CsvRole_DebitCreditIndicator" xml:space="preserve">
+    <value>Soll/Haben-Kennzeichen</value>
+  </data>
+  <data name="BankImport_CsvRole_Description" xml:space="preserve">
+    <value>Buchungstext</value>
+  </data>
+  <data name="BankImport_CsvRole_Counterparty" xml:space="preserve">
+    <value>Gegenpartei</value>
+  </data>
+  <data name="BankImport_CsvRole_Reference" xml:space="preserve">
+    <value>Referenz</value>
+  </data>
+  <data name="BankImport_CsvRole_Balance" xml:space="preserve">
+    <value>Saldo</value>
+  </data>
+  <data name="BankImport_CsvRole_Currency" xml:space="preserve">
+    <value>Währung</value>
+  </data>
+  <data name="BankImport_CsvIssue_TooFewColumns" xml:space="preserve">
+    <value>Die Zeile hat weniger Spalten als die Kopfzeile.</value>
+  </data>
+  <data name="BankImport_CsvIssue_MissingDate" xml:space="preserve">
+    <value>Die Zeile hat kein Datum.</value>
+  </data>
+  <data name="BankImport_CsvIssue_UnreadableDate" xml:space="preserve">
+    <value>Das Datum passt nicht zum Datumsformat der Datei.</value>
+  </data>
+  <data name="BankImport_CsvIssue_MissingAmount" xml:space="preserve">
+    <value>Die Zeile hat keinen Betrag.</value>
+  </data>
+  <data name="BankImport_CsvIssue_UnreadableAmount" xml:space="preserve">
+    <value>Der Betrag liess sich mit dem Dezimaltrennzeichen dieses Profils nicht lesen.</value>
+  </data>
+  <data name="BankImport_CsvIssue_BothDebitAndCredit" xml:space="preserve">
+    <value>Belastung und Gutschrift sind beide gefüllt, die Richtung ist also widersprüchlich.</value>
+  </data>
+  <data name="BankImport_CsvIssue_UnreadableDebitCreditIndicator" xml:space="preserve">
+    <value>Die Soll/Haben-Spalte enthält einen Wert, der weder das eine noch das andere bedeutet.</value>
+  </data>
+  <data name="BankImport_CsvIssue_UnreadableBalance" xml:space="preserve">
+    <value>Der Saldo liess sich nicht lesen. Die Buchung wurde trotzdem importiert.</value>
+  </data>
+  <data name="BankImport_CsvWarning_AmbiguousDateFormat" xml:space="preserve">
+    <value>In dieser Datei hat kein Datum einen Tag über 12, deshalb lässt sich nicht entscheiden, ob Tag oder Monat zuerst steht. Es wurde der Tag zuerst angenommen. Prüfen Sie die Daten in der Vorschau.</value>
+  </data>
+  <data name="BankImport_CsvWarning_AmbiguousDecimalSeparator" xml:space="preserve">
+    <value>Kein Betrag in dieser Datei entscheidet, ob ein Trennzeichen die Tausender gruppiert oder die Rappen abtrennt. Prüfen Sie die Beträge in der Vorschau und wählen Sie sonst ein Profil explizit.</value>
+  </data>
+  <data name="BankImport_CsvWarning_InconsistentColumnCount" xml:space="preserve">
+    <value>Nicht alle Zeilen haben so viele Spalten wie die Kopfzeile.</value>
+  </data>
+  <data name="BankImport_CsvWarning_UnterminatedQuote" xml:space="preserve">
+    <value>Ein Feld in Anführungszeichen wurde geöffnet und nie geschlossen, alles danach wurde als ein Feld gelesen.</value>
+  </data>
+  <data name="BankImport_CsvWarning_NoValueDateColumn" xml:space="preserve">
+    <value>Die Datei hat keine Valuta-Spalte, deshalb wird das Buchungsdatum verwendet.</value>
+  </data>
+  <data name="BankImport_CsvWarning_MixedCurrencies" xml:space="preserve">
+    <value>Die Datei enthält mehr als eine Währung.</value>
+  </data>
+  <data name="BankImport_CsvWarning_NoBalanceColumn" xml:space="preserve">
+    <value>Die Datei hat keine Saldo-Spalte, deshalb lassen sich die Buchungen nicht gegen einen Schlusssaldo abgleichen und es wird kein Saldo-Update vorgeschlagen.</value>
+  </data>
+  <data name="BankImport_CsvWarning_FormatWasAutoDetected" xml:space="preserve">
+    <value>Trennzeichen, Zahlenformat und Datumsformat wurden aus der Datei erkannt und nicht von einem Profil vorgegeben.</value>
+  </data>
+  <data name="BankImport_CsvWarning_SomeRowsCouldNotBeRead" xml:space="preserve">
+    <value>Einige Zeilen liessen sich nicht lesen und wurden nicht importiert. Sie sind unten aufgeführt.</value>
   </data>
 </root>
