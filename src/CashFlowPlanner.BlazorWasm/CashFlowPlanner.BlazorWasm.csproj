@@ -41,10 +41,6 @@
                    PublishedContent="wwwroot\service-worker.published.js" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Pages\HouseBuySimulator.razor.css" />
-  </ItemGroup>
-
   <!--
     The bundled example plan is embedded in the assembly rather than served from
     wwwroot, so loading it needs no HttpClient and the app keeps making zero
@@ -52,12 +48,6 @@
   -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\StarterPlan.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Pages\HouseBuySimulator.razor.css">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <!--
