@@ -1,4 +1,4 @@
-using CashFlowPlanner.Core.Indexation;
+﻿using CashFlowPlanner.Core.Indexation;
 
 namespace CashFlowPlanner.Core.RealEstate;
 
@@ -37,17 +37,58 @@ public sealed class RealEstateAsset
     /// </summary>
     public List<Guid> LinkedMortgageIds { get; init; } = [];
 
+    /// <summary>
+    /// When the household takes ownership. Null means "owned for the whole
+    /// horizon", which is the default and the case for a property somebody
+    /// already lives in.
+    ///
+    /// Set it when the purchase happens inside the horizon. The property then
+    /// appears on the balance sheet on that day, alongside the mortgage that
+    /// paid for it and the cash that left the account -- the three legs net to
+    /// roughly zero, which is what a purchase actually is. Set the mortgage's
+    /// <c>InitialDate</c> to the same day; a mortgage counts from the day it
+    /// starts, and an asset whose debt appears on a different date makes the
+    /// series jump.
+    /// </summary>
+    public DateOnly? AcquisitionDate { get; init; }
+
+    /// <summary>
+    /// When the household ceases to own it. Null means "held to the end of the
+    /// horizon". The asset stops counting on this date; the sale proceeds and
+    /// the mortgage repayment are cash-flow events, and this collection does not
+    /// generate them.
+    /// </summary>
+    public DateOnly? DisposalDate { get; init; }
+
     public string? Notes { get; init; }
 
     /// <summary>
     /// The assumed market value on <paramref name="date"/>.
     ///
-    /// The asset is treated as owned for the entire simulated horizon: there is
-    /// no acquisition or disposal date, because a purchase that appears in the
-    /// net-worth series without the matching cash leg would create wealth out of
-    /// nothing. Buying and selling inside the horizon belongs to the house-buy
-    /// and house-sale scenarios, not here.
+    /// This is the market value only. Whether the household owns it on that date
+    /// is <see cref="IsOwnedOn"/>, and the net-worth series asks both.
     /// </summary>
+    /// <summary>
+    /// Whether the property is on the household's balance sheet on
+    /// <paramref name="date"/>. With no acquisition or disposal date - the
+    /// default - it always is, which is the previous behaviour exactly.
+    /// <para>
+    /// A property acquired mid-horizon with no matching cash and mortgage legs
+    /// makes net worth step up by its whole value on that day. That is visible
+    /// and explicable; counting a house the household has not bought yet from
+    /// the first day of the plan is neither, and it is what this replaces.
+    /// </para>
+    /// </summary>
+    public bool IsOwnedOn(DateOnly date)
+    {
+        if (AcquisitionDate is not null && date < AcquisitionDate.Value)
+        {
+            return false;
+        }
+
+        return DisposalDate is null || date < DisposalDate.Value;
+    }
+
     public decimal GetValueOn(DateOnly date)
     {
         if (AnnualValueGrowthPercent == 0m || ValuationDate is null)
@@ -79,6 +120,15 @@ public sealed class RealEstateAsset
         {
             throw new InvalidOperationException(
                 $"Real estate asset '{Name}' has a negative Pillar 2 (BVG) withdrawal amount.");
+        }
+
+        if (AcquisitionDate is not null
+            && DisposalDate is not null
+            && DisposalDate.Value <= AcquisitionDate.Value)
+        {
+            throw new InvalidOperationException(
+                $"Real estate asset '{Name}' is disposed of on {DisposalDate:yyyy-MM-dd}, " +
+                $"on or before it is acquired on {AcquisitionDate:yyyy-MM-dd}.");
         }
 
         if (AnnualValueGrowthPercent != 0m && ValuationDate is null)

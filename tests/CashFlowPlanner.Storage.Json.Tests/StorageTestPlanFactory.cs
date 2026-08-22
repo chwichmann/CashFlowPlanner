@@ -408,6 +408,8 @@ internal static class StorageTestPlanFactory
                     ValuationDate = new DateOnly(2026, 5, 1),
                     AnnualValueGrowthPercent = 1.2m,
                     Pillar2BvgUsedAmount = 60_000m,
+                    AcquisitionDate = new DateOnly(2021, 8, 1),
+                    DisposalDate = new DateOnly(2041, 12, 31),
                     LinkedMortgageIds = [Guid.Parse("30000000-0000-0000-0000-000000000001")],
                     Notes = "Round-trip fixture"
                 }

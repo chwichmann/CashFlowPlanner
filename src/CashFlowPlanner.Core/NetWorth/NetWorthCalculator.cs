@@ -141,6 +141,14 @@ public sealed class NetWorthCalculator
 
         foreach (var asset in assets)
         {
+            // Owned first, valued second. A property bought in July is not an asset in
+            // January, in the same way its mortgage is not yet a debt - counting one
+            // without the other is what makes a purchase look like a windfall or a loss.
+            if (!asset.IsOwnedOn(date))
+            {
+                continue;
+            }
+
             total += asset.GetValueOn(date);
         }
 

@@ -95,12 +95,22 @@ not modelled at all — see `TAX-MODEL.md` §8 for the disclosure this obliges.
 
 `CashFlowPlan.RealEstateAssets` had no UI because the collection did not exist.
 Needs: name, type (House/Flat), current estimated value, optional valuation date,
-optional annual value growth %, Pillar 2 (BVG) amount used, and multi-select of
-linked mortgages.
+optional annual value growth %, Pillar 2 (BVG) amount used, multi-select of
+linked mortgages, and **optional acquisition and disposal dates**.
+
+> **Added after the handoff was written.** `AcquisitionDate` and `DisposalDate`
+> did not exist in the original design, which treated every property as owned for
+> the whole horizon. That turned out to be unsafe once mortgages stopped counting
+> before their `InitialDate`: a house bought in July stayed on the balance sheet
+> from January while the mortgage that paid for it correctly waited, overstating
+> net worth by the entire property. Both default to null, which is the original
+> behaviour exactly. Label them plainly — "owned since" / "sold on" — and leave
+> them empty for a property the household already lives in.
 
 Validation to surface before save, all of which `CashFlowPlan.Validate()`
 enforces by throwing:
 
+* a disposal date must be after the acquisition date;
 * a linked mortgage must exist in the plan;
 * one mortgage may not be linked to two properties;
 * a non-zero growth rate requires a valuation date;

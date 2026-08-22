@@ -658,6 +658,8 @@ public sealed class CashFlowPlanJsonSerializerTests
         Assert.Equal(original.ValuationDate, loaded.ValuationDate);
         Assert.Equal(original.AnnualValueGrowthPercent, loaded.AnnualValueGrowthPercent);
         Assert.Equal(original.Pillar2BvgUsedAmount, loaded.Pillar2BvgUsedAmount);
+        Assert.Equal(original.AcquisitionDate, loaded.AcquisitionDate);
+        Assert.Equal(original.DisposalDate, loaded.DisposalDate);
         Assert.Equal(original.LinkedMortgageIds, loaded.LinkedMortgageIds);
         Assert.Equal(original.Notes, loaded.Notes);
     }
