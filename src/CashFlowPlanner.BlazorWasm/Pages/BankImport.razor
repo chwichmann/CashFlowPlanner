@@ -14,330 +14,228 @@
 @inject CashFlowAppState AppState
 @inject IBankImportStore ImportStore
 @inject BankStatementImportService ImportService
+@inject AppFormatter Formatter
 @inject IStringLocalizer<SharedResource> L
 @inject EnumLocalizer EnumL
 
-<PageTitle>@L["BankImport_Title"] - CashFlow Planner</PageTitle>
+<PageScaffold Title='@L["BankImport_Title"]'
+              RequiresPlan="true"
+              EmptyStateMessage='@L["BankImport_NoPlanLoaded"]'>
 
-<h2>@L["BankImport_Title"]</h2>
-
-@if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <div class="alert alert-danger">
-        @_errorMessage
-    </div>
-}
-
-@if (!string.IsNullOrWhiteSpace(_infoMessage))
-{
-    <div class="alert alert-success">
-        @_infoMessage
-    </div>
-}
-
-@if (AppState.CurrentPlan is null)
-{
-    <PlanEmptyState Message='@L["BankImport_NoPlanLoaded"]' />
-}
-else
-{
-    var plan = AppState.CurrentPlan;
-
-    <section>
-        <h3>@L["BankImport_UploadMt940"]</h3>
-
-        <p>@L["BankImport_UploadDescription"]</p>
-
-        <InputFile OnChange="OnFileSelected" />
-
-        @if (_fileBytes is not null)
+    <Notifications>
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
-            <p>
-                @Text("BankImport_SelectedFile", _fileName, FormatFileSize(_fileBytes.Length))
-            </p>
-
-            <button type="button"
-                    disabled="@_isBusy"
-                    @onclick="AnalyzeAsync">
-                @L["BankImport_Analyze"]
-            </button>
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
         }
-    </section>
 
-    @if (_isBusy)
-    {
-        <p>@L["BankImport_Working"]</p>
-    }
-
-    @if (_result is not null)
-    {
-        <section>
-            <h3>@L["BankImport_Preview"]</h3>
-
-            <table>
-                <tr>
-                    <th>@L["BankImport_Field"]</th>
-                    <th>@L["BankImport_Value"]</th>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_SourceFormat"]</td>
-                    <td>@_result.Preview.SourceFormat</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_FileName"]</td>
-                    <td>@_result.Preview.FileName</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_AccountIdentifier"]</td>
-                    <td>@_result.Preview.BankAccountIdentifier</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_TransactionReference"]</td>
-                    <td>@_result.Preview.TransactionReference</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_StatementNumber"]</td>
-                    <td>@_result.Preview.StatementNumber</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_OpeningBalance"]</td>
-                    <td>@FormatNullableMoney(_result.Preview.OpeningBalance, _result.Preview.Currency)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_OpeningBalanceDate"]</td>
-                    <td>@FormatNullableDate(_result.Preview.OpeningBalanceDate)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_ClosingBalance"]</td>
-                    <td>@FormatNullableMoney(_result.Preview.ClosingBalance, _result.Preview.Currency)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_ClosingBalanceDate"]</td>
-                    <td>@FormatNullableDate(_result.Preview.ClosingBalanceDate)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_FirstTransactionDate"]</td>
-                    <td>@FormatNullableDate(_result.Preview.FirstTransactionDate)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_LastTransactionDate"]</td>
-                    <td>@FormatNullableDate(_result.Preview.LastTransactionDate)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_ParsedTransactionCount"]</td>
-                    <td>@_result.Preview.ParsedTransactionCount.ToString("N0", CultureInfo.CurrentCulture)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_TransactionNetAmount"]</td>
-                    <td>@FormatMoney(_result.Preview.TransactionNetAmount, _result.Preview.Currency)</td>
-                </tr>
-                <tr>
-                    <td>@L["BankImport_Reconciliation"]</td>
-                    <td>@FormatReconciliation(_result.Preview)</td>
-                </tr>
-            </table>
-        </section>
-
-        <section>
-            <h3>@L["BankImport_AccountMatching"]</h3>
-
-            <p>
-                @Text(
-                    "BankImport_AccountMatchStatus",
-                    FormatAccountMatchStatus(_result.AccountMatchStatus))
-            </p>
-
-            @if (_result.AccountId is not null)
-            {
-                <p>
-                    @Text(
-                        "BankImport_MatchedAccount",
-                        GetAccountDisplayName(_result.AccountId.Value))
-                </p>
-            }
-
-            @if (_result.RequiresAccountSelection)
-            {
-                <div>
-                    <label>@L["BankImport_SelectAccount"]</label>
-                    <select @bind="_selectedAccountIdValue">
-                        <option value="">@L["BankImport_SelectAccountPlaceholder"]</option>
-                        @foreach (var account in plan.Accounts.OrderBy(x => x.Type).ThenBy(x => x.Name))
-                        {
-                            <option value="@account.Id">@GetAccountDisplayName(account)</option>
-                        }
-                    </select>
-                </div>
-
-                <button type="button"
-                        disabled="@_isBusy"
-                        @onclick="AnalyzeWithSelectedAccountAsync">
-                    @L["BankImport_UseSelectedAccount"]
-                </button>
-            }
-        </section>
-
-        @if (_result.CanImport && _result.MergeResult is not null)
+        @if (!string.IsNullOrWhiteSpace(_infoMessage))
         {
-            <section>
-                <h3>@L["BankImport_MergeResult"]</h3>
+            <div class="alert alert-success" role="alert">@_infoMessage</div>
+        }
+    </Notifications>
 
-                <table>
-                    <tr>
-                        <th>@L["BankImport_Field"]</th>
-                        <th>@L["BankImport_Value"]</th>
-                    </tr>
-                    <tr>
-                        <td>@L["BankImport_ExistingTransactionsBeforeMerge"]</td>
-                        <td>@_result.MergeResult.ExistingTransactionCountBeforeMerge.ToString("N0", CultureInfo.CurrentCulture)</td>
-                    </tr>
-                    <tr>
-                        <td>@L["BankImport_AddedTransactions"]</td>
-                        <td>@_result.MergeResult.AddedCount.ToString("N0", CultureInfo.CurrentCulture)</td>
-                    </tr>
-                    <tr>
-                        <td>@L["BankImport_SkippedDuplicates"]</td>
-                        <td>@_result.MergeResult.SkippedDuplicateCount.ToString("N0", CultureInfo.CurrentCulture)</td>
-                    </tr>
-                    <tr>
-                        <td>@L["BankImport_TransactionsAfterMerge"]</td>
-                        <td>@_result.MergeResult.ExistingTransactionCountAfterMerge.ToString("N0", CultureInfo.CurrentCulture)</td>
-                    </tr>
-                </table>
+    <ChildContent>
+        @if (AppState.CurrentPlan is { } plan)
+        {
+            <section class="mb-4">
+                <h3>@L["BankImport_UploadMt940"]</h3>
+
+                <p>@L["BankImport_UploadDescription"]</p>
+
+                <InputFile class="form-control" OnChange="OnFileSelected" />
+
+                @if (_fileBytes is not null)
+                {
+                    <p class="mt-2">
+                        @Text("BankImport_SelectedFile", _fileName, FormatFileSize(_fileBytes.Length))
+                    </p>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            disabled="@_isBusy"
+                            @onclick="AnalyzeAsync">
+                        @L["BankImport_Analyze"]
+                    </button>
+                }
             </section>
 
-            @if (_result.SuggestedBalanceUpdate is not null)
+            @if (_isBusy)
             {
-                <section>
-                    <h3>@L["BankImport_SuggestedBalanceUpdate"]</h3>
+                <p>@L["BankImport_Working"]</p>
+            }
 
-                    <table>
-                        <tr>
-                            <th>@L["BankImport_Field"]</th>
-                            <th>@L["BankImport_Value"]</th>
-                        </tr>
-                        <tr>
-                            <td>@L["BankImport_Balance"]</td>
-                            <td>@FormatMoney(_result.SuggestedBalanceUpdate.Balance, _result.SuggestedBalanceUpdate.Currency)</td>
-                        </tr>
-                        <tr>
-                            <td>@L["BankImport_SuggestedBalanceDate"]</td>
-                            <td>@FormatDate(_result.SuggestedBalanceUpdate.BalanceDate)</td>
-                        </tr>
-                        <tr>
-                            <td>@L["BankImport_ClosingBalanceDateFromFile"]</td>
-                            <td>@FormatNullableDate(_result.SuggestedBalanceUpdate.ClosingBalanceDateFromFile)</td>
-                        </tr>
-                        <tr>
-                            <td>@L["BankImport_LastTransactionDate"]</td>
-                            <td>@FormatNullableDate(_result.SuggestedBalanceUpdate.LastTransactionDate)</td>
-                        </tr>
-                        <tr>
-                            <td>@L["BankImport_BalanceDateWarning"]</td>
-                            <td>
-                                @if (_result.SuggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious)
-                                {
-                                    @L["Yes"]
-                                }
-                                else
-                                {
-                                    @L["No"]
-                                }
-                            </td>
-                        </tr>
-                    </table>
+            @if (_result is not null)
+            {
+                <section class="mb-4">
+                    <h3>@L["BankImport_Preview"]</h3>
 
-                    @if (_result.SuggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious)
+                    <DataTable Items="BuildPreviewRows(_result.Preview)"
+                               RowKey="@(row => row.Field)"
+                               Caption='@L["BankImport_Preview"]'>
+                        <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
+                        <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
+                    </DataTable>
+                </section>
+
+                <section class="mb-4">
+                    <h3>@L["BankImport_AccountMatching"]</h3>
+
+                    <p>
+                        @Text(
+                            "BankImport_AccountMatchStatus",
+                            FormatAccountMatchStatus(_result.AccountMatchStatus))
+                    </p>
+
+                    @if (_result.AccountId is not null)
                     {
                         <p>
-                            @L["BankImport_SuspiciousClosingDateHint"]
+                            @Text(
+                                "BankImport_MatchedAccount",
+                                GetAccountDisplayName(_result.AccountId.Value))
                         </p>
                     }
 
-                    <label>
-                        <input type="checkbox" @bind="_applySuggestedBalanceUpdate" />
-                        @L["BankImport_ApplySuggestedBalanceUpdate"]
-                    </label>
+                    @if (_result.RequiresAccountSelection)
+                    {
+                        <FormField Label='@L["BankImport_SelectAccount"]'>
+                            <select id="@context.Id"
+                                    class="form-select"
+                                    aria-describedby="@context.DescribedBy"
+                                    @bind="_selectedAccountIdValue">
+                                <option value="">@L["BankImport_SelectAccountPlaceholder"]</option>
+                                @foreach (var account in plan.Accounts.OrderBy(x => x.Type).ThenBy(x => x.Name))
+                                {
+                                    <option value="@account.Id">@GetAccountDisplayName(account)</option>
+                                }
+                            </select>
+                        </FormField>
+
+                        <button type="button"
+                                class="btn btn-primary"
+                                disabled="@_isBusy"
+                                @onclick="AnalyzeWithSelectedAccountAsync">
+                            @L["BankImport_UseSelectedAccount"]
+                        </button>
+                    }
                 </section>
-            }
 
-            @if (!string.IsNullOrWhiteSpace(_result.BankAccountIdentifierToRemember))
-            {
-                <section>
-                    <label>
-                        <input type="checkbox" @bind="_rememberAccountMapping" />
-                        @Text(
-                            "BankImport_RememberAccountMapping",
-                            _result.BankAccountIdentifierToRemember)
-                    </label>
-                </section>
-            }
+                @if (_result.CanImport && _result.MergeResult is not null)
+                {
+                    <section class="mb-4">
+                        <h3>@L["BankImport_MergeResult"]</h3>
 
-            <section>
-                <button type="button"
-                        disabled="@_isBusy"
-                        @onclick="ApplyImportAsync">
-                    @L["BankImport_ApplyImport"]
-                </button>
+                        <DataTable Items="BuildMergeRows(_result.MergeResult)"
+                                   RowKey="@(row => row.Field)"
+                                   Caption='@L["BankImport_MergeResult"]'>
+                            <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
+                            <Column Title='@L["BankImport_Value"]' Align="ColumnAlign.Number"
+                                    Text="@(row => row.Value)" />
+                        </DataTable>
+                    </section>
 
-                <button type="button"
-                        disabled="@_isBusy"
-                        @onclick="ResetImport">
-                    @L["Cancel"]
-                </button>
-            </section>
-        }
+                    @if (_result.SuggestedBalanceUpdate is { } suggestedBalanceUpdate)
+                    {
+                        <section class="mb-4">
+                            <h3>@L["BankImport_SuggestedBalanceUpdate"]</h3>
 
-        @if (_result.CanImport && _result.MappingResult?.Transactions.Count > 0)
-        {
-            <section>
-                <h3>@L["BankImport_TransactionPreview"]</h3>
+                            <DataTable Items="BuildSuggestedBalanceRows(suggestedBalanceUpdate)"
+                                       RowKey="@(row => row.Field)"
+                                       Caption='@L["BankImport_SuggestedBalanceUpdate"]'>
+                                <Column Title='@L["BankImport_Field"]' Text="@(row => row.Field)" />
+                                <Column Title='@L["BankImport_Value"]' Text="@(row => row.Value)" />
+                            </DataTable>
 
-                <table>
-                    <tr>
-                        <th>@L["Date"]</th>
-                        <th>@L["BankImport_BookingDate"]</th>
-                        <th>@L["Amount"]</th>
-                        <th>@L["Currency"]</th>
-                        <th>@L["BankImport_Code"]</th>
-                        <th>@L["BankImport_Reference"]</th>
-                        <th>@L["Description"]</th>
-                    </tr>
+                            @if (suggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious)
+                            {
+                                <p>
+                                    @L["BankImport_SuspiciousClosingDateHint"]
+                                </p>
+                            }
 
-                    @foreach (var transaction in _result.MappingResult.Transactions
+                            <FormField Label='@L["BankImport_ApplySuggestedBalanceUpdate"]'
+                                       Layout="FormFieldLayout.Checkbox">
+                                <input id="@context.Id"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       @bind="_applySuggestedBalanceUpdate" />
+                            </FormField>
+                        </section>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_result.BankAccountIdentifierToRemember))
+                    {
+                        <section class="mb-4">
+                            <FormField Label="@RememberAccountMappingLabel"
+                                       Layout="FormFieldLayout.Checkbox">
+                                <input id="@context.Id"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       @bind="_rememberAccountMapping" />
+                            </FormField>
+                        </section>
+                    }
+
+                    <section class="mb-4 d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-primary"
+                                disabled="@_isBusy"
+                                @onclick="ApplyImportAsync">
+                            @L["BankImport_ApplyImport"]
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                disabled="@_isBusy"
+                                @onclick="ResetImport">
+                            @L["Cancel"]
+                        </button>
+                    </section>
+                }
+
+                @if (_result.CanImport && _result.MappingResult?.Transactions.Count > 0)
+                {
+                    var previewTransactions = _result.MappingResult.Transactions
                         .OrderBy(x => x.ValueDate)
                         .ThenBy(x => x.BookingDate)
                         .ThenBy(x => x.Description)
-                        .Take(25))
-                    {
-                        <tr>
-                            <td>@FormatDate(transaction.ValueDate)</td>
-                            <td>@FormatNullableDate(transaction.BookingDate)</td>
-                            <td>@transaction.SignedAmount.ToString("N2", CultureInfo.CurrentCulture)</td>
-                            <td>@transaction.Currency</td>
-                            <td>@transaction.TransactionCode</td>
-                            <td>@transaction.BankReference</td>
-                            <td>@transaction.Description</td>
-                        </tr>
-                    }
-                </table>
+                        .Take(TransactionPreviewLimit)
+                        .ToList();
 
-                @if (_result.MappingResult.Transactions.Count > 25)
-                {
-                    <p>
-                        @Text(
-                            "BankImport_TransactionPreviewLimited",
-                            25,
-                            _result.MappingResult.Transactions.Count)
-                    </p>
+                    <section class="mb-4">
+                        <h3>@L["BankImport_TransactionPreview"]</h3>
+
+                        <DataTable Items="previewTransactions"
+                                   Caption='@L["BankImport_TransactionPreview"]'>
+                            <Column Title='@L["Date"]' Text="@(x => Formatter.Date(x.ValueDate))" />
+                            <Column Title='@L["BankImport_BookingDate"]' Text="@(x => Formatter.Date(x.BookingDate))" />
+                            <Column Title='@L["Amount"]' Align="ColumnAlign.Number"
+                                    Text="@(x => Formatter.Money(x.SignedAmount))" />
+                            <Column Title='@L["Currency"]' Text="@(x => x.Currency)" />
+                            <Column Title='@L["BankImport_Code"]' Text="@(x => x.TransactionCode ?? string.Empty)" />
+                            <Column Title='@L["BankImport_Reference"]' Text="@(x => x.BankReference ?? string.Empty)" />
+                            <Column Title='@L["Description"]' Text="@(x => x.Description ?? string.Empty)" />
+                        </DataTable>
+
+                        @if (_result.MappingResult.Transactions.Count > TransactionPreviewLimit)
+                        {
+                            <p>
+                                @Text(
+                                    "BankImport_TransactionPreviewLimited",
+                                    TransactionPreviewLimit,
+                                    _result.MappingResult.Transactions.Count)
+                            </p>
+                        }
+                    </section>
                 }
-            </section>
+            }
         }
-    }
-}
+    </ChildContent>
+</PageScaffold>
 
 @code {
     private const long MaxUploadSizeBytes = 20 * 1024 * 1024;
+
+    private const int TransactionPreviewLimit = 25;
 
     private byte[]? _fileBytes;
     private string? _fileName;
@@ -348,6 +246,62 @@ else
     private BankStatementImportResult? _result;
     private bool _rememberAccountMapping = true;
     private bool _applySuggestedBalanceUpdate = true;
+
+    /// <summary>One row of the key/value tables the preview, merge and balance sections are made of.</summary>
+    private sealed record FieldValue(string Field, string Value);
+
+    private string RememberAccountMappingLabel =>
+        Text(
+            "BankImport_RememberAccountMapping",
+            _result?.BankAccountIdentifierToRemember);
+
+    private IReadOnlyList<FieldValue> BuildPreviewRows(BankStatementImportPreview preview) =>
+    [
+        new(Text("BankImport_SourceFormat"), preview.SourceFormat ?? string.Empty),
+        new(Text("BankImport_FileName"), preview.FileName ?? string.Empty),
+        new(Text("BankImport_AccountIdentifier"), preview.BankAccountIdentifier ?? string.Empty),
+        new(Text("BankImport_TransactionReference"), preview.TransactionReference ?? string.Empty),
+        new(Text("BankImport_StatementNumber"), preview.StatementNumber ?? string.Empty),
+        new(Text("BankImport_OpeningBalance"), Formatter.Money(preview.OpeningBalance, preview.Currency)),
+        new(Text("BankImport_OpeningBalanceDate"), Formatter.Date(preview.OpeningBalanceDate)),
+        new(Text("BankImport_ClosingBalance"), Formatter.Money(preview.ClosingBalance, preview.Currency)),
+        new(Text("BankImport_ClosingBalanceDate"), Formatter.Date(preview.ClosingBalanceDate)),
+        new(Text("BankImport_FirstTransactionDate"), Formatter.Date(preview.FirstTransactionDate)),
+        new(Text("BankImport_LastTransactionDate"), Formatter.Date(preview.LastTransactionDate)),
+        new(Text("BankImport_ParsedTransactionCount"), Formatter.Number(preview.ParsedTransactionCount, 0)),
+        new(Text("BankImport_TransactionNetAmount"), Formatter.Money(preview.TransactionNetAmount, preview.Currency)),
+        new(Text("BankImport_Reconciliation"), FormatReconciliation(preview)),
+    ];
+
+    private IReadOnlyList<FieldValue> BuildMergeRows(ImportedBankTransactionMergeResult mergeResult) =>
+    [
+        new(
+            Text("BankImport_ExistingTransactionsBeforeMerge"),
+            Formatter.Number(mergeResult.ExistingTransactionCountBeforeMerge, 0)),
+        new(Text("BankImport_AddedTransactions"), Formatter.Number(mergeResult.AddedCount, 0)),
+        new(Text("BankImport_SkippedDuplicates"), Formatter.Number(mergeResult.SkippedDuplicateCount, 0)),
+        new(
+            Text("BankImport_TransactionsAfterMerge"),
+            Formatter.Number(mergeResult.ExistingTransactionCountAfterMerge, 0)),
+    ];
+
+    private IReadOnlyList<FieldValue> BuildSuggestedBalanceRows(
+        BankStatementSuggestedBalanceUpdate suggestedBalanceUpdate) =>
+    [
+        new(
+            Text("BankImport_Balance"),
+            Formatter.Money(suggestedBalanceUpdate.Balance, suggestedBalanceUpdate.Currency)),
+        new(Text("BankImport_SuggestedBalanceDate"), Formatter.Date(suggestedBalanceUpdate.BalanceDate)),
+        new(
+            Text("BankImport_ClosingBalanceDateFromFile"),
+            Formatter.Date(suggestedBalanceUpdate.ClosingBalanceDateFromFile)),
+        new(
+            Text("BankImport_LastTransactionDate"),
+            Formatter.Date(suggestedBalanceUpdate.LastTransactionDate)),
+        new(
+            Text("BankImport_BalanceDateWarning"),
+            suggestedBalanceUpdate.ClosingBalanceDateLooksSuspicious ? Text("Yes") : Text("No")),
+    ];
 
     protected override async Task OnInitializedAsync()
     {
@@ -679,7 +633,7 @@ else
 
         return Text(
             "BankImport_ReconciliationDifference",
-            FormatNullableMoney(preview.ReconciliationDifference, preview.Currency));
+            Formatter.Money(preview.ReconciliationDifference, preview.Currency));
     }
 
     private string FormatAccountMatchStatus(BankStatementAccountMatchStatus status)
@@ -699,30 +653,10 @@ else
         };
     }
 
-    private static string FormatDate(DateOnly date)
-    {
-        return date.ToString("d", CultureInfo.CurrentCulture);
-    }
-
-    private static string FormatNullableDate(DateOnly? date)
-    {
-        return date is null
-            ? "-"
-            : date.Value.ToString("d", CultureInfo.CurrentCulture);
-    }
-
-    private static string FormatMoney(decimal amount, string currency)
-    {
-        return $"{amount.ToString("N2", CultureInfo.CurrentCulture)} {currency}";
-    }
-
-    private static string FormatNullableMoney(decimal? amount, string currency)
-    {
-        return amount is null
-            ? "-"
-            : $"{amount.Value.ToString("N2", CultureInfo.CurrentCulture)} {currency}";
-    }
-
+    /// <summary>
+    /// Not a number format: it picks a unit as well, so it stays here rather than moving to
+    /// <see cref="AppFormatter"/> with the money and date helpers.
+    /// </summary>
     private static string FormatFileSize(long bytes)
     {
         if (bytes < 1024)
