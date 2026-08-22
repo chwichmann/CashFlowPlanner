@@ -1,4 +1,4 @@
-using CashFlowPlanner.Core.Accounts;
+﻿using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.RealEstate;
 
@@ -60,7 +60,13 @@ public sealed class NetWorthCalculator
             .GroupBy(x => x.Date)
             .ToDictionary(x => x.Key, x => x.ToList());
 
-        var principalTracker = new MortgagePrincipalTracker(mortgagePrincipalPoints);
+        // The tracker needs each contract's start date, not just its principal points: a
+        // mortgage taken out halfway through the horizon has no points before that date, and
+        // the "earliest figure is the best answer" rule would otherwise report its full
+        // principal from day one - CHF 600'000 of debt against a house nobody has bought yet.
+        var mortgageStartDates = plan.Mortgages.ToDictionary(x => x.Id, x => x.InitialDate);
+
+        var principalTracker = new MortgagePrincipalTracker(mortgagePrincipalPoints, mortgageStartDates);
 
         // Nothing rounds here. Every input is already a decimal produced by the
         // engine, and this codebase has no rounding policy -- introducing one in
@@ -151,16 +157,27 @@ public sealed class NetWorthCalculator
     /// matching <see cref="SimulationResult.TryGetMortgagePrincipal"/> -- the
     /// earliest figure is the best available answer, and reporting zero would
     /// read as "paid off".
+    ///
+    /// That rule holds only once the mortgage exists. Before
+    /// <see cref="MortgageContract.InitialDate"/> the debt has not been taken on,
+    /// so it counts as nothing: a mortgage starting mid-horizon is precisely the
+    /// house-purchase case this app is for, and carrying its principal backwards
+    /// understated net worth by the whole loan for every day before completion.
     /// </summary>
     private sealed class MortgagePrincipalTracker
     {
         private readonly List<MortgagePrincipalPoint> _points;
         private readonly Dictionary<Guid, decimal> _current = [];
+        private readonly IReadOnlyDictionary<Guid, DateOnly> _startDates;
 
         private int _nextIndex;
 
-        public MortgagePrincipalTracker(IReadOnlyList<MortgagePrincipalPoint> points)
+        public MortgagePrincipalTracker(
+            IReadOnlyList<MortgagePrincipalPoint> points,
+            IReadOnlyDictionary<Guid, DateOnly> startDates)
         {
+            _startDates = startDates;
+
             _points = points
                 .OrderBy(x => x.Date)
                 .ThenBy(x => x.MortgageName)
@@ -183,8 +200,14 @@ public sealed class NetWorthCalculator
 
             var total = 0m;
 
-            foreach (var principal in _current.Values)
+            foreach (var (mortgageId, principal) in _current)
             {
+                // An unknown id keeps the old behaviour rather than silently dropping debt.
+                if (_startDates.TryGetValue(mortgageId, out var start) && date < start)
+                {
+                    continue;
+                }
+
                 total += principal;
             }
 
