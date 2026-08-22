@@ -570,7 +570,6 @@ else
 }
 
 @code {
-    private static readonly CultureInfo SwissCulture = CultureInfo.GetCultureInfo("de-CH");
     private readonly HouseBuyScenarioManager _scenarioManager = new();
 
     private Guid CurrentScenarioId { get; set; } = Guid.NewGuid();
@@ -1162,12 +1161,12 @@ else
 
     private static string Money(decimal value)
     {
-        return $"CHF {value.ToString("N0", SwissCulture)}";
+        return $"CHF {value.ToString("N0", CultureInfo.CurrentCulture)}";
     }
 
     private static string Percent(decimal value)
     {
-        return $"{value.ToString("N2", SwissCulture)}%";
+        return $"{value.ToString("N2", CultureInfo.CurrentCulture)}%";
     }
 
     private string AffordabilityRatioText(decimal ratio)
