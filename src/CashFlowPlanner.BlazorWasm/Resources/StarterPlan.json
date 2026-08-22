@@ -10,7 +10,7 @@
   "persons": [
     {
       "id": "5ba7b813-0000-0000-0000-000000000001",
-      "name": "Alex Muster",
+      "displayName": "Alex Muster",
       "annualEarnedIncome": 102000
     }
   ],

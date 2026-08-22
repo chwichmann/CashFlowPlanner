@@ -61,6 +61,24 @@ public sealed class StarterPlanTests
     }
 
     [Fact]
+    public void StarterPlan_EveryEntityHasAVisibleName()
+    {
+        // The person was written with "name" while Person serializes DisplayName as
+        // "displayName", so the example's only person rendered as a blank row. Nothing
+        // caught it: unknown JSON fields are preserved rather than rejected, so the file
+        // round-tripped and validated perfectly while showing nothing on screen.
+        var plan = new CashFlowPlanJsonSerializer()
+            .DeserializeDocument(Json())
+            .ToPlan();
+
+        Assert.All(plan.Accounts, a => Assert.False(string.IsNullOrWhiteSpace(a.Name)));
+        Assert.All(plan.Transactions, t => Assert.False(string.IsNullOrWhiteSpace(t.Name)));
+        Assert.All(plan.Persons, p => Assert.False(
+            string.IsNullOrWhiteSpace(p.DisplayName),
+            $"person {p.Id} has no display name - check the JSON property spelling"));
+    }
+
+    [Fact]
     public void StarterPlan_Simulates_WithoutCriticalWarnings()
     {
         var plan = new CashFlowPlanJsonSerializer()
