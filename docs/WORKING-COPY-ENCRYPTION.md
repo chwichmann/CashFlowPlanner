@@ -15,6 +15,21 @@ Implementation:
 - `src/CashFlowPlanner.BlazorWasm/Services/WorkingCopyCipher.cs` — the .NET side
 - `tools/working-copy-crypto-selftest.html` — the assertions, run in a browser
 
+## What it covers
+
+Two `localStorage` values, both holding the same class of private data and both
+using the same cipher and the same device key:
+
+| Key | Written by | Holds |
+| --- | --- | --- |
+| `cashflowplanner.plan.v1` (and `.prev`) | `BrowserPlanCacheService` | the plan working copy |
+| `cashflowplanner.bankimport.v1` | `BankImportStoreLocalStorage` | imported statement lines — counterparties, amounts, IBANs |
+
+The import store was missed on the first pass and encrypting the plan next to a
+plaintext list of every payment its owner received was not a defensible place to
+stop. It migrates the same way: plaintext from an older build is read as-is and
+rewritten encrypted on the next save.
+
 ## What this protects, and what it does not
 
 **Protects the bytes at rest in the browser profile.** A lost or stolen laptop, a

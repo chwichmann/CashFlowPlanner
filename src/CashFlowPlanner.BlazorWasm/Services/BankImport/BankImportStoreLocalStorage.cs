@@ -15,16 +15,25 @@ public sealed class BankImportStoreLocalStorage : IBankImportStore
         WriteIndented = false
     };
 
-    public BankImportStoreLocalStorage(IJSRuntime js)
+    private readonly IWorkingCopyCipher _cipher;
+
+    public BankImportStoreLocalStorage(IJSRuntime js, IWorkingCopyCipher cipher)
     {
         _js = js;
+        _cipher = cipher;
     }
 
     public async Task InitializeAsync()
     {
-        var json = await _js.InvokeAsync<string?>(
+        var stored = await _js.InvokeAsync<string?>(
             "localStorage.getItem",
             LocalStorageKeys.BankImportStore);
+
+        // Imported statements carry counterparties, amounts and account references - the same
+        // private data as the plan, and it was sitting in the same greppable profile file.
+        // Plaintext written by an older build is read as-is and rewritten encrypted on the next
+        // save, so nobody loses a reconciled import to this change.
+        var json = await _cipher.UnprotectAsync(stored);
 
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -110,9 +119,11 @@ public sealed class BankImportStoreLocalStorage : IBankImportStore
             _state,
             JsonOptions);
 
+        var stored = await _cipher.ProtectAsync(json);
+
         await _js.InvokeVoidAsync(
             "localStorage.setItem",
             LocalStorageKeys.BankImportStore,
-            json);
+            stored);
     }
 }

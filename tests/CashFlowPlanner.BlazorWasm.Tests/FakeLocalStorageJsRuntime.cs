@@ -1,4 +1,4 @@
-using CashFlowPlanner.BlazorWasm.Services;
+﻿using CashFlowPlanner.BlazorWasm.Services;
 using Microsoft.JSInterop;
 
 namespace CashFlowPlanner.BlazorWasm.Tests;
@@ -38,6 +38,15 @@ internal sealed class FakeLocalStorageJsRuntime : IJSRuntime
             "cashFlowPlanner.setLocalStorageItem" => Set(Key(arguments, 0), Key(arguments, 1)),
 
             "cashFlowPlanner.removeLocalStorageItem" => Remove(Key(arguments, 0)),
+
+            // The bank-import store talks to localStorage directly rather than through the
+            // shim. Same storage, so the same dictionary answers for it.
+            "localStorage.getItem" =>
+                Items.TryGetValue(Key(arguments, 0), out var raw) ? raw : null,
+
+            "localStorage.setItem" => Set(Key(arguments, 0), Key(arguments, 1)),
+
+            "localStorage.removeItem" => Remove(Key(arguments, 0)),
 
             "cashFlowPlanner.getLastStorageError" => QuotaExceeded
                 ? new BrowserStorageError("QuotaExceededError", "Browser storage is full.", true)
