@@ -2343,4 +2343,7 @@
   <data name="Settings_RecoveryHint" xml:space="preserve">
     <value>Bewahre eine Kopie von tools/decrypt-plan.html zusammen mit deinen verschlüsselten Plänen auf. Damit lassen sie sich offline auch ohne diese App öffnen.</value>
   </data>
+  <data name="Form_Required" xml:space="preserve">
+    <value>Pflichtfeld</value>
+  </data>
 </root>
