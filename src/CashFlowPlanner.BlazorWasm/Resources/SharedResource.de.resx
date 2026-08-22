@@ -2346,4 +2346,13 @@
   <data name="Form_Required" xml:space="preserve">
     <value>Pflichtfeld</value>
   </data>
+  <data name="Dialog_Close" xml:space="preserve">
+    <value>Schliessen</value>
+  </data>
+  <data name="Dialog_ConfirmTitle" xml:space="preserve">
+    <value>Bestätigen</value>
+  </data>
+  <data name="Dialog_ConfirmMessage" xml:space="preserve">
+    <value>Sind Sie sicher?</value>
+  </data>
 </root>

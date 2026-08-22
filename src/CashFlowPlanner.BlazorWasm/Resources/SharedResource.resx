@@ -2346,4 +2346,13 @@
   <data name="Form_Required" xml:space="preserve">
     <value>required</value>
   </data>
+  <data name="Dialog_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Dialog_ConfirmTitle" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Dialog_ConfirmMessage" xml:space="preserve">
+    <value>Are you sure?</value>
+  </data>
 </root>

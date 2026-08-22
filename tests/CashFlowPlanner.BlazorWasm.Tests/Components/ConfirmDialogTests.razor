@@ -1,0 +1,141 @@
+@namespace CashFlowPlanner.BlazorWasm.Tests.Components
+@inherits ComponentTestBase
+
+@code {
+    [Fact]
+    public void Shows_nothing_until_it_is_asked_to()
+    {
+        var cut = Render<ConfirmDialog>();
+
+        Assert.Empty(cut.FindAll("div.modal"));
+    }
+
+    [Fact]
+    public async Task Completes_with_true_when_the_user_confirms()
+    {
+        var cut = Render<ConfirmDialog>();
+
+        var answer = await ShowAsync(cut, "Delete transaction", "Delete Rent?");
+
+        Assert.Equal("Delete transaction", cut.Find("div.modal .modal-title").TextContent.Trim());
+        Assert.Equal("Delete Rent?", cut.Find("div.modal .modal-body").TextContent.Trim());
+
+        cut.Find("div.modal-footer button.btn-danger").Click();
+
+        Assert.True(await answer);
+        Assert.Empty(cut.FindAll("div.modal"));
+    }
+
+    [Fact]
+    public async Task Completes_with_false_when_the_user_cancels()
+    {
+        var cut = Render<ConfirmDialog>();
+
+        var answer = await ShowAsync(cut, "Delete transaction", "Delete Rent?");
+
+        cut.Find("div.modal-footer button.btn-outline-secondary").Click();
+
+        Assert.False(await answer);
+    }
+
+    [Fact]
+    public async Task Escape_answers_no_rather_than_leaving_the_caller_waiting()
+    {
+        var cut = Render<ConfirmDialog>();
+
+        var answer = await ShowAsync(cut, "Delete transaction", "Delete Rent?");
+
+        cut.Find("div.modal").KeyDown(Key.Escape);
+
+        Assert.False(await answer);
+    }
+
+    [Fact]
+    public async Task The_close_button_answers_no_too()
+    {
+        var cut = Render<ConfirmDialog>();
+
+        var answer = await ShowAsync(cut, "Delete transaction", "Delete Rent?");
+
+        cut.Find("button.btn-close").Click();
+
+        Assert.False(await answer);
+    }
+
+    [Fact]
+    public async Task Uses_the_localized_Delete_and_Cancel_rather_than_English_literals()
+    {
+        // "Confirm", "Are you sure?", "Cancel" and "Delete" were hardcoded English in an app that
+        // is otherwise fully localized.
+        var cut = Render<ConfirmDialog>();
+
+        await ShowAsync(cut, "Delete transaction", "Delete Rent?");
+
+        var buttons = cut.FindAll("div.modal-footer button");
+
+        Assert.Equal("Cancel", buttons[0].TextContent.Trim());
+        Assert.Equal("Delete", buttons[1].TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task Falls_back_to_localized_defaults_when_a_caller_passes_nothing()
+    {
+        var cut = Render<ConfirmDialog>();
+
+        await ShowAsync(cut, string.Empty, string.Empty);
+
+        Assert.Equal("Confirm", cut.Find("div.modal .modal-title").TextContent.Trim());
+        Assert.Equal("Are you sure?", cut.Find("div.modal .modal-body").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task Lets_a_caller_say_what_the_button_actually_does()
+    {
+        var cut = Render<ConfirmDialog>();
+
+        await ShowAsync(cut, "Discard changes", "Discard?", "Discard", "btn btn-warning");
+
+        var commit = cut.FindAll("div.modal-footer button")[1];
+
+        Assert.Equal("Discard", commit.TextContent.Trim());
+        Assert.Contains("btn-warning", commit.ClassList);
+    }
+
+    [Fact]
+    public async Task A_second_prompt_does_not_strand_the_first_caller()
+    {
+        // The old implementation replaced the pending TaskCompletionSource, leaving whoever was
+        // awaiting the first prompt awaiting forever.
+        var cut = Render<ConfirmDialog>();
+
+        var first = await ShowAsync(cut, "First", "First?");
+        var second = await ShowAsync(cut, "Second", "Second?");
+
+        Assert.False(await first);
+
+        cut.Find("div.modal-footer button.btn-danger").Click();
+
+        Assert.True(await second);
+    }
+
+    /// <summary>
+    /// Opens the dialog on the renderer's dispatcher and hands back the pending answer without
+    /// awaiting it - awaiting here would block on a question nobody has answered yet.
+    /// </summary>
+    private static async Task<Task<bool>> ShowAsync(
+        IRenderedComponent<ConfirmDialog> cut,
+        string title,
+        string message,
+        string? confirmText = null,
+        string? confirmCssClass = null)
+    {
+        Task<bool> answer = Task.FromResult(false);
+
+        await cut.InvokeAsync(() =>
+        {
+            answer = cut.Instance.ShowAsync(title, message, confirmText, confirmCssClass);
+        });
+
+        return answer;
+    }
+}
