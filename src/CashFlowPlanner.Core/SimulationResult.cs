@@ -1,5 +1,6 @@
 ﻿using CashFlowPlanner.Core;
 using CashFlowPlanner.Core.Accounts;
+using CashFlowPlanner.Core.Indexation;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.NetWorth;
 
@@ -23,6 +24,65 @@ public sealed class SimulationResult
     /// test fixture, say -- does not have to fabricate one.
     /// </summary>
     public IReadOnlyList<NetWorthPoint> NetWorthPoints { get; init; } = [];
+
+    /// <summary>
+    /// The inflation assumption the plan was simulated under. Every amount in
+    /// this result is NOMINAL -- francs of the day the money moves. This is what
+    /// lets a caller convert to real terms without knowing the plan.
+    /// </summary>
+    public InflationAssumption Inflation { get; init; } = new();
+
+    /// <summary>
+    /// <paramref name="nominalAmount"/>, observed on <paramref name="date"/>,
+    /// expressed in the requested basis.
+    ///
+    /// Real vs nominal is deliberately a presentation concern and never a change
+    /// to what the engine computed: turning inflation on does not silently
+    /// redefine what an existing number means, it adds a second way to read it.
+    /// With no inflation assumption the two bases are identical.
+    /// </summary>
+    public decimal ToBasis(
+        decimal nominalAmount,
+        DateOnly date,
+        AmountBasis basis)
+    {
+        if (basis == AmountBasis.Nominal || !Inflation.IsEnabled)
+        {
+            return nominalAmount;
+        }
+
+        return AnnualCompounding.Deflate(
+            nominalAmount,
+            Inflation.AnnualRatePercent,
+            Inflation.BaseDate!.Value,
+            date);
+    }
+
+    /// <summary>
+    /// The net-worth series in the requested basis. In
+    /// <see cref="AmountBasis.Real"/> every point is deflated back to the
+    /// plan's inflation base date, so the series answers "what is this worth in
+    /// today's money" rather than "what number will the statement show".
+    /// </summary>
+    public IReadOnlyList<NetWorthPoint> GetNetWorthPoints(AmountBasis basis)
+    {
+        if (basis == AmountBasis.Nominal || !Inflation.IsEnabled)
+        {
+            return NetWorthPoints;
+        }
+
+        var rate = Inflation.AnnualRatePercent;
+        var baseDate = Inflation.BaseDate!.Value;
+
+        return NetWorthPoints
+            .Select(point =>
+            {
+                var factor = AnnualCompounding.Factor(rate, baseDate, point.Date);
+
+                return factor == 0m ? point : point.Scale(1m / factor);
+            })
+            .ToList();
+    }
 
     /// <summary>
     /// The balance sheet on <paramref name="date"/>, or <c>null</c> when the

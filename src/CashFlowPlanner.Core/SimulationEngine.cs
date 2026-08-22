@@ -238,6 +238,7 @@ public sealed class SimulationEngine
             BalancePoints = balancePoints,
             MortgagePrincipalPoints = mortgageGeneration.PrincipalPoints,
             Warnings = warnings,
+            Inflation = plan.Inflation,
 
             NetWorthPoints = _netWorthCalculator.Calculate(
                 plan,

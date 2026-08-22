@@ -68,6 +68,31 @@ public sealed class NetWorthPoint
     public decimal NetWorth =>
         TotalAssets - TotalLiabilities;
 
+    /// <summary>
+    /// This point with every component multiplied by <paramref name="factor"/>.
+    /// Used to express a nominal balance sheet in the money of another date; the
+    /// components scale together, so the breakdown still sums to the total.
+    /// </summary>
+    public NetWorthPoint Scale(decimal factor)
+    {
+        if (factor == 1m)
+        {
+            return this;
+        }
+
+        return new NetWorthPoint
+        {
+            Date = Date,
+            Currency = Currency,
+            LiquidAssets = LiquidAssets * factor,
+            InvestmentAssets = InvestmentAssets * factor,
+            Pillar3aAssets = Pillar3aAssets * factor,
+            RealEstateValue = RealEstateValue * factor,
+            MortgagePrincipal = MortgagePrincipal * factor,
+            OtherLiabilities = OtherLiabilities * factor
+        };
+    }
+
     public override string ToString()
         => $"{Date:yyyy-MM-dd}: {NetWorth:N2} {Currency}";
 }

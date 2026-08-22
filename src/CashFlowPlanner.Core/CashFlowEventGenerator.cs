@@ -1,4 +1,6 @@
-﻿namespace CashFlowPlanner.Core;
+﻿using CashFlowPlanner.Core.Indexation;
+
+namespace CashFlowPlanner.Core;
 
 /// <summary>
 /// Turns transaction definitions into dated cash-flow events.
@@ -21,16 +23,34 @@ public sealed class CashFlowEventGenerator
         _scheduleOccurrenceGenerator = scheduleOccurrenceGenerator;
     }
 
+    /// <summary>
+    /// Generates events with no indexation. Callers that have a plan should use
+    /// the plan-aware overload so the plan's inflation assumption applies.
+    /// </summary>
     public IReadOnlyList<CashFlowEvent> GenerateEvents(
         IEnumerable<TransactionDefinition> transactions,
         DateOnly startDate,
         DateOnly endDate)
     {
+        return GenerateEvents(
+            transactions,
+            startDate,
+            endDate,
+            inflation: null);
+    }
+
+    public IReadOnlyList<CashFlowEvent> GenerateEvents(
+        IEnumerable<TransactionDefinition> transactions,
+        DateOnly startDate,
+        DateOnly endDate,
+        InflationAssumption? inflation)
+    {
         var events = GenerateTransactionEvents(
             transactions,
             startDate,
             endDate,
-            plan: null);
+            plan: null,
+            inflation);
 
         return SortEvents(events);
     }
@@ -55,7 +75,8 @@ public sealed class CashFlowEventGenerator
             plan.Transactions,
             startDate,
             endDate,
-            plan);
+            plan,
+            plan.Inflation);
 
         return SortEvents(events);
     }
@@ -64,7 +85,8 @@ public sealed class CashFlowEventGenerator
         IEnumerable<TransactionDefinition> transactions,
         DateOnly startDate,
         DateOnly endDate,
-        CashFlowPlan? plan)
+        CashFlowPlan? plan,
+        InflationAssumption? inflation)
     {
         var events = new List<CashFlowEvent>();
 
@@ -78,8 +100,20 @@ public sealed class CashFlowEventGenerator
                 endDate,
                 plan);
 
+            var indexation = TransactionIndexer.Resolve(transaction, inflation);
+
             foreach (var date in dates)
             {
+                // Indexation compounds on the anniversary of the base date, not
+                // per occurrence: all twelve charges of an indexation year carry
+                // the same amount, and the amount steps once a year.
+                var factor = indexation is null
+                    ? 1m
+                    : AnnualCompounding.Factor(
+                        indexation.Value.RatePercent,
+                        indexation.Value.BaseDate,
+                        date);
+
                 events.Add(new CashFlowEvent
                 {
                     SourceTransactionId = transaction.Id,
@@ -88,7 +122,10 @@ public sealed class CashFlowEventGenerator
                     Kind = transaction.Kind,
                     FromAccountId = transaction.FromAccountId,
                     ToAccountId = transaction.ToAccountId,
-                    Amount = transaction.Amount,
+                    Amount = factor == 1m
+                        ? transaction.Amount
+                        : transaction.Amount * factor,
+                    IndexationFactor = factor,
                     Currency = transaction.Currency,
                     Priority = transaction.Priority,
                     Category = transaction.Category,

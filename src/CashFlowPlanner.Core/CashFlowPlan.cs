@@ -1,5 +1,6 @@
 ﻿using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.CreditCards;
+using CashFlowPlanner.Core.Indexation;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
@@ -42,6 +43,12 @@ public sealed class CashFlowPlan
     /// net-worth figure could be formed.
     /// </summary>
     public List<RealEstateAsset> RealEstateAssets { get; init; } = [];
+
+    /// <summary>
+    /// Price inflation for the whole plan. Individual transactions opt out or
+    /// override it through <see cref="TransactionDefinition.IndexationMode"/>.
+    /// </summary>
+    public InflationAssumption Inflation { get; init; } = new();
 
     public SimulationSettings SimulationSettings { get; init; } = new();
 
@@ -197,6 +204,8 @@ public sealed class CashFlowPlan
         }
 
         ValidateRealEstateAssets(mortgageIds);
+
+        Inflation.Validate();
 
         SimulationSettings.Validate();
     }
