@@ -1,0 +1,6 @@
+Datum;Buchungstext;Betrag
+15.01.2026;Miete Januar;-2'400.00
+16.01.2026;Kaputte Zeile;keine Zahl
+;Zeile ohne Datum;-10.00
+;Hinweis: Dieser Auszug ist unverbindlich.;
+25.01.2026;Lohn Januar;7'350.55

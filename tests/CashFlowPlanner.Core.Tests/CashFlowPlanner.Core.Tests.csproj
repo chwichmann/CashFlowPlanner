@@ -30,6 +30,19 @@
     <EmbeddedResource Include="Banking\Camt\Fixtures\*.xml" />
   </ItemGroup>
 
+  <!--
+    CSV test fixtures.
+
+    Embedded for the same reason as the camt ones, and for one more: several of them are not
+    UTF-8. Latin1.csv is Latin-1 on purpose, and Utf8Bom.csv carries a byte-order mark, because
+    Swiss exports are not uniformly UTF-8 and a decoder that guesses wrong turns "Zürich" into
+    "Z?rich" without failing. Copying those to the output directory would let a build step or a
+    text-mode file copy silently re-encode them and quietly disarm the test.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Banking\Csv\Fixtures\*.csv" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\CashFlowPlanner.Core\CashFlowPlanner.Core.csproj" />
   </ItemGroup>

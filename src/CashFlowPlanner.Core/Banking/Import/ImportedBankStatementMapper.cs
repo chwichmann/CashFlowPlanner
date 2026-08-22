@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using CashFlowPlanner.Core.Banking.Camt;
+using CashFlowPlanner.Core.Banking.Csv;
 using CashFlowPlanner.Core.Banking.Mt940;
 
 namespace CashFlowPlanner.Core.Banking.Import;
@@ -12,6 +13,14 @@ public sealed class ImportedBankStatementMapper
     /// unbounded itemisation is a real risk to the user's data, not just to readability.
     /// </summary>
     private const int MaxDescribedBatchItems = 10;
+
+    /// <summary>
+    /// Mirrors <see cref="BankStatementImportService.CsvSourceFormat"/>. Kept as a literal here
+    /// for the same reason "MT940" and "CAMT053" are: <see cref="ImportedBankStatementBatch"/>
+    /// persists it as a plain string into the user's browser storage, and a value that moved
+    /// would orphan every batch already stored under the old one.
+    /// </summary>
+    private const string CsvSourceFormat = "CSV";
 
     public ImportedBankStatementMappingResult MapFromMt940(
         Mt940Statement statement,
@@ -154,6 +163,190 @@ public sealed class ImportedBankStatementMapper
             Batch = batch,
             Transactions = transactions
         };
+    }
+
+    /// <summary>
+    /// Maps a parsed CSV export to one import batch.
+    ///
+    /// <para>
+    /// Two things are deliberately different from the MT940 and camt.053 paths, and both are
+    /// about not pretending to know more than the file says.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>No bank reference.</b> A reference column, where one exists, goes to
+    /// <see cref="ImportedBankTransaction.CustomerReference"/> and never to
+    /// <see cref="ImportedBankTransaction.BankReference"/>, which is the primary deduplication
+    /// tier. That looks like throwing away a perfectly good key, and it is not: a CSV reference
+    /// column usually holds the QR or ESR reference of the payment, and a standing order carries
+    /// the <i>same</i> reference every single month. Keying on it would make February's rent a
+    /// duplicate of January's and drop it. So every CSV transaction goes through the content-hash
+    /// fallback tier, with the occurrence rank that
+    /// <see cref="ImportedBankTransactionDedupKeyBuilder.Build(ImportedBankTransaction, int)"/>
+    /// applies keeping genuinely identical rows apart.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>No fabricated balances.</b> Opening and closing balances are set only when the export
+    /// actually carried a running-balance column and it reconciled; otherwise they stay null, and
+    /// with them the suggested balance update. A CSV file with no balance column tells us nothing
+    /// about the account's balance, and inventing one from the transactions would overwrite a
+    /// figure the user maintains by hand with a number derived from an arbitrary starting point.
+    /// </para>
+    /// </summary>
+    public ImportedBankStatementMappingResult MapFromCsv(
+        CsvStatementFile file,
+        Guid accountId,
+        string fileFingerprint,
+        string? fileName = null,
+        DateTime? importedUtc = null)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        var importTime = importedUtc ?? DateTime.UtcNow;
+        var batchId = Guid.NewGuid();
+
+        var transactions = MapCsvRows(file, accountId, batchId, importTime);
+
+        var reconciliation = file.Reconciliation;
+
+        var batch = new ImportedBankStatementBatch
+        {
+            Id = batchId,
+            AccountId = accountId,
+            SourceFormat = CsvSourceFormat,
+            FileName = fileName,
+            FileFingerprint = fileFingerprint,
+            BankAccountIdentifier = file.AccountIdentifier,
+            // A CSV export has no statement identity of its own - no :20:, no Stmt/Id. The file
+            // fingerprint above is the only thing that identifies this particular download, and
+            // it is already there.
+            TransactionReference = null,
+            StatementNumber = null,
+            OpeningBalanceDate = reconciliation.IsAvailable ? reconciliation.OpeningBalanceDate : null,
+            OpeningBalance = reconciliation.IsAvailable ? reconciliation.OpeningBalance : null,
+            ClosingBalanceDate = reconciliation.IsAvailable ? reconciliation.ClosingBalanceDate : null,
+            ClosingBalance = reconciliation.IsAvailable ? reconciliation.ClosingBalance : null,
+            Currency = file.Currency,
+            FirstTransactionDate = transactions.Count == 0
+                ? null
+                : transactions.Min(x => x.ValueDate),
+            LastTransactionDate = transactions.Count == 0
+                ? null
+                : transactions.Max(x => x.ValueDate),
+            ParsedTransactionCount = transactions.Count,
+            TransactionNetAmount = transactions.Sum(x => x.SignedAmount),
+            ReconciliationAvailable = reconciliation.IsAvailable,
+            ReconciliationBalanced = reconciliation.IsBalanced,
+            ReconciliationDifference = reconciliation.Difference,
+            ImportedUtc = importTime
+        };
+
+        return new ImportedBankStatementMappingResult
+        {
+            Batch = batch,
+            Transactions = transactions
+        };
+    }
+
+    /// <summary>
+    /// Maps the rows in file order, ranking identical ones as it goes.
+    ///
+    /// <para>
+    /// The rank has to be assigned here rather than inside the key builder because it is a
+    /// property of the <i>statement</i>, not of the transaction: only something that sees all the
+    /// rows at once can know that this 4.50 is the second identical 4.50 of the day.
+    /// </para>
+    /// </summary>
+    private static IReadOnlyList<ImportedBankTransaction> MapCsvRows(
+        CsvStatementFile file,
+        Guid accountId,
+        Guid batchId,
+        DateTime importTime)
+    {
+        var occurrencesByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+        var transactions = new List<ImportedBankTransaction>(file.Rows.Count);
+
+        foreach (var row in file.Rows)
+        {
+            var transaction = MapCsvRow(file, row, accountId, batchId, importTime);
+
+            var baseKey = ImportedBankTransactionDedupKeyBuilder.Build(transaction);
+
+            occurrencesByKey[baseKey] = occurrencesByKey.TryGetValue(baseKey, out var seen)
+                ? seen + 1
+                : 1;
+
+            transactions.Add(
+                transaction.withDeduplicationKey(occurrencesByKey[baseKey]));
+        }
+
+        return transactions;
+    }
+
+    private static ImportedBankTransaction MapCsvRow(
+        CsvStatementFile file,
+        CsvStatementRow row,
+        Guid accountId,
+        Guid batchId,
+        DateTime importTime)
+    {
+        return new ImportedBankTransaction
+        {
+            Id = Guid.NewGuid(),
+            ImportBatchId = batchId,
+            AccountId = accountId,
+            SourceFormat = CsvSourceFormat,
+            BankAccountIdentifier = file.AccountIdentifier ?? string.Empty,
+            ValueDate = row.EffectiveDate,
+            // Only when the file has both columns. Repeating the value date here would make the
+            // two look confirmed by the export when only one of them was in it.
+            BookingDate = row.ValueDate is null ? null : row.BookingDate,
+            SignedAmount = row.SignedAmount,
+            Currency = row.Currency,
+            // CSV has no equivalent of the MT940 transaction code or camt's BkTxCd. Empty rather
+            // than a placeholder, because the field feeds the deduplication hash and a made-up
+            // constant there would be noise in every key.
+            TransactionCode = string.Empty,
+            Structured86Code = null,
+            BankReference = null,
+            CustomerReference = row.Reference,
+            SupplementaryDetails = row.Counterparty,
+            Description = BuildCsvDescription(row),
+            // The row as it stood in the file. A CSV line is short - a hundred characters or so,
+            // comparable to the MT940 :61:/:86: pair already stored here - and it is what lets a
+            // user challenge an amount six months later.
+            Raw61 = row.RawText,
+            Raw86 = null,
+            ImportedUtc = importTime
+        };
+    }
+
+    /// <summary>
+    /// Builds the description the same way the camt path does: the counterparty first, because
+    /// that is what a person recognises, then what the payment was for - and never the
+    /// counterparty twice when the description already opens with it.
+    /// </summary>
+    private static string BuildCsvDescription(CsvStatementRow row)
+    {
+        var purpose = row.Description;
+        var counterparty = row.Counterparty;
+
+        if (string.IsNullOrWhiteSpace(counterparty))
+        {
+            return string.IsNullOrWhiteSpace(purpose)
+                ? string.Empty
+                : NormalizeText(purpose);
+        }
+
+        if (string.IsNullOrWhiteSpace(purpose))
+        {
+            return NormalizeText(counterparty);
+        }
+
+        return purpose.Contains(counterparty, StringComparison.OrdinalIgnoreCase)
+            ? NormalizeText(purpose)
+            : NormalizeText($"{counterparty} {purpose}");
     }
 
     private static ImportedBankTransaction MapEntry(
@@ -340,6 +533,18 @@ internal static class ImportedBankTransactionExtensions
     public static ImportedBankTransaction withDeduplicationKey(
         this ImportedBankTransaction transaction)
     {
+        return transaction.withDeduplicationKey(occurrence: 1);
+    }
+
+    /// <summary>
+    /// <paramref name="occurrence"/> is the transaction's rank among identical ones in the same
+    /// statement; 1 - the only value the MT940 and camt.053 paths ever pass - produces exactly
+    /// the key those formats produced before.
+    /// </summary>
+    public static ImportedBankTransaction withDeduplicationKey(
+        this ImportedBankTransaction transaction,
+        int occurrence)
+    {
         return new ImportedBankTransaction
         {
             Id = transaction.Id,
@@ -359,7 +564,7 @@ internal static class ImportedBankTransactionExtensions
             Description = transaction.Description,
             Raw61 = transaction.Raw61,
             Raw86 = transaction.Raw86,
-            DeduplicationKey = ImportedBankTransactionDedupKeyBuilder.Build(transaction),
+            DeduplicationKey = ImportedBankTransactionDedupKeyBuilder.Build(transaction, occurrence),
             MatchedTransactionDefinitionId = transaction.MatchedTransactionDefinitionId,
             MatchStatus = transaction.MatchStatus,
             ImportedUtc = transaction.ImportedUtc

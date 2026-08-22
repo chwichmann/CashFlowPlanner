@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.Banking.Camt;
+using CashFlowPlanner.Core.Banking.Csv;
 using CashFlowPlanner.Core.Banking.Mt940;
 
 namespace CashFlowPlanner.Core.Banking.Import;
@@ -11,8 +12,17 @@ public sealed class BankStatementImportService
 
     public const string Camt053SourceFormat = "CAMT053";
 
+    /// <summary>
+    /// <b>The format that is always available to a private customer.</b> camt.053 is a
+    /// business-banking feature at most Swiss retail banks - it has to be switched on through a
+    /// business channel - and it does not exist at all at the neobanks. For several banks a CSV
+    /// export is not the convenient path, it is the only one.
+    /// </summary>
+    public const string CsvSourceFormat = "CSV";
+
     private readonly Mt940Parser _mt940Parser;
     private readonly Camt053Parser _camt053Parser;
+    private readonly CsvStatementParser _csvParser;
     private readonly ImportedBankStatementMapper _mapper;
     private readonly ImportedBankTransactionMerger _merger;
 
@@ -20,6 +30,7 @@ public sealed class BankStatementImportService
         : this(
             new Mt940Parser(),
             new Camt053Parser(),
+            new CsvStatementParser(),
             new ImportedBankStatementMapper(),
             new ImportedBankTransactionMerger())
     {
@@ -30,9 +41,25 @@ public sealed class BankStatementImportService
         Camt053Parser camt053Parser,
         ImportedBankStatementMapper mapper,
         ImportedBankTransactionMerger merger)
+        : this(
+            mt940Parser,
+            camt053Parser,
+            new CsvStatementParser(),
+            mapper,
+            merger)
+    {
+    }
+
+    public BankStatementImportService(
+        Mt940Parser mt940Parser,
+        Camt053Parser camt053Parser,
+        CsvStatementParser csvParser,
+        ImportedBankStatementMapper mapper,
+        ImportedBankTransactionMerger merger)
     {
         _mt940Parser = mt940Parser;
         _camt053Parser = camt053Parser;
+        _csvParser = csvParser;
         _mapper = mapper;
         _merger = merger;
     }
@@ -58,26 +85,47 @@ public sealed class BankStatementImportService
             throw new InvalidOperationException("The imported bank statement file is empty.");
         }
 
-        return DetectSourceFormat(request.FileBytes) == Camt053SourceFormat
-            ? ImportCamt053(request)
-            : [ImportMt940(request)];
+        return DetectSourceFormat(request.FileBytes) switch
+        {
+            Camt053SourceFormat => ImportCamt053(request),
+            CsvSourceFormat => [ImportCsv(request)],
+            _ => [ImportMt940(request)]
+        };
     }
 
     /// <summary>
-    /// Decides whether a file is CAMT.053 or MT940 by looking at the content, not the extension.
+    /// Decides whether a file is CAMT.053, CSV or MT940 by looking at the content, not the
+    /// extension.
     ///
     /// <para>
     /// Extensions are unreliable here: banks export camt as <c>.xml</c>, <c>.txt</c> or inside a
-    /// <c>.zip</c>, and users rename files. The content is unambiguous - an XML document with a
-    /// <c>BkToCstmrStmt</c> element is camt.053 and nothing else is.
+    /// <c>.zip</c>, CSV exports arrive as <c>.csv</c>, <c>.txt</c> and occasionally <c>.xls</c>,
+    /// and users rename files. The content is what decides.
+    /// </para>
+    ///
+    /// <para>
+    /// The order is not arbitrary and MT940 keeps the last word. camt.053 is unambiguous - an
+    /// XML document with a <c>BkToCstmrStmt</c> element is camt.053 and nothing else is. MT940
+    /// is checked next by its tag markers, so a real MT940 statement can never be mistaken for
+    /// CSV even though it is full of colons and commas. Only what is neither is offered to the
+    /// CSV sniff, and anything the CSV sniff also rejects still goes to MT940 - which means an
+    /// unrecognisable file produces exactly the MT940 error message it produced before CSV
+    /// existed.
     /// </para>
     /// </summary>
     public static string DetectSourceFormat(byte[] fileBytes)
     {
         ArgumentNullException.ThrowIfNull(fileBytes);
 
-        return Camt053Parser.LooksLikeCamt053(ReadHead(fileBytes))
-            ? Camt053SourceFormat
+        var head = ReadHead(fileBytes);
+
+        if (Camt053Parser.LooksLikeCamt053(head))
+        {
+            return Camt053SourceFormat;
+        }
+
+        return CsvStatementParser.LooksLikeCsv(head)
+            ? CsvSourceFormat
             : Mt940SourceFormat;
     }
 
@@ -90,7 +138,9 @@ public sealed class BankStatementImportService
     /// </summary>
     private static string ReadHead(byte[] fileBytes)
     {
-        const int HeadLength = 4096;
+        // Generous enough that a CSV header row still falls inside it after a long preamble.
+        // camt sniffing is unaffected: LooksLikeCamt053 truncates to its own 4 KB regardless.
+        const int HeadLength = 16384;
 
         var length = Math.Min(fileBytes.Length, HeadLength);
 
@@ -223,6 +273,207 @@ public sealed class BankStatementImportService
         return results;
     }
 
+    /// <summary>
+    /// Imports a CSV export. Always one result: a CSV file is one account's transactions, with
+    /// no equivalent of camt's <c>Stmt</c> repetition.
+    ///
+    /// <para>
+    /// Account matching is best-effort by design. A CSV export has no <c>Acct/Id/IBAN</c>, so
+    /// the only chance of matching automatically is an IBAN in the preamble above the header -
+    /// which is there often enough to be worth scanning for, and validated by its check digits
+    /// so a QR reference cannot be mistaken for one. When nothing is found the result comes back
+    /// with <see cref="BankStatementImportResult.RequiresAccountSelection"/> set and the user
+    /// picks the account, exactly as an unmatched camt statement does. Once they do, the
+    /// identifier is remembered on the account and the next month matches by itself.
+    /// </para>
+    ///
+    /// <para>
+    /// A file that cannot be parsed at all throws <see cref="CsvParseException"/> with a sentence
+    /// the user can act on. Individual bad rows do not: they come back on
+    /// <see cref="BankStatementImportCsvDetails.RowIssues"/> and are rendered, because an import
+    /// that reports "312 added" while three rows fell out silently is worse than one that says
+    /// which three.
+    /// </para>
+    /// </summary>
+    public BankStatementImportResult ImportCsv(
+        BankStatementImportRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.FileBytes);
+        ArgumentNullException.ThrowIfNull(request.Accounts);
+        ArgumentNullException.ThrowIfNull(request.ExistingImportedTransactions);
+
+        if (request.FileBytes.Length == 0)
+        {
+            throw new InvalidOperationException("The imported CSV file is empty.");
+        }
+
+        var asOfDate = request.AsOfDate
+            ?? DateOnly.FromDateTime(DateTime.Today);
+
+        var fileFingerprint = ImportedBankFileFingerprint.Create(
+            request.FileBytes);
+
+        var profile = CsvStatementProfiles.Find(request.CsvProfileId);
+
+        var file = _csvParser.Parse(request.FileBytes, profile);
+
+        var preview = CreateCsvPreview(
+            file,
+            request.FileName,
+            fileFingerprint);
+
+        var match = ResolveCsvAccount(
+            request.Accounts,
+            file.AccountIdentifier,
+            request.SelectedAccountId);
+
+        if (match.Account is null)
+        {
+            return new BankStatementImportResult
+            {
+                Preview = preview,
+                AccountMatchStatus = BankStatementAccountMatchStatus.NotMatched,
+                AccountId = null,
+                MappingResult = null,
+                MergeResult = null,
+                SuggestedBalanceUpdate = null,
+                BankAccountIdentifierToRemember = file.AccountIdentifier
+            };
+        }
+
+        var mappingResult = _mapper.MapFromCsv(
+            file,
+            match.Account.Id,
+            fileFingerprint,
+            request.FileName);
+
+        var mergeResult = _merger.Merge(
+            request.ExistingImportedTransactions,
+            mappingResult);
+
+        return new BankStatementImportResult
+        {
+            Preview = preview,
+            AccountMatchStatus = match.Status,
+            AccountId = match.Account.Id,
+            MappingResult = mappingResult,
+            MergeResult = mergeResult,
+            // Null whenever the export carried no balance column, which is the normal case.
+            // CreateSuggestedBalanceUpdate returns null for a batch with no closing balance, so
+            // a CSV import never proposes overwriting a balance the user maintains by hand.
+            SuggestedBalanceUpdate = CreateSuggestedBalanceUpdate(
+                match.Account.Id,
+                mappingResult.Batch,
+                asOfDate),
+            BankAccountIdentifierToRemember =
+                match.Status == BankStatementAccountMatchStatus.SelectedManually
+                    ? file.AccountIdentifier
+                    : null
+        };
+    }
+
+    private static BankStatementImportPreview CreateCsvPreview(
+        CsvStatementFile file,
+        string? fileName,
+        string fileFingerprint)
+    {
+        var reconciliation = file.Reconciliation;
+
+        return new BankStatementImportPreview
+        {
+            SourceFormat = CsvSourceFormat,
+            FileName = fileName,
+            FileFingerprint = fileFingerprint,
+            BankAccountIdentifier = file.AccountIdentifier,
+            TransactionReference = null,
+            StatementNumber = null,
+            OpeningBalanceDate = reconciliation.IsAvailable ? reconciliation.OpeningBalanceDate : null,
+            OpeningBalance = reconciliation.IsAvailable ? reconciliation.OpeningBalance : null,
+            ClosingBalanceDate = reconciliation.IsAvailable ? reconciliation.ClosingBalanceDate : null,
+            ClosingBalance = reconciliation.IsAvailable ? reconciliation.ClosingBalance : null,
+            Currency = file.Currency,
+            FirstTransactionDate = file.FirstTransactionDate,
+            LastTransactionDate = file.LastTransactionDate,
+            ParsedTransactionCount = file.Rows.Count,
+            TransactionNetAmount = file.TransactionNetAmount,
+            // False unless the file genuinely carried a running-balance column. Reporting
+            // "balanced" because nothing contradicted us would turn the one check that catches a
+            // half-downloaded statement into a green tick that means nothing.
+            ReconciliationAvailable = reconciliation.IsAvailable,
+            ReconciliationBalanced = reconciliation.IsBalanced,
+            ReconciliationDifference = reconciliation.Difference,
+            Csv = CreateCsvDetails(file)
+        };
+    }
+
+    private static BankStatementImportCsvDetails CreateCsvDetails(CsvStatementFile file)
+    {
+        var columns = file.Mapping.ColumnIndexByRole
+            .OrderBy(x => x.Value)
+            .Select(x => new BankStatementImportCsvColumn(
+                x.Key,
+                x.Value,
+                file.Mapping.HeaderOf(x.Key)))
+            .ToList();
+
+        var mappedIndexes = file.Mapping.ColumnIndexByRole.Values.ToHashSet();
+
+        var unmappedHeaders = file.Mapping.Headers
+            .Select((header, index) => (header, index))
+            .Where(x => !mappedIndexes.Contains(x.index) && !string.IsNullOrWhiteSpace(x.header))
+            .Select(x => x.header.Trim())
+            .ToList();
+
+        return new BankStatementImportCsvDetails
+        {
+            ProfileId = file.ProfileId,
+            ProfileDisplayName = file.ProfileDisplayName,
+            WasAutoDetected = file.WasAutoDetected,
+            Delimiter = CsvStatementParser.DescribeDelimiter(file.Delimiter),
+            DecimalSeparator = file.DecimalSeparator,
+            DateFormat = file.DateFormat,
+            Encoding = file.Encoding,
+            HeaderLineNumber = file.HeaderLineNumber,
+            PreambleLineCount = file.PreambleLines.Count,
+            AmountConvention = file.AmountConvention,
+            Columns = columns,
+            UnmappedHeaders = unmappedHeaders,
+            RowIssues = file.Issues,
+            Warnings = file.Warnings
+        };
+    }
+
+    /// <summary>
+    /// Matches a CSV export to an account by the IBAN found in its preamble, falling back to the
+    /// account the user picked. Same three lookups the camt path uses, for the same reason: an
+    /// account whose IBAN the user typed into the account form must match without any
+    /// import-specific setup.
+    /// </summary>
+    private static AccountMatch ResolveCsvAccount(
+        IReadOnlyCollection<Account> accounts,
+        string? accountIdentifier,
+        Guid? selectedAccountId)
+    {
+        var matched = FindAccountByIban(accounts, accountIdentifier);
+
+        if (matched is not null)
+        {
+            return new AccountMatch(
+                matched,
+                BankStatementAccountMatchStatus.MatchedByBankIdentifier);
+        }
+
+        if (selectedAccountId is null)
+        {
+            return new AccountMatch(null, BankStatementAccountMatchStatus.NotMatched);
+        }
+
+        return new AccountMatch(
+            ResolveSelectedAccount(accounts, selectedAccountId),
+            BankStatementAccountMatchStatus.SelectedManually);
+    }
+
     private static BankStatementImportPreview CreateCamt053Preview(
         Camt053Statement statement,
         string? fileName,
@@ -279,17 +530,29 @@ public sealed class BankStatementImportService
         IReadOnlyCollection<Account> accounts,
         Camt053Statement statement)
     {
-        var accountIdentifier = statement.AccountIdentifier;
+        var matched = FindAccountByIban(accounts, statement.AccountIdentifier);
 
+        return matched is null
+            ? new AccountMatch(null, BankStatementAccountMatchStatus.NotMatched)
+            : new AccountMatch(matched, BankStatementAccountMatchStatus.MatchedByBankIdentifier);
+    }
+
+    /// <summary>
+    /// The three IBAN lookups, shared by the camt.053 and CSV paths so the two cannot drift.
+    /// Returns null when none matches or several do - see <see cref="FindSingle"/>.
+    /// </summary>
+    private static Account? FindAccountByIban(
+        IReadOnlyCollection<Account> accounts,
+        string? accountIdentifier)
+    {
         if (string.IsNullOrWhiteSpace(accountIdentifier))
         {
-            return new AccountMatch(null, BankStatementAccountMatchStatus.NotMatched);
+            return null;
         }
 
         var normalizedIdentifier = AccountBankIdentifier.Normalize(accountIdentifier);
 
-        var matched =
-            FindSingle(
+        return FindSingle(
                 accounts,
                 account => AccountBankIdentifierMatcher.HasIdentifier(
                     account,
@@ -307,10 +570,6 @@ public sealed class BankStatementImportService
                 account => AccountBankIdentifierMatcher.HasMt940AccountId(
                     account,
                     accountIdentifier));
-
-        return matched is null
-            ? new AccountMatch(null, BankStatementAccountMatchStatus.NotMatched)
-            : new AccountMatch(matched, BankStatementAccountMatchStatus.MatchedByBankIdentifier);
     }
 
     /// <summary>
