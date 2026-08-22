@@ -99,6 +99,20 @@ table {
 }
 
 /*
+    Numeric cells and inputs.
+
+    Right-aligned *and* tabular. Without font-variant-numeric the proportional
+    digits of the body font give every glyph its own width, so a money column
+    stays ragged at the decimal separator even when the column is right-aligned -
+    and `tabular-nums` appeared nowhere in this codebase. Apply .num to any cell,
+    input or figure holding an amount.
+*/
+.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/*
     Bootstrap 5.3 reads --bs-primary for utilities, links and focus rings, but the
     button variants still bake the literal hex into their own --bs-btn-* block.
     Re-point those at the token so a brand change stays a one-line edit in
