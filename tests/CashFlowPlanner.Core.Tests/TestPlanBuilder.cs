@@ -1,4 +1,5 @@
 ﻿using CashFlowPlanner.Core.Accounts;
+using CashFlowPlanner.Core.Indexation;
 using CashFlowPlanner.Core.CreditCards;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
@@ -18,7 +19,8 @@ public static class TestPlanBuilder
         List<Pillar3aContract>? pillar3aContracts = null,
         List<RealEstateAsset>? realEstateAssets = null,
         DateOnly? startDate = null,
-        DateOnly? endDate = null)
+        DateOnly? endDate = null,
+        InflationAssumption? inflation = null)
     {
         return new CashFlowPlan
         {
@@ -33,6 +35,7 @@ public static class TestPlanBuilder
             CreditCards = creditCards ?? [],
             Pillar3aContracts = pillar3aContracts ?? [],
             RealEstateAssets = realEstateAssets ?? [],
+            Inflation = inflation ?? new InflationAssumption(),
 
             SimulationSettings = new SimulationSettings
             {
