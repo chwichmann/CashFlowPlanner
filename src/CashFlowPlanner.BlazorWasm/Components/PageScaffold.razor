@@ -1,4 +1,4 @@
-@using CashFlowPlanner.BlazorWasm.Services
+﻿@using CashFlowPlanner.BlazorWasm.Services
 @implements IDisposable
 
 @inject CashFlowAppState AppState
@@ -43,7 +43,10 @@
         }
     </div>
 
-    @if (Actions is not null)
+    @* Actions follow the same guard as the body. "Add account" opens an editor that lives in
+       ChildContent, so showing it beside the empty state would offer a button that appears to do
+       nothing. Three pages were each carrying their own @@if for this. *@
+    @if (Actions is not null && !ShowEmptyState)
     {
         <div class="d-flex flex-wrap gap-2">
             @Actions
@@ -90,7 +93,10 @@ else
     [Parameter]
     public string? Subtitle { get; set; }
 
-    /// <summary>Page-level buttons, laid out on the heading row.</summary>
+    /// <summary>
+    /// Page-level buttons, laid out on the heading row. Hidden when the empty state is showing,
+    /// since they act on a plan that is not loaded.
+    /// </summary>
     [Parameter]
     public RenderFragment? Actions { get; set; }
 

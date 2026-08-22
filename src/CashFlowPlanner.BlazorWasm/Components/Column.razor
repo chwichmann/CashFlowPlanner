@@ -1,4 +1,4 @@
-@typeparam TItem
+﻿@typeparam TItem
 @implements IDisposable
 
 @*
@@ -106,4 +106,15 @@
     {
         Owner?.RemoveColumn(this);
     }
+
+    /// <summary>
+    /// This column's value for footer row <c>n</c>, for tables with more than one totals row.
+    /// Return null to leave that cell blank. Takes precedence over <see cref="FooterValue"/>.
+    /// </summary>
+    [Parameter]
+    public Func<IReadOnlyList<TItem>, int, string?>? FooterValueAt { get; set; }
+
+    /// <summary>Markup form of <see cref="FooterValueAt"/>, receiving the rows and the row index.</summary>
+    [Parameter]
+    public RenderFragment<(IReadOnlyList<TItem> Rows, int Row)>? FooterContentAt { get; set; }
 }

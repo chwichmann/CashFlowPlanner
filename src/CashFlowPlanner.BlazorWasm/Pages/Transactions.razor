@@ -1,4 +1,4 @@
-@page "/transactions"
+﻿@page "/transactions"
 
 @using Microsoft.Extensions.Localization
 @using CashFlowPlanner.Core
@@ -482,9 +482,16 @@
                    TableCssClass="table table-striped table-hover align-middle"
                    Caption="@L["Transactions"]"
                    EmptyText="@L["Transaction_NoTransactionsMatchFilter"]"
-                   ShowFooter="@(showRecurringColumns && visibleTransactions.Count > 0)">
+                   ShowFooter="@(showRecurringColumns && visibleTransactions.Count > 0)"
+                   FooterRowCount="3">
 
-            <Column Title="@L["Name"]" FooterText="@L["Transaction_SumYearlyAmountFilter"]">
+            <Column Title="@L["Name"]"
+                    FooterValueAt="@((rows, row) => row switch
+                    {
+                        0 => L["Transaction_SumIncomingYearlyAmountFilter"].Value,
+                        1 => L["Transaction_SumOutgoingYearlyAmountFilter"].Value,
+                        _ => L["Transaction_SumYearlyAmountFilter"].Value
+                    })">
                 <ChildContent Context="transaction">
                     <div>@transaction.Name</div>
 
@@ -543,13 +550,20 @@
                     Align="ColumnAlign.Number"
                     Visible="@showRecurringColumns"
                     Text="@(transaction => Formatter.Money(CalculateYearlyAmount(transaction), transaction.Currency))"
-                    FooterValue="@(rows => Formatter.Money(rows.Sum(CalculateYearlyAmount), baseCurrency))" />
+                    FooterValueAt="@((rows, row) => row switch
+                    {
+                        0 => Formatter.Money(SumYearly(rows, TransactionKind.ExternalIncome), baseCurrency),
+                        1 => Formatter.Money(SumYearly(rows, TransactionKind.ExternalExpense), baseCurrency),
+                        _ => Formatter.Money(rows.Sum(CalculateYearlyAmount), baseCurrency)
+                    })" />
 
             <Column Title="@L["Transaction_EffectiveYearlyAmount"]"
                     Align="ColumnAlign.Number"
                     Visible="@showRecurringColumns"
                     Text="@(transaction => Formatter.Money(CalculateEffectiveYearlyAmount(transaction), transaction.Currency))"
-                    FooterValue="@(rows => Formatter.Money(rows.Sum(CalculateEffectiveYearlyAmount), baseCurrency))" />
+                    FooterValueAt="@((rows, row) => row == 2
+                        ? Formatter.Money(rows.Sum(CalculateEffectiveYearlyAmount), baseCurrency)
+                        : null)" />
 
             <Column Title="@L["Actions"]" HeaderCssClass="text-end" CellCssClass="text-nowrap">
                 <ChildContent Context="transaction">
@@ -568,27 +582,6 @@
             </Column>
         </DataTable>
 
-        @if (showRecurringColumns && visibleTransactions.Count > 0)
-        {
-            @*
-                The incoming/outgoing split used to be two more totals rows. A DataTable's <tfoot>
-                is a single row - one cell per column, which is what stops a total from drifting out
-                from under its heading - so the grand total stays in the footer and the breakdown
-                sits here. Stacking all three inside the footer cells was tried first and reads
-                wrong: these labels wrap to two lines and the amounts do not, so the second amount
-                lines up with the first label's second line.
-
-                Same rows, same guarantee: visibleTransactions is exactly what the table rendered.
-            *@
-            <div class="d-grid ms-auto mt-2 small"
-                 style="grid-template-columns: auto auto; column-gap: 1rem; row-gap: .25rem; width: max-content;">
-                <span class="text-body-secondary">@L["Transaction_SumIncomingYearlyAmountFilter"]</span>
-                <span class="num fw-semibold">@Formatter.Money(SumYearly(visibleTransactions, TransactionKind.ExternalIncome), baseCurrency)</span>
-
-                <span class="text-body-secondary">@L["Transaction_SumOutgoingYearlyAmountFilter"]</span>
-                <span class="num fw-semibold">@Formatter.Money(SumYearly(visibleTransactions, TransactionKind.ExternalExpense), baseCurrency)</span>
-            </div>
-        }
     </ChildContent>
 </PageScaffold>
 

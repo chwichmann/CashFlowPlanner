@@ -1,4 +1,4 @@
-@page "/mortgages"
+﻿@page "/mortgages"
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core
 @using CashFlowPlanner.BlazorWasm.Models
@@ -20,12 +20,9 @@
               RequiresPlan="true"
               EmptyStateMessage='@L["Mortgages_NoPlanLoaded"]'>
     <Actions>
-        @if (AppState.CurrentPlan is not null)
-        {
-            <button class="btn btn-primary" @onclick="NewMortgage">
-                @L["Mortgages_AddMortgage"]
-            </button>
-        }
+        <button class="btn btn-primary" @onclick="NewMortgage">
+            @L["Mortgages_AddMortgage"]
+        </button>
     </Actions>
 
     <Notifications>
@@ -140,7 +137,7 @@
 
                         <div class="col-md-3">
                             <FormField Label='@L["Mortgages_CalculationPrincipal"]' CssClass="">
-                                <MoneyInput Id="@context.Id" @bind-Value="CalculationPrincipal" />
+                                <MoneyInput Id="@context.Id" @bind-Value="_editModel.CalculationPrincipal" />
                             </FormField>
                         </div>
 
@@ -409,23 +406,6 @@
             .OrderBy(x => x.Date)
             .ToList()
         ?? [];
-
-    /// <summary>
-    /// <see cref="MoneyInput"/> binds a <c>decimal</c> and the model holds a <c>decimal?</c>, where
-    /// null means "use the initial principal". Zero stands in for null, which loses nothing:
-    /// <see cref="ValidateEditModel"/> already rejects a calculation principal of zero outright.
-    /// </summary>
-    private decimal CalculationPrincipal
-    {
-        get => _editModel?.CalculationPrincipal ?? 0m;
-        set
-        {
-            if (_editModel is not null)
-            {
-                _editModel.CalculationPrincipal = value == 0m ? null : value;
-            }
-        }
-    }
 
     private IReadOnlyList<Account> PaymentAccounts =>
         AppState.CurrentPlan?.Accounts

@@ -1,4 +1,4 @@
-@typeparam TItem
+﻿@typeparam TItem
 @attribute [CascadingTypeParameter(nameof(TItem))]
 
 @*
@@ -105,26 +105,47 @@
 
         @if (RendersFooter)
         {
+            @* One <tr> per footer row, each built from the same column list as the header and
+               body. That is what keeps a total under its own heading: there is no colspan
+               anywhere in here to get wrong. *@
             <tfoot class="table-group-divider fw-semibold">
-                <tr>
-                    @foreach (var column in VisibleColumns)
-                    {
-                        <td class="@CellClass(column)">
-                            @if (column.FooterContent is not null)
-                            {
-                                @column.FooterContent(Rows)
-                            }
-                            else if (column.FooterValue is not null)
-                            {
-                                @column.FooterValue(Rows)
-                            }
-                            else
-                            {
-                                @column.FooterText
-                            }
-                        </td>
-                    }
-                </tr>
+                @for (var footerRow = 0; footerRow < Math.Max(1, FooterRowCount); footerRow++)
+                {
+                    var row = footerRow;
+
+                    <tr>
+                        @foreach (var column in VisibleColumns)
+                        {
+                            <td class="@CellClass(column)">
+                                @if (column.FooterContentAt is not null)
+                                {
+                                    @column.FooterContentAt((Rows, row))
+                                }
+                                else if (column.FooterValueAt is not null)
+                                {
+                                    @column.FooterValueAt(Rows, row)
+                                }
+                                else if (row == 0)
+                                {
+                                    @* The single-row parameters only ever fill the first row, so a
+                                       table that never asked for more than one behaves as before. *@
+                                    if (column.FooterContent is not null)
+                                    {
+                                        @column.FooterContent(Rows)
+                                    }
+                                    else if (column.FooterValue is not null)
+                                    {
+                                        @column.FooterValue(Rows)
+                                    }
+                                    else
+                                    {
+                                        @column.FooterText
+                                    }
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
             </tfoot>
         }
     </table>
@@ -138,6 +159,14 @@
     /// <summary>The <see cref="Column{TItem}"/> declarations.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// How many rows the footer has. Transactions shows incoming, outgoing and net as three
+    /// totals; before this they had to live outside the table, where nothing kept them lined up
+    /// with the columns they totalled.
+    /// </summary>
+    [Parameter]
+    public int FooterRowCount { get; set; } = 1;
 
     /// <summary>Classes on the <c>&lt;table&gt;</c> itself.</summary>
     [Parameter]

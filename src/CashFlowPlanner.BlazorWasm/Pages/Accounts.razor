@@ -354,17 +354,14 @@
                                             </Column>
 
                                             @*
-                                                Still a raw <input>: MoneyInput's Value is decimal, and an
-                                                empty ToAmount is what makes a tier open-ended. Binding it
-                                                through MoneyInput would turn "no upper bound" into 0.00.
+                                                An empty upper bound is what makes a tier open-ended, so this
+                                                binds decimal? - clearing the box means "no bound", not zero.
                                             *@
                                             <Column Title="@L["Account_ToAmount"]" Align="ColumnAlign.Number">
                                                 <ChildContent Context="tier">
-                                                    <input class="form-control form-control-sm num"
-                                                           type="number"
-                                                           step="0.01"
-                                                           aria-label="@L["Account_ToAmount"]"
-                                                           @bind="tier.ToAmount" />
+                                                    <MoneyInput @bind-Value="tier.ToAmount"
+                                                                CssClass="form-control form-control-sm num"
+                                                                aria-label="@L["Account_ToAmount"]" />
                                                 </ChildContent>
                                             </Column>
 

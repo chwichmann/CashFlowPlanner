@@ -1,4 +1,4 @@
-@page "/creditcards"
+﻿@page "/creditcards"
 
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core
@@ -22,12 +22,9 @@
               RequiresPlan="true"
               EmptyStateMessage='@L["CreditCard_NoPlanLoaded"]'>
     <Actions>
-        @if (AppState.CurrentPlan is not null)
-        {
-            <button class="btn btn-primary" @onclick="NewCreditCard">
-                @L["CreditCard_AddContract"]
-            </button>
-        }
+        <button class="btn btn-primary" @onclick="NewCreditCard">
+            @L["CreditCard_AddContract"]
+        </button>
     </Actions>
 
     <Notifications>

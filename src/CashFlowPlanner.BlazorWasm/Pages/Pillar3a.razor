@@ -1,4 +1,4 @@
-@page "/pillar3a"
+﻿@page "/pillar3a"
 
 @using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
@@ -26,12 +26,9 @@
               RequiresPlan="true"
               EmptyStateMessage='@L["Pillar3a_NoPlanLoaded"]'>
     <Actions>
-        @if (AppState.CurrentPlan is not null)
-        {
-            <button class="btn btn-primary" @onclick="NewContract">
-                @L["Pillar3a_AddContract"]
-            </button>
-        }
+        <button class="btn btn-primary" @onclick="NewContract">
+            @L["Pillar3a_AddContract"]
+        </button>
     </Actions>
 
     <Notifications>
@@ -211,7 +208,7 @@
                             <FormField Label='@L["Pillar3a_ExpectedSurplusPercent"]' CssClass="">
                                 <MoneyInput Id="@context.Id"
                                             Suffix="%"
-                                            @bind-Value="ExpectedSurplusPercent" />
+                                            @bind-Value="_editModel.ExpectedSurplusPercent" />
                             </FormField>
                         </div>
                     </div>
@@ -791,23 +788,6 @@
             .ThenBy(x => x.Name)
             .ToList()
         ?? [];
-
-    /// <summary>
-    /// <see cref="MoneyInput"/> binds a <c>decimal</c> and the model holds a <c>decimal?</c>. Zero
-    /// stands in for null, which changes nothing: the projection engine never reads this figure and
-    /// the only rule on it is that it may not be negative.
-    /// </summary>
-    private decimal ExpectedSurplusPercent
-    {
-        get => _editModel?.ExpectedSurplusPercent ?? 0m;
-        set
-        {
-            if (_editModel is not null)
-            {
-                _editModel.ExpectedSurplusPercent = value == 0m ? null : value;
-            }
-        }
-    }
 
     private static YearlyPersonProjectionCell? Cell(
         YearlyPersonProjectionMatrixRow row,

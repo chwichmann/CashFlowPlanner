@@ -89,7 +89,7 @@
                             <MoneyInput Id="@context.Id"
                                         AriaDescribedBy="@context.DescribedBy"
                                         Suffix="@BaseCurrency"
-                                        @bind-Value="AnnualEarnedIncome" />
+                                        @bind-Value="editModel.AnnualEarnedIncome" />
                         </FormField>
                     </div>
                 </div>
@@ -166,17 +166,6 @@
         editModel.Pillar3aEligibility == Pillar3aEligibilityType.WithoutPensionFund
             ? L["Person_AnnualEarnedIncomeHint"].Value
             : null;
-
-    /// <summary>
-    /// Bridges the model's nullable amount onto <see cref="MoneyInput"/>, which is not nullable.
-    /// Zero maps back to null so the field can still be cleared: nothing reads this value except
-    /// the table beside it, where "not specified" and "zero" say the same thing.
-    /// </summary>
-    private decimal AnnualEarnedIncome
-    {
-        get => editModel.AnnualEarnedIncome ?? 0m;
-        set => editModel.AnnualEarnedIncome = value == 0m ? null : value;
-    }
 
     private void Save()
     {

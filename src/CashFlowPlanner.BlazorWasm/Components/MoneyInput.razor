@@ -1,3 +1,4 @@
+﻿@typeparam TValue
 @using System.Globalization
 
 @*
@@ -37,11 +38,22 @@ else
 
 @code {
     /// <summary>The amount. Two-way bindable with <c>@@bind-Value</c>.</summary>
+    /// <summary>
+    /// The amount. Two-way bindable with <c>@@bind-Value</c>, and generic over
+    /// <c>decimal</c> or <c>decimal?</c> the same way Blazor's own <c>InputNumber</c> is -
+    /// binding infers which.
+    ///
+    /// Nullability is not decoration here. An interest tier's upper bound, a mortgage's known
+    /// principal and a person's declared income are all <c>decimal?</c>, and null is a real
+    /// answer in each: "no upper bound", "not stated". Before this component was generic those
+    /// pages bridged with a 0-means-null property, which quietly turned an open-ended tier into
+    /// one that stops at zero.
+    /// </summary>
     [Parameter]
-    public decimal Value { get; set; }
+    public TValue? Value { get; set; }
 
     [Parameter]
-    public EventCallback<decimal> ValueChanged { get; set; }
+    public EventCallback<TValue?> ValueChanged { get; set; }
 
     /// <summary>
     /// Decimal places, both shown and rounded to. Two for money; zero for a whole-franc field such
@@ -94,8 +106,14 @@ else
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string _text = string.Empty;
-    private decimal _renderedValue;
+    private decimal? _renderedValue;
+    private bool _hasRendered;
     private int _renderedDecimals = -1;
+
+    // Whether TValue can actually hold null, decided once. Only then may an emptied box mean
+    // "not stated" rather than "unparseable, put the old number back".
+    private static readonly bool IsNullable =
+        Nullable.GetUnderlyingType(typeof(TValue)) is not null;
 
     // Bumped to force Blazor to rebuild the element. Without it, text the user typed that
     // normalises back to the same string - "1234.5" against a bound 1234.50 - leaves the render
@@ -111,15 +129,25 @@ else
 
     protected override void OnParametersSet()
     {
-        if (Value == _renderedValue && Decimals == _renderedDecimals)
+        var current = ToDecimal(Value);
+
+        if (_hasRendered && current == _renderedValue && Decimals == _renderedDecimals)
         {
             return;
         }
 
-        _renderedValue = Value;
+        _hasRendered = true;
+        _renderedValue = current;
         _renderedDecimals = Decimals;
-        _text = Format(Value);
+        _text = current is null ? string.Empty : Format(current.Value);
     }
+
+    private static decimal? ToDecimal(TValue? value) => value switch
+    {
+        null => null,
+        decimal d => d,
+        _ => Convert.ToDecimal(value, CultureInfo.InvariantCulture)
+    };
 
     private RenderFragment InputElement => @<input @key="_resetToken"
                                                   type="text"
@@ -138,13 +166,26 @@ else
     {
         var raw = args.Value?.ToString() ?? string.Empty;
 
-        var parsed = TryParse(raw, out var candidate)
-            ? decimal.Round(candidate, Math.Max(0, Decimals), MidpointRounding.AwayFromZero)
+        decimal? parsed;
+
+        if (TryParse(raw, out var candidate))
+        {
+            parsed = decimal.Round(candidate, Math.Max(0, Decimals), MidpointRounding.AwayFromZero);
+        }
+        else if (IsNullable && string.IsNullOrWhiteSpace(raw))
+        {
+            // An emptied box on a nullable field is the user clearing it, which is a legitimate
+            // value - not a typo to be undone.
+            parsed = null;
+        }
+        else
+        {
             // Unparseable input reverts to the bound value rather than binding zero. Silently
             // turning a typo into 0.00 in a cashflow plan is worse than refusing it.
-            : Value;
+            parsed = ToDecimal(Value);
+        }
 
-        var normalised = Format(parsed);
+        var normalised = parsed is null ? string.Empty : Format(parsed.Value);
 
         if (normalised != raw)
         {
@@ -155,11 +196,25 @@ else
 
         _text = normalised;
         _renderedValue = parsed;
+        _hasRendered = true;
 
-        if (parsed != Value)
+        if (parsed != ToDecimal(Value))
         {
-            await ValueChanged.InvokeAsync(parsed);
+            await ValueChanged.InvokeAsync(FromDecimal(parsed));
         }
+    }
+
+    private static TValue? FromDecimal(decimal? value)
+    {
+        if (value is null)
+        {
+            // Only reachable when TValue is nullable; the non-nullable path never produces null.
+            return default;
+        }
+
+        return (TValue)Convert.ChangeType(
+            value.Value, Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue),
+            CultureInfo.InvariantCulture);
     }
 
     private string Format(decimal value) =>

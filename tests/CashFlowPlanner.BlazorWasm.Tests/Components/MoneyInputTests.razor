@@ -17,7 +17,7 @@
             var bound = 12345.60m;
             var expected = bound.ToString("N2", CultureInfo.CurrentCulture);
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -39,7 +39,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -58,7 +58,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -77,7 +77,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -103,7 +103,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.Decimals, 3)
                 .Add(p => p.ValueChanged, v => bound = v));
@@ -121,7 +121,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -138,7 +138,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -155,7 +155,7 @@
         {
             var bound = 900m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -173,7 +173,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.ValueChanged, v => bound = v));
 
@@ -190,7 +190,7 @@
         {
             var bound = 0m;
 
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, bound)
                 .Add(p => p.Decimals, 0)
                 .Add(p => p.ValueChanged, v => bound = v));
@@ -206,7 +206,7 @@
     {
         WithCulture("de-CH", () =>
         {
-            var cut = Render<MoneyInput>(parameters => parameters.Add(p => p.Value, 10m));
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters.Add(p => p.Value, 10m));
 
             cut.Render(parameters => parameters.Add(p => p.Value, 99.95m));
 
@@ -217,7 +217,7 @@
     [Fact]
     public void Is_a_text_box_with_a_decimal_keyboard_not_a_number_spinner()
     {
-        var cut = Render<MoneyInput>(parameters => parameters.Add(p => p.Value, 1m));
+        var cut = Render<MoneyInput<decimal>>(parameters => parameters.Add(p => p.Value, 1m));
 
         var input = cut.Find("input");
 
@@ -231,7 +231,7 @@
     {
         WithCulture("de-CH", () =>
         {
-            var cut = Render<MoneyInput>(parameters => parameters
+            var cut = Render<MoneyInput<decimal>>(parameters => parameters
                 .Add(p => p.Value, 12345.60m)
                 .Add(p => p.Prefix, "CHF"));
 
@@ -244,12 +244,83 @@
     public void Carries_the_id_and_description_a_FormField_hands_it()
     {
         var cut = Render(@<FormField Label="Opening balance" Hint="Balance on the opening date." Context="field">
-                             <MoneyInput Id="@field.Id" AriaDescribedBy="@field.DescribedBy" Value="0" />
+                             <MoneyInput TValue="decimal" Id="@field.Id" AriaDescribedBy="@field.DescribedBy" Value="0" />
                          </FormField>);
 
         var input = cut.Find("input");
 
         Assert.Equal(input.Id, cut.Find("label").GetAttribute("for"));
         Assert.Equal(cut.Find("div.form-text").Id, input.GetAttribute("aria-describedby"));
+    }
+
+    // Nullable mode. An interest tier's upper bound, a mortgage's known principal and a person's
+    // declared income are all decimal?, and null is a real answer in each - "no upper bound",
+    // "not stated". Before MoneyInput was generic, three pages bridged with a property that
+    // mapped 0 to null, which quietly turned an open-ended tier into one stopping at zero.
+
+    [Fact]
+    public void NullableValue_RendersEmpty_WhenNull()
+    {
+        var cut = Render<MoneyInput<decimal?>>(parameters => parameters
+            .Add(p => p.Value, (decimal?)null));
+
+        Assert.Equal(string.Empty, cut.Find("input").GetAttribute("value"));
+    }
+
+    [Fact]
+    public void ClearingANullableField_BindsNull_NotZero()
+    {
+        decimal? bound = 5000m;
+
+        var cut = Render<MoneyInput<decimal?>>(parameters => parameters
+            .Add(p => p.Value, bound)
+            .Add(p => p.ValueChanged, v => bound = v));
+
+        cut.Find("input").Change(string.Empty);
+
+        Assert.Null(bound);
+    }
+
+    [Fact]
+    public void ClearingANonNullableField_KeepsTheValue_RatherThanBindingZero()
+    {
+        // Zero is a meaningful amount, so an emptied box must not silently become one.
+        var bound = 1234.50m;
+
+        var cut = Render<MoneyInput<decimal>>(parameters => parameters
+            .Add(p => p.Value, bound)
+            .Add(p => p.ValueChanged, v => bound = v));
+
+        cut.Find("input").Change(string.Empty);
+
+        Assert.Equal(1234.50m, bound);
+    }
+
+    [Fact]
+    public void NullableValue_RoundTripsAnAmount()
+    {
+        WithCulture("de-CH", () =>
+        {
+            decimal? bound = null;
+
+            var cut = Render<MoneyInput<decimal?>>(parameters => parameters
+                .Add(p => p.Value, bound)
+                .Add(p => p.ValueChanged, v => bound = v));
+
+            cut.Find("input").Change("12'345.60");
+
+            Assert.Equal(12345.60m, bound);
+        });
+    }
+
+    [Fact]
+    public void NullableZero_IsNotTreatedAsEmpty()
+    {
+        // The exact case the old 0-means-null bridge could not express: a stored zero is a
+        // number, and must render as one.
+        var cut = Render<MoneyInput<decimal?>>(parameters => parameters
+            .Add(p => p.Value, (decimal?)0m));
+
+        Assert.False(string.IsNullOrEmpty(cut.Find("input").GetAttribute("value")));
     }
 }
