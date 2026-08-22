@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One file, three accounts. Stmt is 1..n: a combined export carries every account the
+  customer holds at that bank, each with its own IBAN, currency, balances and entries.
+
+  Swiss Payment Standards *typically* delivers one account per file, which is precisely
+  what makes a single-statement parser dangerous - it works until the bank sends this.
+
+    Stmt 1  CH2100210210108311400  CHF  OPBD  1'000.00 + 200.00          = CLBD  1'200.00
+    Stmt 2  CH5604835012345678009  CHF  OPBD     50.00 - 300.00          = CLBD   -250.00 (DBIT)
+    Stmt 3  CH9300762011623852957  EUR  PRCD    400.00 - 100.00          = CLBD    300.00
+
+  Stmt 2 closes with CdtDbtInd DBIT - an overdrawn account - so the closing balance is
+  negative from the account holder's point of view.
+  Stmt 3 opens with PRCD instead of OPBD, which some banks send; it is the previous
+  closing booked balance and therefore the same number.
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>20260401-CAMT053-COMBINED</MsgId>
+      <CreDtTm>2026-04-01T02:00:00+02:00</CreDtTm>
+    </GrpHdr>
+
+    <Stmt>
+      <Id>STMT-A-2026-03</Id>
+      <ElctrncSeqNb>31</ElctrncSeqNb>
+      <CreDtTm>2026-04-01T02:00:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH2100210210108311400</IBAN>
+        </Id>
+        <Ccy>CHF</Ccy>
+        <Ownr>
+          <Nm>Christian Wichmann</Nm>
+        </Ownr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">1000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-03-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">1200.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-03-31</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>ACCT-A-0001</AcctSvcrRef>
+        <Amt Ccy="CHF">200.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-03-05</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-03-05</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RCDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <AddtlNtryInf>Gutschrift Privatkonto</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+
+    <Stmt>
+      <Id>STMT-B-2026-03</Id>
+      <ElctrncSeqNb>32</ElctrncSeqNb>
+      <CreDtTm>2026-04-01T02:00:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH5604835012345678009</IBAN>
+        </Id>
+        <Ccy>CHF</Ccy>
+        <Ownr>
+          <Nm>Christian Wichmann</Nm>
+        </Ownr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">50.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-03-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="CHF">250.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-03-31</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>ACCT-B-0001</AcctSvcrRef>
+        <Amt Ccy="CHF">300.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-03-12</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-03-12</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>CCRD</Cd>
+              <SubFmlyCd>POSD</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <AddtlNtryInf>Kartenzahlung Moebelhaus</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+
+    <Stmt>
+      <Id>STMT-C-2026-03</Id>
+      <ElctrncSeqNb>33</ElctrncSeqNb>
+      <CreDtTm>2026-04-01T02:00:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH9300762011623852957</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Ownr>
+          <Nm>Christian Wichmann</Nm>
+        </Ownr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>PRCD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">400.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-03-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">300.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-03-31</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>ACCT-C-0001</AcctSvcrRef>
+        <Amt Ccy="EUR">100.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-03-18</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-03-18</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>ICDT</Cd>
+              <SubFmlyCd>XBCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <AddtlNtryInf>Ueberweisung EUR</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+
+  </BkToCstmrStmt>
+</Document>

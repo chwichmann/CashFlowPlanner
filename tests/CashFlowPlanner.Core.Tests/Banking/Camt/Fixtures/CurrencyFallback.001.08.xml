@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ccy is an ATTRIBUTE of Amt - <Amt Ccy="EUR">120.00</Amt> - not a child element. Some banks
+  omit it on entries when it equals the account currency, so the fallback is Stmt/Acct/Ccy.
+
+    Ntry 1  Amt carries Ccy="EUR"   -> EUR
+    Ntry 2  Amt carries no Ccy      -> falls back to Acct/Ccy = EUR
+
+  PRCD/OPBD 1'000.00 - 120.00 - 80.00 = CLBD 800.00
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>20260501-CAMT053-EUR</MsgId>
+      <CreDtTm>2026-05-01T02:00:00+02:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-EUR-2026-04</Id>
+      <ElctrncSeqNb>12</ElctrncSeqNb>
+      <CreDtTm>2026-05-01T02:00:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH9300762011623852957</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">1000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-04-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">800.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-04-30</Dt>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <AcctSvcrRef>EUR-0001</AcctSvcrRef>
+        <Amt Ccy="EUR">120.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-04-04</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-04-04</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>ICDT</Cd>
+              <SubFmlyCd>XBCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <AddtlNtryInf>Zahlung mit Waehrungsattribut</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <AcctSvcrRef>EUR-0002</AcctSvcrRef>
+        <Amt>80.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-04-18</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-04-18</Dt>
+        </ValDt>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>ICDT</Cd>
+              <SubFmlyCd>XBCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <AddtlNtryInf>Zahlung ohne Waehrungsattribut</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

@@ -19,6 +19,17 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!--
+    CAMT.053 test fixtures.
+
+    Embedded rather than copied to the output directory so a fixture can never be silently
+    missing at run time: a wrong name fails in CamtFixture.Read, not in a file-not-found
+    deep inside a test.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Banking\Camt\Fixtures\*.xml" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\CashFlowPlanner.Core\CashFlowPlanner.Core.csproj" />
   </ItemGroup>
