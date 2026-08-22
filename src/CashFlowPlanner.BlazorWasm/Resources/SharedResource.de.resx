@@ -2775,4 +2775,124 @@
   <data name="Enum.AmountBasis.Real" xml:space="preserve">
     <value>Real (heutiges Geld)</value>
   </data>
+  <data name="Nav_RealEstate" xml:space="preserve">
+    <value>Immobilien</value>
+  </data>
+  <data name="RealEstate_Title" xml:space="preserve">
+    <value>Immobilien</value>
+  </data>
+  <data name="RealEstate_Subtitle" xml:space="preserve">
+    <value>Immobilien im Besitz des Haushalts. Ihr Wert ist die Aktivseite zu den Hypotheken auf der Seite Hypotheken.</value>
+  </data>
+  <data name="RealEstate_NoPlanLoaded" xml:space="preserve">
+    <value>Laden Sie einen Plan, um dessen Immobilien zu verwalten.</value>
+  </data>
+  <data name="RealEstate_AddAsset" xml:space="preserve">
+    <value>Immobilie hinzufügen</value>
+  </data>
+  <data name="RealEstate_EditAsset" xml:space="preserve">
+    <value>Immobilie bearbeiten</value>
+  </data>
+  <data name="RealEstate_NoAssets" xml:space="preserve">
+    <value>Keine Immobilien erfasst.</value>
+  </data>
+  <data name="RealEstate_CurrentValue" xml:space="preserve">
+    <value>Geschätzter Wert</value>
+  </data>
+  <data name="RealEstate_CurrentValueHint" xml:space="preserve">
+    <value>Was die Immobilie heute nach Ihrer Einschätzung wert ist.</value>
+  </data>
+  <data name="RealEstate_AnnualGrowth" xml:space="preserve">
+    <value>Angenommenes jährliches Wachstum</value>
+  </data>
+  <data name="RealEstate_AnnualGrowthHint" xml:space="preserve">
+    <value>Bei null bleibt der Wert über den ganzen Zeitraum konstant. Es wird nichts vorausgefüllt: Eine Prognose des Immobilienmarkts ist eine Annahme, und sie sollte Ihre sein.</value>
+  </data>
+  <data name="RealEstate_ValuationDate" xml:space="preserve">
+    <value>Bewertet am</value>
+  </data>
+  <data name="RealEstate_ValuationDateHint" xml:space="preserve">
+    <value>Das Datum, auf das sich die Schätzung bezieht. Erforderlich, sobald eine Wachstumsrate gesetzt ist - davon ausgehend wird aufgezinst.</value>
+  </data>
+  <data name="RealEstate_AcquisitionDate" xml:space="preserve">
+    <value>Im Besitz seit</value>
+  </data>
+  <data name="RealEstate_AcquisitionDateHint" xml:space="preserve">
+    <value>Leer lassen für eine Immobilie, die der Haushalt bereits bewohnt: Sie zählt dann über den ganzen Zeitraum. Ausfüllen, wenn der Kauf in den Plan fällt.</value>
+  </data>
+  <data name="RealEstate_DisposalDate" xml:space="preserve">
+    <value>Verkauft am</value>
+  </data>
+  <data name="RealEstate_DisposalDateHint" xml:space="preserve">
+    <value>Ab diesem Datum zählt die Immobilie nicht mehr. Verkaufserlös und Hypothekarrückzahlung sind Zahlungsereignisse und werden hier nicht erzeugt.</value>
+  </data>
+  <data name="RealEstate_Pillar2Used" xml:space="preserve">
+    <value>Verwendete Säule 2 (BVG)</value>
+  </data>
+  <data name="RealEstate_Pillar2UsedHint" xml:space="preserve">
+    <value>Das für diese Immobilie bezogene Vorsorgekapital. Beim Verkauf wird es wieder zweckgebunden.</value>
+  </data>
+  <data name="RealEstate_LinkedMortgages" xml:space="preserve">
+    <value>Verknüpfte Hypotheken</value>
+  </data>
+  <data name="RealEstate_LinkedMortgagesHint" xml:space="preserve">
+    <value>Welche Hypotheken auf dieser Immobilie lasten. Eine Hypothek gehört zu einer Immobilie: Zwei Verknüpfungen würden dieselbe Schuld von zwei verschiedenen Vermögenswerten abziehen.</value>
+  </data>
+  <data name="RealEstate_NoMortgagesInPlan" xml:space="preserve">
+    <value>Dieser Plan enthält keine Hypotheken zum Verknüpfen.</value>
+  </data>
+  <data name="RealEstate_MortgageClaimedBy" xml:space="preserve">
+    <value>Bereits mit «{0}» verknüpft.</value>
+  </data>
+  <data name="RealEstate_AcquisitionMortgageMismatch" xml:space="preserve">
+    <value>Die Hypothek «{0}» beginnt am {1} und damit nicht am Tag des Erwerbs dieser Immobilie. Beide Seiten eines Kaufs sollten auf dasselbe Datum fallen, sonst springt das Vermögen einmal für die Immobilie und einmal für die Schuld.</value>
+  </data>
+  <data name="RealEstate_OwnershipPeriod" xml:space="preserve">
+    <value>Besitz</value>
+  </data>
+  <data name="RealEstate_OwnedThroughout" xml:space="preserve">
+    <value>Ganzer Zeitraum</value>
+  </data>
+  <data name="RealEstate_NoCashflowHint" xml:space="preserve">
+    <value>Eine erfasste Immobilie erhöht das Vermögen. Sie erzeugt keine Zahlungen: Kauf, Verkauf, Nebenkosten und die Hypothek selbst werden als Transaktionen und Hypotheken erfasst.</value>
+  </data>
+  <data name="RealEstate_AssetAdded" xml:space="preserve">
+    <value>Immobilie «{0}» wurde hinzugefügt.</value>
+  </data>
+  <data name="RealEstate_AssetUpdated" xml:space="preserve">
+    <value>Immobilie «{0}» wurde aktualisiert.</value>
+  </data>
+  <data name="RealEstate_AssetDeleted" xml:space="preserve">
+    <value>Immobilie «{0}» wurde gelöscht.</value>
+  </data>
+  <data name="RealEstate_DeleteConfirm" xml:space="preserve">
+    <value>Immobilie «{0}» löschen?</value>
+  </data>
+  <data name="RealEstate_ErrorNameRequired" xml:space="preserve">
+    <value>Die Immobilie braucht einen Namen.</value>
+  </data>
+  <data name="RealEstate_ErrorNegativeValue" xml:space="preserve">
+    <value>Der geschätzte Wert darf nicht negativ sein.</value>
+  </data>
+  <data name="RealEstate_ErrorNegativePillar2" xml:space="preserve">
+    <value>Der Betrag der Säule 2 (BVG) darf nicht negativ sein.</value>
+  </data>
+  <data name="RealEstate_ErrorValuationDateRequired" xml:space="preserve">
+    <value>Eine Wachstumsrate braucht ein Bewertungsdatum, ab dem sie aufgezinst wird.</value>
+  </data>
+  <data name="RealEstate_ErrorDisposalBeforeAcquisition" xml:space="preserve">
+    <value>Das Verkaufsdatum muss nach dem Erwerbsdatum liegen.</value>
+  </data>
+  <data name="RealEstate_ErrorUnknownMortgage" xml:space="preserve">
+    <value>Eine der verknüpften Hypotheken ist nicht mehr Teil dieses Plans.</value>
+  </data>
+  <data name="RealEstate_ErrorMortgageAlreadyLinked" xml:space="preserve">
+    <value>Diese Hypothek ist bereits mit der Immobilie «{0}» verknüpft. Eine Hypothek gehört zu einer Immobilie.</value>
+  </data>
+  <data name="Enum.RealEstateType.House" xml:space="preserve">
+    <value>Haus</value>
+  </data>
+  <data name="Enum.RealEstateType.Flat" xml:space="preserve">
+    <value>Wohnung</value>
+  </data>
 </root>

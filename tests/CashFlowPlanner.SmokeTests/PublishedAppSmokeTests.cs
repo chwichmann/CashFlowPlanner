@@ -296,7 +296,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
             return;
         }
 
-        // The navigation row holds twelve destinations, the plan name and the save badge.
+        // The navigation row holds thirteen destinations, the plan name and the save badge.
         // When the status block was allowed to shrink without a floor, the list took all the
         // space and the block collapsed to width 0 - so on an ordinary 1280px laptop the plan
         // name and, far worse, the export-needed / saved badge were simply not on screen.

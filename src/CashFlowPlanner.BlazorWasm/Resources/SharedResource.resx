@@ -2775,4 +2775,124 @@
   <data name="Enum.AmountBasis.Real" xml:space="preserve">
     <value>Real (today's money)</value>
   </data>
+  <data name="Nav_RealEstate" xml:space="preserve">
+    <value>Real estate</value>
+  </data>
+  <data name="RealEstate_Title" xml:space="preserve">
+    <value>Real estate</value>
+  </data>
+  <data name="RealEstate_Subtitle" xml:space="preserve">
+    <value>Properties the household owns. Their value is the asset side of the mortgages on the Mortgages page.</value>
+  </data>
+  <data name="RealEstate_NoPlanLoaded" xml:space="preserve">
+    <value>Load a plan to manage its properties.</value>
+  </data>
+  <data name="RealEstate_AddAsset" xml:space="preserve">
+    <value>Add property</value>
+  </data>
+  <data name="RealEstate_EditAsset" xml:space="preserve">
+    <value>Edit property</value>
+  </data>
+  <data name="RealEstate_NoAssets" xml:space="preserve">
+    <value>No properties recorded.</value>
+  </data>
+  <data name="RealEstate_CurrentValue" xml:space="preserve">
+    <value>Estimated value</value>
+  </data>
+  <data name="RealEstate_CurrentValueHint" xml:space="preserve">
+    <value>What the property is worth today, as you estimate it.</value>
+  </data>
+  <data name="RealEstate_AnnualGrowth" xml:space="preserve">
+    <value>Assumed annual growth</value>
+  </data>
+  <data name="RealEstate_AnnualGrowthHint" xml:space="preserve">
+    <value>Left at zero the value is held flat for the whole horizon. Nothing is filled in for you: a forecast of the property market is an assumption, and it should be yours.</value>
+  </data>
+  <data name="RealEstate_ValuationDate" xml:space="preserve">
+    <value>Valued on</value>
+  </data>
+  <data name="RealEstate_ValuationDateHint" xml:space="preserve">
+    <value>The date the estimate refers to. Required as soon as a growth rate is set, because that is what it compounds from.</value>
+  </data>
+  <data name="RealEstate_AcquisitionDate" xml:space="preserve">
+    <value>Owned since</value>
+  </data>
+  <data name="RealEstate_AcquisitionDateHint" xml:space="preserve">
+    <value>Leave empty for a property the household already lives in: it then counts for the whole horizon. Fill it in when the purchase falls inside the plan.</value>
+  </data>
+  <data name="RealEstate_DisposalDate" xml:space="preserve">
+    <value>Sold on</value>
+  </data>
+  <data name="RealEstate_DisposalDateHint" xml:space="preserve">
+    <value>The property stops counting on this date. The sale proceeds and the mortgage repayment are cash-flow events and are not generated here.</value>
+  </data>
+  <data name="RealEstate_Pillar2Used" xml:space="preserve">
+    <value>Pillar 2 (BVG) used</value>
+  </data>
+  <data name="RealEstate_Pillar2UsedHint" xml:space="preserve">
+    <value>The occupational pension capital withdrawn for this property. It becomes purpose-bound again when the property is sold.</value>
+  </data>
+  <data name="RealEstate_LinkedMortgages" xml:space="preserve">
+    <value>Linked mortgages</value>
+  </data>
+  <data name="RealEstate_LinkedMortgagesHint" xml:space="preserve">
+    <value>Which mortgages are secured on this property. One mortgage belongs to one property: linking it to two would net the same debt off two different assets.</value>
+  </data>
+  <data name="RealEstate_NoMortgagesInPlan" xml:space="preserve">
+    <value>This plan has no mortgages to link.</value>
+  </data>
+  <data name="RealEstate_MortgageClaimedBy" xml:space="preserve">
+    <value>Already linked to «{0}».</value>
+  </data>
+  <data name="RealEstate_AcquisitionMortgageMismatch" xml:space="preserve">
+    <value>The mortgage «{0}» starts on {1}, which is not the day this property is acquired. Both legs of a purchase should fall on the same date, or net worth steps once for the property and once for the debt.</value>
+  </data>
+  <data name="RealEstate_OwnershipPeriod" xml:space="preserve">
+    <value>Owned</value>
+  </data>
+  <data name="RealEstate_OwnedThroughout" xml:space="preserve">
+    <value>Whole horizon</value>
+  </data>
+  <data name="RealEstate_NoCashflowHint" xml:space="preserve">
+    <value>Recording a property adds its value to net worth. It generates no payments: a purchase, a sale, running costs and the mortgage itself are entered as transactions and mortgages.</value>
+  </data>
+  <data name="RealEstate_AssetAdded" xml:space="preserve">
+    <value>Property «{0}» was added.</value>
+  </data>
+  <data name="RealEstate_AssetUpdated" xml:space="preserve">
+    <value>Property «{0}» was updated.</value>
+  </data>
+  <data name="RealEstate_AssetDeleted" xml:space="preserve">
+    <value>Property «{0}» was deleted.</value>
+  </data>
+  <data name="RealEstate_DeleteConfirm" xml:space="preserve">
+    <value>Delete the property «{0}»?</value>
+  </data>
+  <data name="RealEstate_ErrorNameRequired" xml:space="preserve">
+    <value>The property needs a name.</value>
+  </data>
+  <data name="RealEstate_ErrorNegativeValue" xml:space="preserve">
+    <value>The estimated value cannot be negative.</value>
+  </data>
+  <data name="RealEstate_ErrorNegativePillar2" xml:space="preserve">
+    <value>The Pillar 2 (BVG) amount cannot be negative.</value>
+  </data>
+  <data name="RealEstate_ErrorValuationDateRequired" xml:space="preserve">
+    <value>A growth rate needs a valuation date to compound from.</value>
+  </data>
+  <data name="RealEstate_ErrorDisposalBeforeAcquisition" xml:space="preserve">
+    <value>The sale date must be after the date the property was acquired.</value>
+  </data>
+  <data name="RealEstate_ErrorUnknownMortgage" xml:space="preserve">
+    <value>One of the linked mortgages is no longer in this plan.</value>
+  </data>
+  <data name="RealEstate_ErrorMortgageAlreadyLinked" xml:space="preserve">
+    <value>That mortgage is already linked to the property «{0}». A mortgage belongs to one property.</value>
+  </data>
+  <data name="Enum.RealEstateType.House" xml:space="preserve">
+    <value>House</value>
+  </data>
+  <data name="Enum.RealEstateType.Flat" xml:space="preserve">
+    <value>Flat</value>
+  </data>
 </root>
