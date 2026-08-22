@@ -1987,10 +1987,10 @@
     <value>No plan is loaded.</value>
   </data>
   <data name="BankImport_UploadMt940" xml:space="preserve">
-    <value>Upload MT940 statement</value>
+    <value>Upload bank statement</value>
   </data>
   <data name="BankImport_UploadDescription" xml:space="preserve">
-    <value>Upload a UBS MT940 Light or Enriched export. The file is used to import actual account transactions into the local browser cache.</value>
+    <value>Upload a CAMT.053 (ISO 20022 XML) or MT940 export. The format is detected from the file content, not from its name. The file is used to import actual account transactions into the local browser cache.</value>
   </data>
   <data name="BankImport_SelectedFile" xml:space="preserve">
     <value>Selected file: {0} ({1})</value>
@@ -2171,6 +2171,18 @@
   </data>
   <data name="BankImport_InfoAnalysisCompleted" xml:space="preserve">
     <value>The file was analyzed successfully.</value>
+  </data>
+  <data name="BankImport_StatementHeading" xml:space="preserve">
+    <value>Statement {0} of {1}: {2}</value>
+  </data>
+  <data name="BankImport_StatementNotImported" xml:space="preserve">
+    <value>This statement was not imported: no account matches the identifier {0}. Add it to the matching account and analyze the file again - transactions that were already imported are not added twice.</value>
+  </data>
+  <data name="BankImport_InfoSeveralAccountSelectionsRequired" xml:space="preserve">
+    <value>{0} statements could not be matched to an account. Add the identifier shown for each of them to the matching account, then analyze the file again. Statements that did match can be imported now.</value>
+  </data>
+  <data name="BankImport_ImportAppliedForStatements" xml:space="preserve">
+    <value>Import applied for {0} statements. Added transactions: {1}. Skipped duplicates: {2}.</value>
   </data>
   <data name="BankImport_ImportApplied" xml:space="preserve">
     <value>Import applied. Added transactions: {0}. Skipped duplicates: {1}.</value>
