@@ -1,6 +1,5 @@
-﻿@page "/creditcards"
+@page "/creditcards"
 
-@using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core
 @using CashFlowPlanner.BlazorWasm.Models
@@ -14,218 +13,251 @@
 @inject CashFlowAppState AppState
 @inject IStringLocalizer<SharedResource> L
 @inject EnumLocalizer EnumL
+@inject AppFormatter Formatter
 
-<PageTitle>@L["CreditCard_Title"] - CashFlow Planner</PageTitle>
+@* Outside the scaffold: the dialog has to survive the body being replaced by the empty state. *@
+<ConfirmDialog @ref="_confirmDialog" />
 
-<h1>@L["CreditCard_Title"]</h1>
+<PageScaffold Title='@L["CreditCard_Title"]'
+              RequiresPlan="true"
+              EmptyStateMessage='@L["CreditCard_NoPlanLoaded"]'>
+    <Actions>
+        @if (AppState.CurrentPlan is not null)
+        {
+            <button class="btn btn-primary" @onclick="NewCreditCard">
+                @L["CreditCard_AddContract"]
+            </button>
+        }
+    </Actions>
 
-@if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <div class="alert alert-danger">
-        @_errorMessage
-    </div>
-}
-
-@if (!string.IsNullOrWhiteSpace(_infoMessage))
-{
-    <div class="alert alert-success">
-        @_infoMessage
-    </div>
-}
-
-@if (AppState.CurrentPlan is null)
-{
-    <PlanEmptyState Message='@L["CreditCard_NoPlanLoaded"]' />
-}
-else
-{
-    var plan = AppState.CurrentPlan;
-
-    <div class="alert alert-secondary">
-        <strong>@L["CreditCard_InfoTitle"]</strong>
-        @L["CreditCard_InfoText"]
-    </div>
-
-    <div class="mb-3">
-        <button class="btn btn-primary me-2" @onclick="NewCreditCard">
-            @L["CreditCard_AddContract"]
-        </button>
-    </div>
-
-    @if (_editModel is not null)
-    {
-        <div class="card mb-4">
-            <div class="card-header">
-                @(_isNewCreditCard ? L["CreditCard_AddContract"] : L["CreditCard_EditContract"])
+    <Notifications>
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @_errorMessage
             </div>
+        }
 
-            <div class="card-body">
-                <EditForm Model="_editModel" OnValidSubmit="SaveCreditCard">
-                    <div class="row g-3">
-
-                        <div class="col-md-4">
-                            <label class="form-label">@L["Name"]</label>
-                            <InputText class="form-control" @bind-Value="_editModel.Name" />
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">@L["CreditCard_CreditCardAccount"]</label>
-                            <InputSelect class="form-select" @bind-Value="_editModel.CreditCardAccountIdText">
-                                <option value="">@L["CreditCard_SelectCreditCardAccount"]</option>
-                                @foreach (var account in CreditCardAccounts)
-                                {
-                                    <option value="@account.Id">@account.Name (@EnumL.Translate(account.Type))</option>
-                                }
-                            </InputSelect>
-                            <div class="form-text">
-                                @L["CreditCard_CreditCardAccountHint"]
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">@L["CreditCard_PaymentAccount"]</label>
-                            <InputSelect class="form-select" @bind-Value="_editModel.PaymentAccountIdText">
-                                <option value="">@L["CreditCard_SelectPaymentAccount"]</option>
-                                @foreach (var account in PaymentAccounts)
-                                {
-                                    <option value="@account.Id">@account.Name (@EnumL.Translate(account.Type))</option>
-                                }
-                            </InputSelect>
-                            <div class="form-text">
-                                @L["CreditCard_PaymentAccountHint"]
-                            </div>
-                        </div>
-
-                        <div class="col-md-2">
-                            <label class="form-label">@L["CreditCard_ClosingDay"]</label>
-                            <InputNumber class="form-control" @bind-Value="_editModel.ClosingDayOfMonth" />
-                        </div>
-
-                        <div class="col-md-2">
-                            <label class="form-label">@L["CreditCard_PaymentDay"]</label>
-                            <InputNumber class="form-control" @bind-Value="_editModel.PaymentDayOfMonth" />
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">@L["CreditCard_PaymentMethod"]</label>
-                            <InputSelect class="form-select" @bind-Value="_editModel.PaymentMethod">
-                                @foreach (var method in Enum.GetValues<CreditCardPaymentMethod>())
-                                {
-                                    <option value="@method">@EnumL.Translate(method)</option>
-                                }
-                            </InputSelect>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">@L["CreditCard_BusinessDayAdjustment"]</label>
-                            <InputSelect class="form-select" @bind-Value="_editModel.PaymentBusinessDayAdjustment">
-                                @foreach (var adjustment in Enum.GetValues<BusinessDayAdjustment>())
-                                {
-                                    <option value="@adjustment">@EnumL.Translate(adjustment)</option>
-                                }
-                            </InputSelect>
-                        </div>
-
-                        <div class="col-md-2">
-                            <label class="form-label">@L["Active"]</label>
-                            <div class="form-check mt-2">
-                                <InputCheckbox class="form-check-input" @bind-Value="_editModel.IsActive" />
-                                <label class="form-check-label">@L["Active"]</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">@L["CreditCard_StartDate"]</label>
-                            <InputDate class="form-control" @bind-Value="_editModel.StartDate" />
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">@L["CreditCard_EndDate"]</label>
-                            <InputDate class="form-control" @bind-Value="_editModel.EndDate" />
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label">@L["Notes"]</label>
-                            <InputTextArea class="form-control" @bind-Value="_editModel.Notes" />
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <button class="btn btn-success me-2" type="submit">
-                            @L["Save"]
-                        </button>
-
-                        <button class="btn btn-outline-secondary" type="button" @onclick="CancelEdit">
-                            @L["Cancel"]
-                        </button>
-                    </div>
-                </EditForm>
+        @if (!string.IsNullOrWhiteSpace(_infoMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @_infoMessage
             </div>
+        }
+    </Notifications>
+
+    <ChildContent>
+        <div class="alert alert-secondary">
+            <strong>@L["CreditCard_InfoTitle"]</strong>
+            @L["CreditCard_InfoText"]
         </div>
-    }
 
-    <table class="table table-sm table-striped">
-        <thead>
-            <tr>
-                <th>@L["Name"]</th>
-                <th>@L["Active"]</th>
-                <th>@L["CreditCard_CreditCardAccount"]</th>
-                <th>@L["CreditCard_PaymentAccount"]</th>
-                <th>@L["CreditCard_ClosingDay"]</th>
-                <th>@L["CreditCard_PaymentDay"]</th>
-                <th>@L["CreditCard_Method"]</th>
-                <th>@L["CreditCard_Adjustment"]</th>
-                <th class="text-end">@L["CreditCard_CurrentBalance"]</th>
-                
-                <th class="text-end">@L["Actions"]</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var creditCard in plan.CreditCards.OrderBy(x => x.Name))
-            {
-                var currentBalance = GetAccountBalance(creditCard.CreditCardAccountId);
+        @if (_editModel is not null)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    @(_isNewCreditCard ? L["CreditCard_AddContract"] : L["CreditCard_EditContract"])
+                </div>
 
-                <tr>
-                    <td>@creditCard.Name</td>
-                    <td>
-                        @if (creditCard.IsActive)
-                        {
-                            <span class="badge bg-success">@L["Active"]</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">@L["Inactive"]</span>
-                        }
-                    </td>
-                    <td>@GetAccountName(creditCard.CreditCardAccountId)</td>
-                    <td>@GetAccountName(creditCard.PaymentAccountId)</td>
-                    <td>@creditCard.ClosingDayOfMonth</td>
-                    <td>@creditCard.PaymentDayOfMonth</td>
-                    <td>@EnumL.Translate(creditCard.PaymentMethod)</td>
-                    <td>@EnumL.Translate(creditCard.PaymentBusinessDayAdjustment)</td>
-                    <td class="text-end">@currentBalance.ToString("N2", CultureInfo.CurrentCulture)</td>
-                    
-                    <td class="text-end" style="white-space: nowrap;">
-                        <button class="btn btn-sm btn-primary me-1" @onclick="() => EditCreditCard(creditCard)">
-                            @L["Edit"]
-                        </button>
+                <div class="card-body">
+                    @* Named so that `context` inside the fields below is the FormField's, not the EditContext. *@
+                    <EditForm Model="_editModel" OnValidSubmit="SaveCreditCard" Context="editContext">
+                        <div class="row g-3">
 
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteCreditCard(creditCard)">
-                            @L["Delete"]
-                        </button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                            <div class="col-md-4">
+                                <FormField Label='@L["Name"]' CssClass="">
+                                    <InputText id="@context.Id"
+                                               class="form-control"
+                                               @bind-Value="_editModel.Name" />
+                                </FormField>
+                            </div>
 
-    @if (plan.CreditCards.Count == 0)
-    {
-        <div class="alert alert-info">
-            @L["CreditCard_NoContractsDefined"]
-        </div>
-    }
-}
+                            <div class="col-md-4">
+                                <FormField Label='@L["CreditCard_CreditCardAccount"]'
+                                           Hint='@L["CreditCard_CreditCardAccountHint"]'
+                                           CssClass="">
+                                    <InputSelect id="@context.Id"
+                                                 aria-describedby="@context.DescribedBy"
+                                                 class="form-select"
+                                                 @bind-Value="_editModel.CreditCardAccountIdText">
+                                        <option value="">@L["CreditCard_SelectCreditCardAccount"]</option>
+                                        @foreach (var account in CreditCardAccounts)
+                                        {
+                                            <option value="@account.Id">@account.Name (@EnumL.Translate(account.Type))</option>
+                                        }
+                                    </InputSelect>
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-4">
+                                <FormField Label='@L["CreditCard_PaymentAccount"]'
+                                           Hint='@L["CreditCard_PaymentAccountHint"]'
+                                           CssClass="">
+                                    <InputSelect id="@context.Id"
+                                                 aria-describedby="@context.DescribedBy"
+                                                 class="form-select"
+                                                 @bind-Value="_editModel.PaymentAccountIdText">
+                                        <option value="">@L["CreditCard_SelectPaymentAccount"]</option>
+                                        @foreach (var account in PaymentAccounts)
+                                        {
+                                            <option value="@account.Id">@account.Name (@EnumL.Translate(account.Type))</option>
+                                        }
+                                    </InputSelect>
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-2">
+                                <FormField Label='@L["CreditCard_ClosingDay"]' CssClass="">
+                                    <InputNumber id="@context.Id"
+                                                 class="form-control num"
+                                                 @bind-Value="_editModel.ClosingDayOfMonth" />
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-2">
+                                <FormField Label='@L["CreditCard_PaymentDay"]' CssClass="">
+                                    <InputNumber id="@context.Id"
+                                                 class="form-control num"
+                                                 @bind-Value="_editModel.PaymentDayOfMonth" />
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-3">
+                                <FormField Label='@L["CreditCard_PaymentMethod"]' CssClass="">
+                                    <InputSelect id="@context.Id"
+                                                 class="form-select"
+                                                 @bind-Value="_editModel.PaymentMethod">
+                                        @foreach (var method in Enum.GetValues<CreditCardPaymentMethod>())
+                                        {
+                                            <option value="@method">@EnumL.Translate(method)</option>
+                                        }
+                                    </InputSelect>
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-3">
+                                <FormField Label='@L["CreditCard_BusinessDayAdjustment"]' CssClass="">
+                                    <InputSelect id="@context.Id"
+                                                 class="form-select"
+                                                 @bind-Value="_editModel.PaymentBusinessDayAdjustment">
+                                        @foreach (var adjustment in Enum.GetValues<BusinessDayAdjustment>())
+                                        {
+                                            <option value="@adjustment">@EnumL.Translate(adjustment)</option>
+                                        }
+                                    </InputSelect>
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-2 d-flex align-items-end">
+                                @* One label, associated with the box. This used to be two. *@
+                                <FormField Label='@L["Active"]'
+                                           Layout="FormFieldLayout.Checkbox"
+                                           CssClass="">
+                                    <InputCheckbox id="@context.Id"
+                                                   class="form-check-input"
+                                                   @bind-Value="_editModel.IsActive" />
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-3">
+                                <FormField Label='@L["CreditCard_StartDate"]' CssClass="">
+                                    <InputDate id="@context.Id"
+                                               class="form-control"
+                                               @bind-Value="_editModel.StartDate" />
+                                </FormField>
+                            </div>
+
+                            <div class="col-md-3">
+                                <FormField Label='@L["CreditCard_EndDate"]' CssClass="">
+                                    <InputDate id="@context.Id"
+                                               class="form-control"
+                                               @bind-Value="_editModel.EndDate" />
+                                </FormField>
+                            </div>
+
+                            <div class="col-12">
+                                <FormField Label='@L["Notes"]' CssClass="">
+                                    <InputTextArea id="@context.Id"
+                                                   class="form-control"
+                                                   @bind-Value="_editModel.Notes" />
+                                </FormField>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button class="btn btn-primary" type="submit">
+                                @L["Save"]
+                            </button>
+
+                            <button class="btn btn-outline-secondary ms-2" type="button" @onclick="CancelEdit">
+                                @L["Cancel"]
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        <DataTable Items="CreditCardRows"
+                   RowKey="@(x => x.Id)"
+                   Caption='@L["CreditCard_Title"]'
+                   TableCssClass="table table-sm table-striped table-hover align-middle"
+                   EmptyText='@L["CreditCard_NoContractsDefined"]'>
+            <Column Title='@L["Name"]' Text="@(x => x.Name)" />
+
+            <Column Title='@L["Active"]'>
+                <ChildContent Context="creditCard">
+                    @if (creditCard.IsActive)
+                    {
+                        <span class="badge bg-success">@L["Active"]</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@L["Inactive"]</span>
+                    }
+                </ChildContent>
+            </Column>
+
+            <Column Title='@L["CreditCard_CreditCardAccount"]'
+                    Text="@(x => GetAccountName(x.CreditCardAccountId))" />
+
+            <Column Title='@L["CreditCard_PaymentAccount"]'
+                    Text="@(x => GetAccountName(x.PaymentAccountId))" />
+
+            <Column Title='@L["CreditCard_ClosingDay"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Number(x.ClosingDayOfMonth, 0))" />
+
+            <Column Title='@L["CreditCard_PaymentDay"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Number(x.PaymentDayOfMonth, 0))" />
+
+            <Column Title='@L["CreditCard_Method"]'
+                    Text="@(x => EnumL.Translate(x.PaymentMethod))" />
+
+            <Column Title='@L["CreditCard_Adjustment"]'
+                    Text="@(x => EnumL.Translate(x.PaymentBusinessDayAdjustment))" />
+
+            <Column Title='@L["CreditCard_CurrentBalance"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(GetAccountBalance(x.CreditCardAccountId)))" />
+
+            <Column Title='@L["Actions"]'
+                    HeaderCssClass="text-end"
+                    CellCssClass="text-end text-nowrap">
+                <ChildContent Context="creditCard">
+                    <button class="btn btn-sm btn-primary me-1" @onclick="() => EditCreditCard(creditCard)">
+                        @L["Edit"]
+                    </button>
+
+                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteCreditCardAsync(creditCard)">
+                        @L["Delete"]
+                    </button>
+                </ChildContent>
+            </Column>
+        </DataTable>
+    </ChildContent>
+</PageScaffold>
 
 @code {
     private CreditCardEditModel? _editModel;
@@ -233,6 +265,14 @@ else
 
     private string? _errorMessage;
     private string? _infoMessage;
+
+    private ConfirmDialog? _confirmDialog;
+
+    private IReadOnlyList<CreditCardContract> CreditCardRows =>
+        AppState.CurrentPlan?.CreditCards
+            .OrderBy(x => x.Name)
+            .ToList()
+        ?? [];
 
     private IReadOnlyList<Account> CreditCardAccounts =>
         AppState.CurrentPlan?.Accounts
@@ -310,9 +350,25 @@ else
         }
     }
 
-    private void DeleteCreditCard(CreditCardContract creditCard)
+    // The plan autosaves to the browser working copy, so an accidental click here is not
+    // recoverable without re-importing a file.
+    private async Task DeleteCreditCardAsync(CreditCardContract creditCard)
     {
         ClearMessages();
+
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("Delete"),
+            Text("Dialog_ConfirmMessage"));
+
+        if (!confirmed)
+        {
+            return;
+        }
 
         try
         {
