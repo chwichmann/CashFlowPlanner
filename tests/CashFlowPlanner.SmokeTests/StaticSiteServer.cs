@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
 namespace CashFlowPlanner.SmokeTests;
@@ -44,18 +45,116 @@ public sealed class StaticSiteServer : IDisposable
     private readonly string _root;
     private readonly CancellationTokenSource _cts = new();
 
-    public StaticSiteServer(string wwwrootPath, int port)
+    public StaticSiteServer(string wwwrootPath)
     {
         _root = Path.GetFullPath(wwwrootPath);
-        BaseUrl = $"http://127.0.0.1:{port}/";
 
-        _listener.Prefixes.Add(BaseUrl);
+        // A free ephemeral port per instance, never a fixed one.
+        //
+        // xunit constructs a NEW instance of the test class for every test method, so a
+        // hardcoded port means every test after the first races the previous one's socket.
+        // Locally they run in sequence and it frees in time; on a CI runner it sits in
+        // TIME_WAIT, the listener never serves, and each navigation burns its full timeout -
+        // which reads as an eighteen-minute hang rather than a bind error.
+        var probe = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        probe.Start();
+        var port = ((IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+
+        // Serve under whatever <base href> the artifact actually carries.
+        //
+        // CI rewrites it to /CashFlowPlanner/ before this runs, so serving at the root
+        // means the app asks for /CashFlowPlanner/_framework/..., gets 404s and never
+        // starts - which is precisely how it presented: every navigation succeeded and no
+        // page ever rendered. Mounting at the real prefix makes the smoke test exercise
+        // the deployed configuration, base-href rewrite included, rather than a shape that
+        // only exists on a developer machine.
+        _basePath = ReadBaseHref(_root);
+
+        Origin = $"http://127.0.0.1:{port}/";
+        BaseUrl = Origin.TrimEnd('/') + _basePath;
+
+        _listener.Prefixes.Add(Origin);
         _listener.Start();
 
         _ = Task.Run(() => LoopAsync(_cts.Token));
     }
 
+    /// <summary>
+    /// Confirms the listener actually answers, so a server that failed to start fails the
+    /// test immediately and says so, instead of every navigation quietly timing out.
+    /// </summary>
+    public async Task<bool> RespondsAsync()
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            try
+            {
+                var response = await client.GetAsync(BaseUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                // Not up yet.
+            }
+
+            await Task.Delay(200);
+        }
+
+        return false;
+    }
+
+    /// <summary>The server root, e.g. <c>http://127.0.0.1:1234/</c>.</summary>
+    public string Origin { get; }
+
+    /// <summary>Where the app is mounted, honouring its <c>base href</c>.</summary>
     public string BaseUrl { get; }
+
+    private readonly string _basePath;
+
+    /// <summary>
+    /// The path the published index.html expects to be served from. Defaults to "/" when the
+    /// tag is missing, which is the un-rewritten local case.
+    /// </summary>
+    private static string ReadBaseHref(string root)
+    {
+        var index = Path.Combine(root, "index.html");
+
+        if (!File.Exists(index))
+        {
+            return "/";
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            File.ReadAllText(index),
+            "<base[^>]*href=\"([^\"]*)\"",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (!match.Success)
+        {
+            return "/";
+        }
+
+        var value = match.Groups[1].Value;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "/";
+        }
+
+        if (!value.StartsWith('/'))
+        {
+            value = "/" + value;
+        }
+
+        return value.EndsWith('/') ? value : value + "/";
+    }
 
     private async Task LoopAsync(CancellationToken token)
     {
@@ -95,7 +194,15 @@ public sealed class StaticSiteServer : IDisposable
 
     private void Serve(HttpListenerContext context)
     {
-        var relative = Uri.UnescapeDataString(context.Request.Url!.AbsolutePath).TrimStart('/');
+        var absolute = Uri.UnescapeDataString(context.Request.Url!.AbsolutePath);
+
+        // Strip the mount prefix, exactly as Pages does when serving a project site.
+        if (_basePath != "/" && absolute.StartsWith(_basePath, StringComparison.OrdinalIgnoreCase))
+        {
+            absolute = absolute[(_basePath.Length - 1)..];
+        }
+
+        var relative = absolute.TrimStart('/');
 
         if (relative.Length == 0)
         {

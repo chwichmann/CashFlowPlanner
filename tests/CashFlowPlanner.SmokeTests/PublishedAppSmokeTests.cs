@@ -31,8 +31,6 @@ namespace CashFlowPlanner.SmokeTests;
 [Trait("Category", "Smoke")]
 public sealed class PublishedAppSmokeTests : IAsyncLifetime
 {
-    private const int Port = 5399;
-
     private StaticSiteServer? _server;
     private IPlaywright? _playwright;
     private IBrowser? _browser;
@@ -78,7 +76,15 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
             return;
         }
 
-        _server = new StaticSiteServer(wwwroot, Port);
+        _server = new StaticSiteServer(wwwroot);
+
+        if (!await _server.RespondsAsync())
+        {
+            _skipReason =
+                $"The test web server at {_server.BaseUrl} did not answer. Nothing can be "
+                + "verified, so this is a failure rather than a slow run.";
+            return;
+        }
 
         try
         {
@@ -151,7 +157,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         await page.GotoAsync(_server!.BaseUrl + path, new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
+            Timeout = 30_000
         });
 
         return (page, errors);
@@ -169,7 +175,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
 
         // The heading only exists once Blazor has started and rendered a routed page. This is
         // the assertion that the ICU regression would have failed.
-        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 60_000 });
+        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 30_000 });
 
         var heading = await page.InnerTextAsync("h1");
 
@@ -196,7 +202,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         // rather than showing a not-found page.
         var (page, errors) = await OpenAsync("transactions");
 
-        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 60_000 });
+        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 30_000 });
 
         Assert.Empty(errors);
     }
@@ -211,7 +217,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
 
         var (page, errors) = await OpenAsync();
 
-        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 60_000 });
+        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 30_000 });
 
         // The empty state offers create / open / example. Take the example, which is the path a
         // first-time user takes and the one that shipped a plan with a blank person on it.
@@ -244,7 +250,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
 
         var (page, errors) = await OpenAsync();
 
-        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 60_000 });
+        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 30_000 });
 
         var sample = page.Locator("button", new PageLocatorOptions
         {
@@ -260,7 +266,7 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         await page.GotoAsync(_server!.BaseUrl + "persons", new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
+            Timeout = 30_000
         });
 
         await page.WaitForSelectorAsync("table tbody tr", new PageWaitForSelectorOptions { Timeout = 30_000 });
@@ -301,10 +307,10 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         await page.GotoAsync(_server!.BaseUrl, new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,
-            Timeout = 60_000
+            Timeout = 30_000
         });
 
-        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 60_000 });
+        await page.WaitForSelectorAsync("h1", new PageWaitForSelectorOptions { Timeout = 30_000 });
 
         var sample = page.Locator("button", new PageLocatorOptions
         {
