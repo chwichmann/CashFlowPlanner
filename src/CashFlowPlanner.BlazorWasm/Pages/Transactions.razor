@@ -420,7 +420,7 @@ else
                     <th>@L["Transaction_From"]</th>
                     <th>@L["Transaction_To"]</th>
                     <th>@L["Transaction_IncomePerson"]</th>
-                    <th>@L["Amount"]</th>
+                    <th class="text-end">@L["Amount"]</th>
 
                     @if(_selectedTransactionTab == TransactionTab.Recurring)
                     {
@@ -435,8 +435,8 @@ else
 
                     @if(_selectedTransactionTab == TransactionTab.Recurring)
                     {
-                        <th>@L["Transaction_YearlyAmount"]</th>
-                        <th>@L["Transaction_EffectiveYearlyAmount"]</th>
+                        <th class="text-end">@L["Transaction_YearlyAmount"]</th>
+                        <th class="text-end">@L["Transaction_EffectiveYearlyAmount"]</th>
                     }
                     
                     <th class="text-end">@L["Actions"]</th>
@@ -475,7 +475,7 @@ else
                         <td>@GetAccountName(transaction.ToAccountId)</td>
                         <td>@GetPersonName(transaction.IncomePersonId)</td>
 
-                        <td>
+                        <td class="text-end">
                             @transaction.Amount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
                         </td>
 
@@ -494,11 +494,11 @@ else
 
                         @if (_selectedTransactionTab == TransactionTab.Recurring)
                         {
-                            <td>
+                            <td class="text-end">
                                 @yearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
                             </td>
 
-                            <td>
+                            <td class="text-end">
                                 @CalculateEffectiveYearlyAmount(transaction).ToString("N2", CultureInfo.CurrentCulture) @transaction.Currency
                             </td>
                         }
@@ -523,7 +523,7 @@ else
                         <td colspan="9">
                             <strong>@L["Transaction_SumIncomingYearlyAmountFilter"]</strong>
                         </td>
-                        <td>
+                        <td class="text-end">
                             <strong>@visibleIncomingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
                         </td>
                         <td colspan="2"></td>
@@ -533,7 +533,7 @@ else
                         <td colspan="9">
                             <strong>@L["Transaction_SumOutgoingYearlyAmountFilter"]</strong>
                         </td>
-                        <td>
+                        <td class="text-end">
                             <strong>@visibleOutgoingYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
                         </td>
                         <td colspan="2"></td>
@@ -543,10 +543,10 @@ else
                         <td colspan="9">
                             <strong>@L["Transaction_SumYearlyAmountFilter"]</strong>
                         </td>
-                        <td>
+                        <td class="text-end">
                             <strong>@visibleYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
                         </td>
-                        <td>
+                        <td class="text-end">
                             <strong>@visibleEffectiveYearlyAmount.ToString("N2", CultureInfo.CurrentCulture) @plan.BaseCurrency</strong>
                         </td>
                         <td></td>
