@@ -98,13 +98,20 @@
     gap: 0.75rem;
 }
 
-.text-input,
-.select-input,
-.number-input,
-.currency-input,
-.percent-input,
-.year-input,
-.table-number-input {
+/* These classes sit on a mix of raw elements (<select class="select-input">) and
+   child components (<InputText class="text-input">, <InputNumber class="currency-input">).
+   CSS isolation stamps the scope attribute only onto raw elements written in this
+   component's markup, so the <input> rendered by a child component never carries it
+   and an unprefixed `.currency-input` rule matches nothing. Reaching the controls
+   through `::deep` from `.card` — a raw <section> in this component's own markup that
+   wraps every form control on the page — makes the rules apply to both kinds. */
+.card ::deep .text-input,
+.card ::deep .select-input,
+.card ::deep .number-input,
+.card ::deep .currency-input,
+.card ::deep .percent-input,
+.card ::deep .year-input,
+.card ::deep .table-number-input {
     height: 34px;
     min-height: 34px;
     box-sizing: border-box;
@@ -117,40 +124,40 @@
     line-height: 1.2;
 }
 
-.text-input:focus,
-.select-input:focus,
-.number-input:focus,
-.currency-input:focus,
-.percent-input:focus,
-.year-input:focus,
-.table-number-input:focus {
+.card ::deep .text-input:focus,
+.card ::deep .select-input:focus,
+.card ::deep .number-input:focus,
+.card ::deep .currency-input:focus,
+.card ::deep .percent-input:focus,
+.card ::deep .year-input:focus,
+.card ::deep .table-number-input:focus {
     outline: none;
     border-color: #2563eb;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
-.currency-input {
+.card ::deep .currency-input {
     width: 150px;
     text-align: right;
 }
 
-.number-input {
+.card ::deep .number-input {
     width: 135px;
     text-align: right;
 }
 
-.percent-input,
-.year-input {
+.card ::deep .percent-input,
+.card ::deep .year-input {
     width: 95px;
     text-align: right;
 }
 
-.table-number-input {
+.card ::deep .table-number-input {
     width: 100%;
     text-align: right;
 }
 
-.range-input {
+.card ::deep .range-input {
     width: 280px;
     max-width: 280px;
     accent-color: #2563eb;
@@ -247,14 +254,14 @@
     text-overflow: ellipsis;
 }
 
-.equity-grid .text-input,
-.equity-grid .select-input,
-.equity-grid .currency-input {
+.equity-grid ::deep .text-input,
+.equity-grid ::deep .select-input,
+.equity-grid ::deep .currency-input {
     width: 100%;
     max-width: 100%;
 }
 
-.equity-grid .btn-small {
+.equity-grid .btn-sm {
     width: 86px;
     height: 34px;
     min-height: 34px;
@@ -262,7 +269,7 @@
     padding-right: 0.45rem;
 }
 
-.data-table-row .btn-small {
+.data-table-row .btn-sm {
     height: 34px;
 }
 
@@ -401,7 +408,7 @@
     background: #fee2e2;
 }
 
-.btn-small {
+.btn-sm {
     padding: 0.35rem 0.55rem;
     font-size: 0.82rem;
 }
@@ -704,11 +711,11 @@
         align-items: stretch;
     }
 
-    .currency-input,
-    .number-input,
-    .percent-input,
-    .year-input,
-    .range-input {
+    .card ::deep .currency-input,
+    .card ::deep .number-input,
+    .card ::deep .percent-input,
+    .card ::deep .year-input,
+    .card ::deep .range-input {
         width: 100%;
         max-width: none;
     }
@@ -805,18 +812,6 @@
     flex: 0 0 1.35rem;
 }
 
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
 /* Reinforce icon colors + sizing */
 .result-title-icon,
 .checklist-icon {
@@ -850,8 +845,8 @@
     font-weight: 700;
 }
 
-.scenario-select,
-.scenario-name-input {
+.scenario-select-row ::deep .scenario-select,
+.scenario-name-row ::deep .scenario-name-input {
     width: 100%;
     max-width: 100%;
 }

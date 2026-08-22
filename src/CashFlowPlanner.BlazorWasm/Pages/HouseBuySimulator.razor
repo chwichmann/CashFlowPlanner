@@ -214,7 +214,7 @@ else
                         <InputNumber class="currency-input" @bind-Value="person.GrossAnnualIncome" />
 
                         <button type="button"
-                                class="btn btn-danger btn-small"
+                                class="btn btn-danger btn-sm"
                                 @onclick="() => RemovePerson(person.Id)">
                             @L["Remove"]
                         </button>
@@ -284,7 +284,7 @@ else
                         <InputNumber class="currency-input" @bind-Value="equity.Amount" />
 
                         <button type="button"
-                                class="btn btn-danger btn-small"
+                                class="btn btn-danger btn-sm"
                                 @onclick="() => RemoveEquitySource(equity.Id)">
                             @L["Remove"]
                         </button>
@@ -388,7 +388,7 @@ else
                                      aria-hidden="true">
                                     <path d="M20 6L9 17l-5-5" />
                                 </svg>
-                                <span class="sr-only">@L["HouseBuy_Viable"]</span>
+                                <span class="visually-hidden">@L["HouseBuy_Viable"]</span>
                             }
                             else
                             {
@@ -405,7 +405,7 @@ else
                                     <path d="M18 6L6 18" />
                                     <path d="M6 6l12 12" />
                                 </svg>
-                                <span class="sr-only">@L["HouseBuy_NotViable"]</span>
+                                <span class="visually-hidden">@L["HouseBuy_NotViable"]</span>
                             }
                         </span>
 
@@ -513,7 +513,7 @@ else
                                                  aria-hidden="true">
                                                 <path d="M20 6L9 17l-5-5" />
                                             </svg>
-                                            <span class="sr-only">@L["HouseBuy_Passed"]</span>
+                                            <span class="visually-hidden">@L["HouseBuy_Passed"]</span>
                                         }
                                         else
                                         {
@@ -530,7 +530,7 @@ else
                                                 <path d="M18 6L6 18" />
                                                 <path d="M6 6l12 12" />
                                             </svg>
-                                            <span class="sr-only">@L["HouseBuy_Failed"]</span>
+                                            <span class="visually-hidden">@L["HouseBuy_Failed"]</span>
                                         }
                                     </div>
 
@@ -570,7 +570,6 @@ else
 }
 
 @code {
-    private static readonly CultureInfo SwissCulture = CultureInfo.GetCultureInfo("de-CH");
     private readonly HouseBuyScenarioManager _scenarioManager = new();
 
     private Guid CurrentScenarioId { get; set; } = Guid.NewGuid();
@@ -1162,12 +1161,12 @@ else
 
     private static string Money(decimal value)
     {
-        return $"CHF {value.ToString("N0", SwissCulture)}";
+        return $"CHF {value.ToString("N0", CultureInfo.CurrentCulture)}";
     }
 
     private static string Percent(decimal value)
     {
-        return $"{value.ToString("N2", SwissCulture)}%";
+        return $"{value.ToString("N2", CultureInfo.CurrentCulture)}%";
     }
 
     private string AffordabilityRatioText(decimal ratio)
