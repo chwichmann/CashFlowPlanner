@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using System.Globalization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
 namespace CashFlowPlanner.BlazorWasm.Components.Charts;
@@ -20,6 +21,10 @@ public sealed class SvgText : ComponentBase
     [Parameter]
     public int FontSize { get; set; } = 11;
 
+    /// <summary>An SVG transform, e.g. a rotation for an axis label.</summary>
+    [Parameter]
+    public string? Transform { get; set; }
+
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
@@ -28,9 +33,20 @@ public sealed class SvgText : ComponentBase
         var sequence = 0;
 
         builder.OpenElement(sequence++, "text");
-        builder.AddAttribute(sequence++, "x", X);
-        builder.AddAttribute(sequence++, "y", Y);
-        builder.AddAttribute(sequence++, "font-size", FontSize);
+
+        // Invariant, never the ambient culture. Blazor renders a boxed double through
+        // CultureInfo.CurrentCulture, so under de-DE - one of the four regions Settings offers -
+        // y="123.5" became y="123,5", which SVG rejects as a length and silently drops the label
+        // to the origin. SvgLineChart already routes its own coordinates through an invariant
+        // formatter for exactly this reason; passing them through this component skipped it.
+        builder.AddAttribute(sequence++, "x", Format(X));
+        builder.AddAttribute(sequence++, "y", Format(Y));
+        builder.AddAttribute(sequence++, "font-size", FontSize.ToString(CultureInfo.InvariantCulture));
+
+        if (!string.IsNullOrWhiteSpace(Transform))
+        {
+            builder.AddAttribute(sequence++, "transform", Transform);
+        }
 
         if (!string.IsNullOrWhiteSpace(TextAnchor))
         {
@@ -46,4 +62,7 @@ public sealed class SvgText : ComponentBase
 
         builder.CloseElement();
     }
+
+    private static string Format(double value) =>
+        value.ToString("0.###", CultureInfo.InvariantCulture);
 }

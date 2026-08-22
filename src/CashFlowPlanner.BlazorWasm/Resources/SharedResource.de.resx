@@ -2895,4 +2895,70 @@
   <data name="Enum.RealEstateType.Flat" xml:space="preserve">
     <value>Wohnung</value>
   </data>
+  <data name="Chart_NoData" xml:space="preserve">
+    <value>Keine Diagrammdaten verfügbar.</value>
+  </data>
+  <data name="Chart_OnDate" xml:space="preserve">
+    <value>am</value>
+  </data>
+  <data name="Chart_AxisNetWorthNominal" xml:space="preserve">
+    <value>Vermögen in {0}, Franken des jeweiligen Tages</value>
+  </data>
+  <data name="Chart_AxisNetWorthReal" xml:space="preserve">
+    <value>Vermögen in {0}, in Geld von {1}</value>
+  </data>
+  <data name="Chart_AxisLiquidNominal" xml:space="preserve">
+    <value>Liquider Saldo in {0}, Franken des jeweiligen Tages</value>
+  </data>
+  <data name="Chart_AxisLiquidReal" xml:space="preserve">
+    <value>Liquider Saldo in {0}, in Geld von {1}</value>
+  </data>
+  <data name="Dashboard_Basis" xml:space="preserve">
+    <value>Beträge dargestellt in</value>
+  </data>
+  <data name="Dashboard_BasisExplained" xml:space="preserve">
+    <value>Der Plan rechnet mit {0} pro Jahr; reale Werte lauten auf Geld von {1}.</value>
+  </data>
+  <data name="Dashboard_BasisNoInflation" xml:space="preserve">
+    <value>Es ist keine Teuerungsrate gesetzt; beide Darstellungen sind daher identisch. Setzen Sie eine unter Einstellungen.</value>
+  </data>
+  <data name="Dashboard_NetWorthAsOf" xml:space="preserve">
+    <value>per {0}</value>
+  </data>
+  <data name="Dashboard_BalanceSheet" xml:space="preserve">
+    <value>Bilanz</value>
+  </data>
+  <data name="Dashboard_BalanceSheetOn" xml:space="preserve">
+    <value>Bilanz per {0}</value>
+  </data>
+  <data name="Dashboard_BalanceSheetComponent" xml:space="preserve">
+    <value>Position</value>
+  </data>
+  <data name="Dashboard_InvestmentAssets" xml:space="preserve">
+    <value>Anlagen</value>
+  </data>
+  <data name="Dashboard_Pillar3aAssets" xml:space="preserve">
+    <value>Säule 3a</value>
+  </data>
+  <data name="Dashboard_RealEstateValue" xml:space="preserve">
+    <value>Immobilien</value>
+  </data>
+  <data name="Dashboard_TotalAssets" xml:space="preserve">
+    <value>Total Aktiven</value>
+  </data>
+  <data name="Dashboard_NoNetWorthSeries" xml:space="preserve">
+    <value>Diese Simulation hat keine Vermögensreihe erzeugt; die Bilanz stammt daher allein aus den Kontosaldi und enthält keine Immobilien. Führen Sie die Simulation erneut aus.</value>
+  </data>
+  <data name="Dashboard_NotModelledTitle" xml:space="preserve">
+    <value>Was in diesen Zahlen nicht enthalten ist</value>
+  </data>
+  <data name="Dashboard_NotModelledTax" xml:space="preserve">
+    <value>Steuern werden nicht modelliert. Zahlungs- und Vermögenszahlen verstehen sich vor Steuern - Einkommenssteuer, Vermögenssteuer und der Eigenmietwert fehlen vollständig.</value>
+  </data>
+  <data name="Dashboard_NotModelledPension" xml:space="preserve">
+    <value>Auch Säule 2 (berufliche Vorsorge) und AHV werden nicht modelliert. Beide sind reales Vermögen und künftiges Einkommen, das in diesen Zahlen nicht enthalten ist.</value>
+  </data>
+  <data name="Simulation_AmountAsEntered" xml:space="preserve">
+    <value>{0} wie erfasst</value>
+  </data>
 </root>

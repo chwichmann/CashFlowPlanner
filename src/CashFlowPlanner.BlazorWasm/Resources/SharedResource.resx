@@ -2895,4 +2895,70 @@
   <data name="Enum.RealEstateType.Flat" xml:space="preserve">
     <value>Flat</value>
   </data>
+  <data name="Chart_NoData" xml:space="preserve">
+    <value>No chart data available.</value>
+  </data>
+  <data name="Chart_OnDate" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="Chart_AxisNetWorthNominal" xml:space="preserve">
+    <value>Net worth in {0}, francs of the day</value>
+  </data>
+  <data name="Chart_AxisNetWorthReal" xml:space="preserve">
+    <value>Net worth in {0}, in money of {1}</value>
+  </data>
+  <data name="Chart_AxisLiquidNominal" xml:space="preserve">
+    <value>Liquid balance in {0}, francs of the day</value>
+  </data>
+  <data name="Chart_AxisLiquidReal" xml:space="preserve">
+    <value>Liquid balance in {0}, in money of {1}</value>
+  </data>
+  <data name="Dashboard_Basis" xml:space="preserve">
+    <value>Amounts shown in</value>
+  </data>
+  <data name="Dashboard_BasisExplained" xml:space="preserve">
+    <value>The plan assumes {0} a year; real figures are expressed in money of {1}.</value>
+  </data>
+  <data name="Dashboard_BasisNoInflation" xml:space="preserve">
+    <value>No inflation rate is set, so both readings are the same. Set one under Settings.</value>
+  </data>
+  <data name="Dashboard_NetWorthAsOf" xml:space="preserve">
+    <value>as of {0}</value>
+  </data>
+  <data name="Dashboard_BalanceSheet" xml:space="preserve">
+    <value>Balance sheet</value>
+  </data>
+  <data name="Dashboard_BalanceSheetOn" xml:space="preserve">
+    <value>Balance sheet on {0}</value>
+  </data>
+  <data name="Dashboard_BalanceSheetComponent" xml:space="preserve">
+    <value>Component</value>
+  </data>
+  <data name="Dashboard_InvestmentAssets" xml:space="preserve">
+    <value>Investments</value>
+  </data>
+  <data name="Dashboard_Pillar3aAssets" xml:space="preserve">
+    <value>Pillar 3a</value>
+  </data>
+  <data name="Dashboard_RealEstateValue" xml:space="preserve">
+    <value>Real estate</value>
+  </data>
+  <data name="Dashboard_TotalAssets" xml:space="preserve">
+    <value>Total assets</value>
+  </data>
+  <data name="Dashboard_NoNetWorthSeries" xml:space="preserve">
+    <value>This simulation produced no net-worth series, so the balance sheet is built from account balances alone and does not include any property. Run the simulation again.</value>
+  </data>
+  <data name="Dashboard_NotModelledTitle" xml:space="preserve">
+    <value>What these figures do not contain</value>
+  </data>
+  <data name="Dashboard_NotModelledTax" xml:space="preserve">
+    <value>Taxes are not modelled. Cash-flow and net-worth figures are before tax - income tax, wealth tax and the imputed rental value of an owner-occupied home are all missing.</value>
+  </data>
+  <data name="Dashboard_NotModelledPension" xml:space="preserve">
+    <value>Pillar 2 (occupational pension) and AHV are not modelled either. Both are real wealth and future income that these figures do not count.</value>
+  </data>
+  <data name="Simulation_AmountAsEntered" xml:space="preserve">
+    <value>{0} as entered</value>
+  </data>
 </root>

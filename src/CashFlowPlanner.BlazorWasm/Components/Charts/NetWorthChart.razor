@@ -1,13 +1,29 @@
 ﻿@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<SharedResource> L
+@inject AppFormatter Formatter
 
 @using CashFlowPlanner.Core
+@using CashFlowPlanner.Core.Indexation
+
+@*
+    Net worth over time, from the engine's own series.
+
+    This component used to sum the balances of every active account and call the result net worth.
+    That is not net worth: it counted a mortgage account's negative balance if there happened to be
+    one, missed the mortgage principal the engine actually tracks, and could not see the
+    household's property at all - so on a plan with a house it was wrong by the largest number in
+    the plan. SimulationResult.NetWorthPoints is computed once, in the domain, with its components
+    kept separable, and the chart beside the dashboard's net-worth tile is now reading the same
+    figure the tile is.
+*@
 
 <SvgLineChart Title="@L["Chart_NetWorthTitle"]"
               Points="Series"
-              Currency="@Plan.BaseCurrency"
+              Currency="@Currency"
               Stroke="#198754"
+              AxisLabel="@AxisLabel"
               FooterLabel="@L["Chart_NetWorthFooter"]" />
 
 @code {
@@ -17,27 +33,28 @@
     [Parameter]
     public required SimulationResult Result { get; set; }
 
-    private IReadOnlyList<TimeSeriesPoint> Series => BuildSeries();
+    /// <summary>
+    /// Which money the series is drawn in. With no inflation assumption the two bases are
+    /// identical, so the caller can offer the choice unconditionally.
+    /// </summary>
+    [Parameter]
+    public AmountBasis Basis { get; set; } = AmountBasis.Nominal;
 
-    private IReadOnlyList<TimeSeriesPoint> BuildSeries()
-    {
-        var activeAccountIds = Plan.Accounts
-            .Where(x => x.IsActive)
-            .Select(x => x.Id)
-            .ToHashSet();
+    private string Currency => Plan.BaseCurrency;
 
-        if (activeAccountIds.Count == 0)
-        {
-            return [];
-        }
-
-        return Result.BalancePoints
-            .Where(x => activeAccountIds.Contains(x.AccountId))
-            .GroupBy(x => x.Date)
-            .Select(group => new TimeSeriesPoint(
-                group.Key,
-                group.Sum(x => x.Balance)))
+    private IReadOnlyList<TimeSeriesPoint> Series =>
+        Result.GetNetWorthPoints(Basis)
+            .Select(point => new TimeSeriesPoint(point.Date, point.NetWorth))
             .OrderBy(x => x.Date)
             .ToList();
-    }
+
+    /// <summary>
+    /// Names the scale, and in real terms names the date the money is measured in. Switching basis
+    /// moves every number on the chart; a chart that does that without saying so is worse than one
+    /// that never offered the choice.
+    /// </summary>
+    private string AxisLabel =>
+        Basis == AmountBasis.Real && Result.Inflation.IsEnabled
+            ? L["Chart_AxisNetWorthReal", Currency, Formatter.Date(Result.Inflation.BaseDate)].Value
+            : L["Chart_AxisNetWorthNominal", Currency].Value;
 }

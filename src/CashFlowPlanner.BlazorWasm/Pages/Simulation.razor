@@ -226,7 +226,22 @@
             <Column Title='@L["Simulation_KindOrSeverity"]' Text="@(row => row.KindOrSeverity)" />
             <Column Title='@L["Transaction_FromAccount"]' Text="@(row => row.FromAccountName)" />
             <Column Title='@L["Transaction_ToAccount"]' Text="@(row => row.ToAccountName)" />
-            <Column Title='@L["Amount"]' Align="ColumnAlign.Number" Text="@(row => row.AmountText)" />
+            <Column Title='@L["Amount"]' Align="ColumnAlign.Number">
+                <ChildContent Context="row">
+                    <div>@row.AmountText</div>
+
+                    @*
+                        What the user actually typed, beside what the simulation charged. The
+                        engine already carries the factor on the event, so this needs no
+                        re-derivation - and without it an indexed amount looks like a number
+                        nobody entered.
+                    *@
+                    @if (row.AsEnteredText is not null)
+                    {
+                        <small class="text-body-secondary">@row.AsEnteredText</small>
+                    }
+                </ChildContent>
+            </Column>
             <Column Title='@L["Currency"]' Text="@(row => row.Currency)" />
             <Column Title='@L["Simulation_CategoryOrMessage"]' Text="@(row => row.MessageOrCategory)" />
         </DataTable>
@@ -281,6 +296,23 @@
         }
 
         return warning.AccountId is null ? null : GetAccountName(warning.AccountId);
+    }
+
+    /// <summary>
+    /// "CHF 1'000.00 as entered", or null when the amount is not indexed. A factor of exactly 1 is
+    /// what the engine produces for everything that is not indexed, so this shows nothing at all
+    /// on a plan with no inflation rate.
+    /// </summary>
+    private string? DescribeAsEntered(CashFlowEvent cashFlowEvent)
+    {
+        if (cashFlowEvent.IndexationFactor == 1m || cashFlowEvent.IndexationFactor == 0m)
+        {
+            return null;
+        }
+
+        var asEntered = cashFlowEvent.Amount / cashFlowEvent.IndexationFactor;
+
+        return Text("Simulation_AmountAsEntered", Formatter.Money(asEntered));
     }
 
     private string GetMortgageTypeName(CashFlowPlan plan, Guid mortgageId)
@@ -386,6 +418,7 @@
                 FromAccountName = GetAccountName(cashFlowEvent.FromAccountId),
                 ToAccountName = GetAccountName(cashFlowEvent.ToAccountId),
                 AmountText = Formatter.Money(cashFlowEvent.Amount),
+                AsEnteredText = DescribeAsEntered(cashFlowEvent),
                 Currency = cashFlowEvent.Currency,
                 MessageOrCategory = cashFlowEvent.Category ?? string.Empty,
                 RowCssClass = string.Empty
@@ -442,6 +475,9 @@
         public string ToAccountName { get; init; } = string.Empty;
 
         public string AmountText { get; init; } = string.Empty;
+
+        /// <summary>What the amount was entered as, when indexation has since moved it.</summary>
+        public string? AsEnteredText { get; init; }
 
         public string Currency { get; init; } = string.Empty;
 

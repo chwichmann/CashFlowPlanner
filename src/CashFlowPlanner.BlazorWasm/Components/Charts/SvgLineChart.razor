@@ -1,8 +1,16 @@
 ﻿@using System.Globalization
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using Microsoft.Extensions.Localization
+
+@inject IStringLocalizer<SharedResource> L
+@inject AppFormatter Formatter
+
 @if (!HasData)
 {
+    @* Was "No chart data available." in English, on a page that is German everywhere else. *@
     <div class="alert alert-info">
-        No chart data available.
+        @L["Chart_NoData"]
     </div>
 }
 else
@@ -18,6 +26,25 @@ else
                  style="width: 100%; height: auto; max-height: 420px;">
 
                 <title>@Title</title>
+
+                @*
+                    The axis, named. A chart whose scale can switch between nominal and real
+                    francs without saying which it is showing is worse than one that never
+                    offered the choice - the numbers move and nothing on screen explains why.
+                *@
+                @if (!string.IsNullOrWhiteSpace(AxisLabel))
+                {
+                    <desc>@AxisLabel</desc>
+
+                    <SvgText X="14"
+                             Y="@(TopPadding + ((Height - TopPadding - BottomPadding) / 2.0))"
+                             TextAnchor="middle"
+                             FontSize="11"
+                             Fill="#666"
+                             Transform="@AxisLabelTransform">
+                        @AxisLabel
+                    </SvgText>
+                }
 
                 @foreach (var tick in YTicks)
                 {
@@ -108,11 +135,13 @@ else
                 </SvgText>
             </svg>
 
+            @* "on" was hardcoded English, and the amount and date were formatted by hand rather
+               than through AppFormatter, so this one line ignored the region the user picked. *@
             <div class="mt-2 small text-muted">
                 @FooterLabel:
-                <strong>@LowestValue.ToString("N2") @Currency</strong>
-                on
-                <strong>@LowestValueDate</strong>
+                <strong>@Formatter.Money(LowestValue, Currency)</strong>
+                @L["Chart_OnDate"]
+                <strong>@Formatter.Date(LowestValueDate)</strong>
             </div>
         </div>
     </div>
@@ -134,6 +163,13 @@ else
     [Parameter]
     public string FooterLabel { get; set; } = "Lowest value";
 
+    /// <summary>
+    /// What the vertical axis measures, drawn rotated beside it. Say the unit and, where the
+    /// caller offers the choice, which money the figures are in.
+    /// </summary>
+    [Parameter]
+    public string? AxisLabel { get; set; }
+
     [Parameter]
     public int Width { get; set; } = 900;
 
@@ -144,6 +180,18 @@ else
     private const int RightPadding = 24;
     private const int TopPadding = 24;
     private const int BottomPadding = 42;
+
+    private string AxisLabelTransform
+    {
+        get
+        {
+            var y = TopPadding + ((Height - TopPadding - BottomPadding) / 2.0);
+
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"rotate(-90 14 {y:0.###})");
+        }
+    }
 
     private IReadOnlyList<TimeSeriesPoint> OrderedPoints =>
         Points

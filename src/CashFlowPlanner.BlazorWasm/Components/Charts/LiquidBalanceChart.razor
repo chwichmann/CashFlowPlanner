@@ -1,14 +1,18 @@
 ﻿@using CashFlowPlanner.BlazorWasm.Resources
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<SharedResource> L
+@inject AppFormatter Formatter
 
+@using CashFlowPlanner.BlazorWasm.Services
 @using CashFlowPlanner.Core
 @using CashFlowPlanner.Core.Accounts
+@using CashFlowPlanner.Core.Indexation
 
 <SvgLineChart Title="@L["Chart_LiquidBalanceTitle"]"
               Points="Series"
               Currency="@Plan.BaseCurrency"
               Stroke="#0d6efd"
+              AxisLabel="@AxisLabel"
               FooterLabel="@L["Chart_LiquidBalanceFooter"]" />
 
 @code {
@@ -17,6 +21,18 @@
 
     [Parameter]
     public required SimulationResult Result { get; set; }
+
+    /// <summary>
+    /// Which money the series is drawn in. Liquidity in real terms answers "what will this buy",
+    /// which is the question a 2050 balance is usually being asked.
+    /// </summary>
+    [Parameter]
+    public AmountBasis Basis { get; set; } = AmountBasis.Nominal;
+
+    private string AxisLabel =>
+        Basis == AmountBasis.Real && Result.Inflation.IsEnabled
+            ? L["Chart_AxisLiquidReal", Plan.BaseCurrency, Formatter.Date(Result.Inflation.BaseDate)].Value
+            : L["Chart_AxisLiquidNominal", Plan.BaseCurrency].Value;
 
     private IReadOnlyList<TimeSeriesPoint> Series => BuildSeries();
 
@@ -37,7 +53,7 @@
             .GroupBy(x => x.Date)
             .Select(group => new TimeSeriesPoint(
                 group.Key,
-                group.Sum(x => x.Balance)))
+                Result.ToBasis(group.Sum(x => x.Balance), group.Key, Basis)))
             .OrderBy(x => x.Date)
             .ToList();
     }
