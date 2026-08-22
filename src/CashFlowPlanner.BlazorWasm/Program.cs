@@ -17,6 +17,10 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddLocalization();
 builder.Services.AddScoped<BrowserCultureService>();
 
+// Stateless and culture-agnostic at construction time - it reads CultureInfo.CurrentCulture on
+// every call, so a singleton is safe even though the culture is assigned after the host is built.
+builder.Services.AddSingleton<AppFormatter>();
+
 builder.Services.AddSingleton<CashFlowAppState>();
 builder.Services.AddSingleton<CashFlowPlanJsonSerializer>();
 builder.Services.AddSingleton<StarterPlanProvider>();

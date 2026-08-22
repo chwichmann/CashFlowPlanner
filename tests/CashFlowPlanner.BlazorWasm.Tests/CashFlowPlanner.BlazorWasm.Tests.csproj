@@ -1,4 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<!--
+  Microsoft.NET.Sdk.Razor, not Microsoft.NET.Sdk: the component tests are written
+  in Razor so a DataTable's <Column> children and a modal's render fragments read
+  the same way in the test as they do on a page. Plain C# RenderTreeBuilder code
+  for those would obscure exactly the markup under test.
+-->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="bunit" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />

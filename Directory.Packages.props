@@ -24,6 +24,25 @@
 
   <!-- Test stack -->
   <ItemGroup>
+    <!--
+      bUnit renders Blazor components in-process so the shared component library
+      can be asserted on as HTML.
+
+      Pinned to 2.6.2 rather than the newest 2.9.x on purpose: from 2.8.x onwards
+      bUnit's net10.0 dependency group demands Microsoft.AspNetCore.Components
+      10.0.10, which - with CentralPackageTransitivePinningEnabled - would force
+      the app's own Components.WebAssembly/Localization pins up with it or fail
+      restore with NU1605. 2.6.2 asks only for 10.0.0, so the app's shipped
+      dependency versions stay exactly where they were. Raise this together with
+      the ASP.NET pins above, never on its own.
+    -->
+    <PackageVersion Include="bunit" Version="2.6.2" />
+    <!--
+      bUnit 2.6.2 asks for AngleSharp 1.4.0, which carries GHSA-pgww-w46g-26qg.
+      Transitive pinning lets us take 1.7.0 (the version newer bUnits use)
+      without moving anything else, so `dotnet restore` stays warning-free.
+    -->
+    <PackageVersion Include="AngleSharp" Version="1.7.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
