@@ -2451,4 +2451,43 @@
   <data name="Mortgages_ErrorSaronRateRequired" xml:space="preserve">
     <value>Mindestens ein SARON-Zinspunkt ist erforderlich.</value>
   </data>
+  <data name="Settings_DiskTitle" xml:space="preserve">
+    <value>In eine Datei auf der Festplatte speichern</value>
+  </data>
+  <data name="Settings_DiskHint" xml:space="preserve">
+    <value>Wähle einmal eine Datei, und die App hält sie beim Arbeiten aktuell - du musst nie mehr ans Exportieren denken. Zeigt sie auf einen synchronisierten Ordner wie OneDrive, erhältst du zusätzlich Backup und Synchronisation; die Datei wird vor dem Schreiben verschlüsselt, der Anbieter sieht den Inhalt also nie.</value>
+  </data>
+  <data name="Settings_DiskUnsupported" xml:space="preserve">
+    <value>Dieser Browser kann nicht direkt in Dateien schreiben. Firefox und Safari unterstützen das nicht - nutze dort den Export. Chrome und Edge können es.</value>
+  </data>
+  <data name="Settings_DiskUnlinked" xml:space="preserve">
+    <value>Noch keine Datei verknüpft.</value>
+  </data>
+  <data name="Settings_DiskLinkedTo" xml:space="preserve">
+    <value>Verknüpft mit {0}</value>
+  </data>
+  <data name="Settings_DiskNeedsPermission" xml:space="preserve">
+    <value>Der Zugriff auf diese Datei muss erneut erteilt werden. Browser verlangen dafür einen Klick; automatisch geht es nicht.</value>
+  </data>
+  <data name="Settings_DiskChooseFile" xml:space="preserve">
+    <value>Datei wählen...</value>
+  </data>
+  <data name="Settings_DiskReconnect" xml:space="preserve">
+    <value>Erneut verbinden</value>
+  </data>
+  <data name="Settings_DiskUnlink" xml:space="preserve">
+    <value>Nicht mehr in diese Datei speichern</value>
+  </data>
+  <data name="Settings_DiskUpToDate" xml:space="preserve">
+    <value>Aktuell.</value>
+  </data>
+  <data name="Settings_DiskBehind" xml:space="preserve">
+    <value>Die Datei ist gegenüber dem Plan in diesem Browser veraltet.</value>
+  </data>
+  <data name="Settings_DiskLockedBehind" xml:space="preserve">
+    <value>Der Plan ist verschlüsselt und gesperrt, daher kann die Datei erst nach dem Entsperren aktualisiert werden.</value>
+  </data>
+  <data name="Settings_DiskInstallHint" xml:space="preserve">
+    <value>Installiere die App, um den Klick zum erneuten Verbinden ganz zu sparen - eine installierte App behält den Zugriff.</value>
+  </data>
 </root>

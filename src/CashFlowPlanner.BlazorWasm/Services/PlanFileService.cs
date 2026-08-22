@@ -1,4 +1,4 @@
-using CashFlowPlanner.Storage.Json;
+﻿using CashFlowPlanner.Storage.Json;
 
 namespace CashFlowPlanner.BlazorWasm.Services;
 
@@ -87,6 +87,32 @@ public sealed class PlanFileService
                 error = ex.Message;
             }
         }
+    }
+
+    /// <summary>
+    /// Produce the file content without ever prompting, or null when producing it would need
+    /// a passphrase the user has not entered this session.
+    /// <para>
+    /// Autosave to disk runs on a debounce, behind the user's back. Throwing a modal passphrase
+    /// dialog at someone mid-edit because a timer elapsed would be worse than not writing, so
+    /// this reports "cannot, silently" and the UI shows that the file is out of date.
+    /// </para>
+    /// </summary>
+    public async Task<PlanFileContent?> TryWriteWithoutPromptAsync(CashFlowPlanDocument document)
+    {
+        var planJson = _serializer.SerializeDocument(document);
+
+        if (!_preferences.EncryptExports)
+        {
+            return new PlanFileContent(planJson, IsEncrypted: false);
+        }
+
+        if (!_crypto.IsUnlocked)
+        {
+            return null;
+        }
+
+        return new PlanFileContent(await _crypto.EncryptAsync(planJson), IsEncrypted: true);
     }
 
     /// <summary>

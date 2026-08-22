@@ -2451,4 +2451,43 @@
   <data name="Mortgages_ErrorSaronRateRequired" xml:space="preserve">
     <value>At least one SARON rate point is required.</value>
   </data>
+  <data name="Settings_DiskTitle" xml:space="preserve">
+    <value>Save to a file on disk</value>
+  </data>
+  <data name="Settings_DiskHint" xml:space="preserve">
+    <value>Pick a file once and the app keeps it up to date as you work, so you never have to remember to export. Point it at a synced folder such as OneDrive and you get backup and sync too - the file is encrypted before it is written, so the provider never sees its contents.</value>
+  </data>
+  <data name="Settings_DiskUnsupported" xml:space="preserve">
+    <value>This browser cannot write files directly. Firefox and Safari do not support it, so use Export instead. Chrome and Edge do.</value>
+  </data>
+  <data name="Settings_DiskUnlinked" xml:space="preserve">
+    <value>No file linked yet.</value>
+  </data>
+  <data name="Settings_DiskLinkedTo" xml:space="preserve">
+    <value>Linked to {0}</value>
+  </data>
+  <data name="Settings_DiskNeedsPermission" xml:space="preserve">
+    <value>Access to this file needs to be granted again. Browsers require a click for this; it cannot be done automatically.</value>
+  </data>
+  <data name="Settings_DiskChooseFile" xml:space="preserve">
+    <value>Choose file...</value>
+  </data>
+  <data name="Settings_DiskReconnect" xml:space="preserve">
+    <value>Reconnect</value>
+  </data>
+  <data name="Settings_DiskUnlink" xml:space="preserve">
+    <value>Stop saving to this file</value>
+  </data>
+  <data name="Settings_DiskUpToDate" xml:space="preserve">
+    <value>Up to date.</value>
+  </data>
+  <data name="Settings_DiskBehind" xml:space="preserve">
+    <value>The file is behind the plan in this browser.</value>
+  </data>
+  <data name="Settings_DiskLockedBehind" xml:space="preserve">
+    <value>The plan is encrypted and locked, so the file cannot be updated until you unlock it.</value>
+  </data>
+  <data name="Settings_DiskInstallHint" xml:space="preserve">
+    <value>Install the app to skip the reconnect click entirely - an installed app keeps its access.</value>
+  </data>
 </root>

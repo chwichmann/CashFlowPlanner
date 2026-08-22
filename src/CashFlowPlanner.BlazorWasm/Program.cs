@@ -28,6 +28,8 @@ builder.Services.AddSingleton<PlanCryptoService>();
 builder.Services.AddSingleton<PassphrasePromptService>();
 builder.Services.AddSingleton<PlanExportPreferences>();
 builder.Services.AddSingleton<PlanFileService>();
+builder.Services.AddSingleton<DiskAutoSaveService>();
+builder.Services.AddSingleton<DiskAutoSaveCoordinator>();
 builder.Services.AddSingleton<DashboardSummaryService>();
 builder.Services.AddSingleton<MonthlyCashflowSummaryService>();
 builder.Services.AddSingleton<BrowserPlanCacheService>();

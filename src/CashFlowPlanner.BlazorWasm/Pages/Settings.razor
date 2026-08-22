@@ -19,6 +19,8 @@
 @inject EnumLocalizer EnumL
 @inject PlanExportPreferences ExportPreferences
 @inject PlanCryptoService Crypto
+@inject DiskAutoSaveService Disk
+@inject DiskAutoSaveCoordinator DiskCoordinator
 
 <PageScaffold Title='@L["Settings"]'
               RequiresPlan="true"
@@ -39,6 +41,78 @@
     <ChildContent>
         @if (_editModel is { } editModel)
         {
+            <div class="card mb-3">
+                <div class="card-header">
+                    @L["Settings_DiskTitle"]
+                </div>
+
+                <div class="card-body">
+                    <p class="form-text mt-0">@L["Settings_DiskHint"]</p>
+
+                    @if (Disk.Status.State == DiskLinkState.Unsupported)
+                    {
+                        <div class="alert alert-secondary mb-0" role="alert">
+                            @L["Settings_DiskUnsupported"]
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="mb-2">
+                            @if (Disk.Status.FileName is { Length: > 0 } fileName)
+                            {
+                                <span class="badge @(Disk.Status.CanWrite ? "text-bg-success" : "text-bg-warning")">
+                                    @string.Format(L["Settings_DiskLinkedTo"].Value, fileName)
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">@L["Settings_DiskUnlinked"]</span>
+                            }
+
+                            @if (Disk.Status.CanWrite)
+                            {
+                                <span class="ms-2 small text-body-secondary">
+                                    @(DiskCoordinator.FileIsBehind
+                                        ? (Crypto.IsUnlocked || !ExportPreferences.EncryptExports
+                                            ? L["Settings_DiskBehind"].Value
+                                            : L["Settings_DiskLockedBehind"].Value)
+                                        : L["Settings_DiskUpToDate"].Value)
+                                </span>
+                            }
+                        </p>
+
+                        @if (Disk.Status.State == DiskLinkState.NeedsPermission)
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                @L["Settings_DiskNeedsPermission"]
+                            </div>
+                        }
+
+                        <div class="d-flex flex-wrap gap-2">
+                            @if (Disk.Status.State == DiskLinkState.NeedsPermission)
+                            {
+                                <button type="button" class="btn btn-primary" @onclick="ReconnectDiskAsync">
+                                    @L["Settings_DiskReconnect"]
+                                </button>
+                            }
+
+                            <button type="button" class="btn btn-outline-secondary" @onclick="LinkDiskAsync">
+                                @L["Settings_DiskChooseFile"]
+                            </button>
+
+                            @if (Disk.Status.State != DiskLinkState.Unlinked)
+                            {
+                                <button type="button" class="btn btn-outline-secondary" @onclick="UnlinkDiskAsync">
+                                    @L["Settings_DiskUnlink"]
+                                </button>
+                            }
+                        </div>
+
+                        <p class="form-text mb-0">@L["Settings_DiskInstallHint"]</p>
+                    }
+                </div>
+            </div>
+
             <div class="card mb-3">
                 <div class="card-header">
                     @L["Settings_EncryptionTitle"]
@@ -405,6 +479,33 @@
 <ConfirmDialog @ref="_confirmDialog" />
 
 @code {
+    private async Task LinkDiskAsync()
+    {
+        // Runs straight off the click on purpose: showSaveFilePicker needs a user gesture, so
+        // nothing may be awaited before it.
+        var name = (AppState.CurrentPlan?.Name ?? "cashflow-plan")
+            + (ExportPreferences.EncryptExports ? ".cfplan" : ".json");
+
+        if (await Disk.LinkAsync(name))
+        {
+            // Write at once, so the file the user just chose is not left empty.
+            await DiskCoordinator.FlushAsync();
+        }
+    }
+
+    private async Task ReconnectDiskAsync()
+    {
+        if (await Disk.ReconnectAsync())
+        {
+            await DiskCoordinator.FlushAsync();
+        }
+    }
+
+    private async Task UnlinkDiskAsync()
+    {
+        await Disk.UnlinkAsync();
+    }
+
     private async Task OnEncryptExportsChangedAsync(ChangeEventArgs e)
     {
         var enabled = e.Value is bool b && b;
@@ -442,6 +543,10 @@
         // so without this the badge below keeps showing whatever it said on first render.
         Crypto.LockStateChanged += OnCryptoStateChanged;
         ExportPreferences.Changed += OnCryptoStateChanged;
+        Disk.StatusChanged += OnCryptoStateChanged;
+        DiskCoordinator.Changed += OnCryptoStateChanged;
+
+        await Disk.RefreshAsync();
 
         var preferences = await CultureService.LoadAsync();
 
@@ -748,5 +853,7 @@
 
         Crypto.LockStateChanged -= OnCryptoStateChanged;
         ExportPreferences.Changed -= OnCryptoStateChanged;
+        Disk.StatusChanged -= OnCryptoStateChanged;
+        DiskCoordinator.Changed -= OnCryptoStateChanged;
     }
 }

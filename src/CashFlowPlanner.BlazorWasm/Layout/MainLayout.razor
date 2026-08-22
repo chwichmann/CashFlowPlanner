@@ -5,6 +5,8 @@
 
 @inject CashFlowPlanner.BlazorWasm.Services.PlanCacheCoordinator PlanCacheCoordinator
 @inject CashFlowPlanner.BlazorWasm.Services.CashFlowAppState AppState
+@inject CashFlowPlanner.BlazorWasm.Services.DiskAutoSaveCoordinator DiskCoordinator
+@inject CashFlowPlanner.BlazorWasm.Services.DiskAutoSaveService DiskAutoSave
 
 <div class="app-shell">
     <NavMenu />
@@ -54,6 +56,12 @@
         {
             return;
         }
+
+        // Start disk autosave before restoring, so a plan restored from the working copy is
+        // written to the linked file too. Reading the link status neither prompts nor touches
+        // the disk - re-granting a lapsed permission needs a click and lives in Settings.
+        DiskCoordinator.Initialize();
+        await DiskAutoSave.RefreshAsync();
 
         try
         {
