@@ -1,4 +1,5 @@
 ﻿using CashFlowPlanner.Core;
+using CashFlowPlanner.Core.Indexation;
 
 namespace CashFlowPlanner.BlazorWasm.Models;
 
@@ -36,6 +37,17 @@ public sealed class TransactionEditModel
 
     public BusinessDayAdjustment BusinessDayAdjustment { get; set; } = BusinessDayAdjustment.None;
 
+    /// <summary>
+    /// Whether this transaction follows the plan's inflation assumption, is exempt, or carries its
+    /// own rate. Rent and groceries follow the plan; a fixed-rate mortgage instalment does not; a
+    /// salary rises at its own rate.
+    /// </summary>
+    public IndexationMode IndexationMode { get; set; } = IndexationMode.PlanDefault;
+
+    public decimal? AnnualIndexationRatePercent { get; set; }
+
+    public DateOnly? IndexationBaseDate { get; set; }
+
     public string? Category { get; set; }
 
     public string? Counterparty { get; set; }
@@ -60,6 +72,9 @@ public sealed class TransactionEditModel
             IncomePersonId = transaction.IncomePersonId,
             Amount = transaction.Amount,
             Currency = transaction.Currency,
+            IndexationMode = transaction.IndexationMode,
+            AnnualIndexationRatePercent = transaction.AnnualIndexationRatePercent,
+            IndexationBaseDate = transaction.IndexationBaseDate,
             Frequency = transaction.Schedule.Frequency,
             StartDate = transaction.Schedule.StartDate,
             EndDate = transaction.Schedule.EndDate,
@@ -100,6 +115,17 @@ public sealed class TransactionEditModel
                 Month = Month,
                 BusinessDayAdjustment = BusinessDayAdjustment
             },
+            IndexationMode = IndexationMode,
+
+            // Only kept for the mode that uses it. A rate left behind by a mode the user has since
+            // changed would sit in the file looking meaningful and be ignored by the engine.
+            AnnualIndexationRatePercent = IndexationMode == IndexationMode.Custom
+                ? AnnualIndexationRatePercent
+                : null,
+            IndexationBaseDate = IndexationMode == IndexationMode.None
+                ? null
+                : IndexationBaseDate,
+
             Category = string.IsNullOrWhiteSpace(Category) ? null : Category.Trim(),
             Counterparty = string.IsNullOrWhiteSpace(Counterparty) ? null : Counterparty.Trim(),
             PaymentMethod = PaymentMethod,

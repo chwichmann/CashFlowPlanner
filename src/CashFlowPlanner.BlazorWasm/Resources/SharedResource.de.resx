@@ -2700,4 +2700,79 @@
   <data name="Warning_Occurrences" xml:space="preserve">
     <value>{0} Vorkommen, erstmals am {1}.</value>
   </data>
+  <data name="Settings_Inflation" xml:space="preserve">
+    <value>Teuerung</value>
+  </data>
+  <data name="Settings_InflationText" xml:space="preserve">
+    <value>Eine angenommene Teuerungsrate für den ganzen Plan. Sie beginnt bei null - so hat jeder Plan gerechnet, der vor dieser Einstellung entstanden ist - und eine Rate von null lässt alle Zahlen genau so, wie sie heute sind. Einzelne Transaktionen können davon abweichen oder eine eigene Rate tragen.</value>
+  </data>
+  <data name="Settings_InflationRate" xml:space="preserve">
+    <value>Jährliche Teuerungsrate</value>
+  </data>
+  <data name="Settings_InflationRateHint" xml:space="preserve">
+    <value>Der langfristige Schweizer Durchschnitt liegt bei rund 1%. Es wird nichts vorausgefüllt: Die Annahme ist Ihre, und eine von der App erfundene Rate würde jede Zahl Ihres Plans stillschweigend neu bewerten.</value>
+  </data>
+  <data name="Settings_InflationBaseDate" xml:space="preserve">
+    <value>Beträge lauten auf Geld vom</value>
+  </data>
+  <data name="Settings_InflationBaseDateHint" xml:space="preserve">
+    <value>Das Datum, in dessen Geld die Beträge Ihres Plans ausgedrückt sind - für die meisten Menschen die heutigen Franken. Erforderlich, sobald die Rate nicht null ist: Ohne dieses Datum gibt es keinen Ausgangspunkt für die Aufzinsung.</value>
+  </data>
+  <data name="Settings_InflationOff" xml:space="preserve">
+    <value>Die Teuerung ist ausgeschaltet. Alle Beträge bleiben nominal und im Plan ändert sich nichts.</value>
+  </data>
+  <data name="Settings_SaveInflation" xml:space="preserve">
+    <value>Teuerung speichern</value>
+  </data>
+  <data name="Settings_InflationSaved" xml:space="preserve">
+    <value>Die Teuerungsannahme wurde gespeichert.</value>
+  </data>
+  <data name="Settings_ErrorInflationBaseDateRequired" xml:space="preserve">
+    <value>Geben Sie an, auf welches Datum sich die Beträge des Plans beziehen. Eine Teuerungsrate braucht ein Datum, ab dem sie aufgezinst wird.</value>
+  </data>
+  <data name="Transaction_Indexation" xml:space="preserve">
+    <value>Teuerung und Indexierung</value>
+  </data>
+  <data name="Transaction_IndexationGuidance" xml:space="preserve">
+    <value>Miete, Lebensmittel und Versicherungen folgen der Rate des Plans. Eine Hypothekarrate mit fester Verzinsung oder eine fixe Prämie nicht - wählen Sie dort «nicht indexiert». Ein Lohn steigt mit seiner eigenen Rate: Wählen Sie «eigene Rate» und geben Sie eine an. Mehr ist Lohnentwicklung nicht.</value>
+  </data>
+  <data name="Transaction_IndexationMode" xml:space="preserve">
+    <value>Indexierung</value>
+  </data>
+  <data name="Transaction_IndexationPlanRate" xml:space="preserve">
+    <value>Der Plan rechnet mit {0} pro Jahr, bezogen auf Beträge per {1}.</value>
+  </data>
+  <data name="Transaction_IndexationPlanRateZero" xml:space="preserve">
+    <value>Die Teuerungsrate des Plans ist null; «Plan folgen» ändert deshalb nichts. Setzen Sie unter Einstellungen eine Rate, damit sie wirkt.</value>
+  </data>
+  <data name="Transaction_IndexationRate" xml:space="preserve">
+    <value>Eigene jährliche Rate</value>
+  </data>
+  <data name="Transaction_IndexationRateHint" xml:space="preserve">
+    <value>Wird einmal jährlich ab dem Basisdatum aufgezinst, nie pro Zahlung: Alle zwölf Belastungen eines Jahres tragen denselben Betrag.</value>
+  </data>
+  <data name="Transaction_IndexationBaseDate" xml:space="preserve">
+    <value>Betrag per</value>
+  </data>
+  <data name="Transaction_IndexationBaseDateHint" xml:space="preserve">
+    <value>Leer lassen, um das Datum des Plans zu verwenden. Ein 2024 zuletzt verhandelter Lohn lautet auf Franken von 2024, auch in einem Plan mit heutigem Basisdatum.</value>
+  </data>
+  <data name="Transaction_ErrorIndexationRateRequired" xml:space="preserve">
+    <value>Diese Transaktion verwendet eine eigene Indexierungsrate, gibt aber keine an.</value>
+  </data>
+  <data name="Enum.IndexationMode.PlanDefault" xml:space="preserve">
+    <value>Plan folgen</value>
+  </data>
+  <data name="Enum.IndexationMode.None" xml:space="preserve">
+    <value>Nicht indexiert</value>
+  </data>
+  <data name="Enum.IndexationMode.Custom" xml:space="preserve">
+    <value>Eigene Rate</value>
+  </data>
+  <data name="Enum.AmountBasis.Nominal" xml:space="preserve">
+    <value>Nominal</value>
+  </data>
+  <data name="Enum.AmountBasis.Real" xml:space="preserve">
+    <value>Real (heutiges Geld)</value>
+  </data>
 </root>

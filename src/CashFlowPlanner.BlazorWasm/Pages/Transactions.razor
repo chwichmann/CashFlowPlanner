@@ -2,6 +2,7 @@
 
 @using Microsoft.Extensions.Localization
 @using CashFlowPlanner.Core
+@using CashFlowPlanner.Core.Indexation
 @using CashFlowPlanner.Core.People
 @using CashFlowPlanner.BlazorWasm.Models
 @using CashFlowPlanner.BlazorWasm.Services
@@ -362,6 +363,88 @@
                                       @bind="edit.Notes"></textarea>
                         </FormField>
                     </div>
+
+                    @*
+                        Indexation, behind a disclosure: the great majority of transactions want
+                        the default, and three more fields on the face of an already long form
+                        would cost every user something to spare a few the trouble.
+
+                        <details> rather than a Bootstrap collapse - it needs no JavaScript, it is
+                        keyboard-operable and screen-reader-announced without any aria of its own,
+                        and it prints open.
+                    *@
+                    <div class="col-12">
+                        <hr />
+
+                        <details class="transaction-indexation">
+                            <summary class="h5 d-inline-block">@L["Transaction_Indexation"]</summary>
+
+                            <p class="text-muted mt-2">@L["Transaction_IndexationGuidance"]</p>
+
+                            @if (plan.Inflation.AnnualRatePercent == 0m)
+                            {
+                                <div class="alert alert-light" role="status">
+                                    @L["Transaction_IndexationPlanRateZero"]
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-light" role="status">
+                                    @Text(
+                                        "Transaction_IndexationPlanRate",
+                                        Formatter.Percent(plan.Inflation.AnnualRatePercent),
+                                        Formatter.Date(plan.Inflation.BaseDate))
+                                </div>
+                            }
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <FormField Label="@L["Transaction_IndexationMode"]" CssClass="mb-0">
+                                        <select id="@context.Id"
+                                                aria-describedby="@context.DescribedBy"
+                                                class="form-select"
+                                                @bind="edit.IndexationMode">
+                                            @foreach (var mode in Enum.GetValues<IndexationMode>())
+                                            {
+                                                <option value="@mode">@EnumL.Translate(mode)</option>
+                                            }
+                                        </select>
+                                    </FormField>
+                                </div>
+
+                                @* Shown only where it means something, and required there. *@
+                                @if (edit.IndexationMode == IndexationMode.Custom)
+                                {
+                                    <div class="col-md-4">
+                                        <FormField Label="@L["Transaction_IndexationRate"]"
+                                                   Required="true"
+                                                   Hint="@Text("Transaction_IndexationRateHint")"
+                                                   CssClass="mb-0">
+                                            <MoneyInput Id="@context.Id"
+                                                        AriaDescribedBy="@context.DescribedBy"
+                                                        Suffix="%"
+                                                        @bind-Value="edit.AnnualIndexationRatePercent" />
+                                        </FormField>
+                                    </div>
+                                }
+
+                                @if (edit.IndexationMode != IndexationMode.None)
+                                {
+                                    <div class="col-md-4">
+                                        <FormField Label="@L["Transaction_IndexationBaseDate"]"
+                                                   Hint="@Text("Transaction_IndexationBaseDateHint")"
+                                                   CssClass="mb-0">
+                                            <input id="@context.Id"
+                                                   aria-describedby="@context.DescribedBy"
+                                                   type="date"
+                                                   class="form-control"
+                                                   @bind="edit.IndexationBaseDate" />
+                                        </FormField>
+                                    </div>
+                                }
+                            </div>
+                        </details>
+                    </div>
                 </div>
             </AppModal>
         }
@@ -675,6 +758,14 @@
             if (_editModel.Interval < 1)
             {
                 throw new InvalidOperationException(Text("Transaction_ErrorIntervalGreaterOrEqualOne"));
+            }
+
+            // Core rejects this too, from inside TransactionDefinition.Validate and in English.
+            // Said here it names the field the user has to go back and fill in.
+            if (_editModel.IndexationMode == IndexationMode.Custom &&
+                _editModel.AnnualIndexationRatePercent is null)
+            {
+                throw new InvalidOperationException(Text("Transaction_ErrorIndexationRateRequired"));
             }
 
             var transaction = _editModel.ToTransaction();

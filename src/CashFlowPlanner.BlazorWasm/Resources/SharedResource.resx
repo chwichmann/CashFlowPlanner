@@ -2700,4 +2700,79 @@
   <data name="Warning_Occurrences" xml:space="preserve">
     <value>{0} occurrences, first on {1}.</value>
   </data>
+  <data name="Settings_Inflation" xml:space="preserve">
+    <value>Inflation</value>
+  </data>
+  <data name="Settings_InflationText" xml:space="preserve">
+    <value>One assumed rate of price inflation for the whole plan. It starts at zero, which is what every plan written before this existed assumed, and a zero rate leaves every figure exactly as it is today. Individual transactions can opt out of it or carry their own rate.</value>
+  </data>
+  <data name="Settings_InflationRate" xml:space="preserve">
+    <value>Annual inflation rate</value>
+  </data>
+  <data name="Settings_InflationRateHint" xml:space="preserve">
+    <value>The Swiss long-run average is around 1%. No figure is filled in for you: the assumption is yours, and a rate this app invented would quietly restate every number in your plan.</value>
+  </data>
+  <data name="Settings_InflationBaseDate" xml:space="preserve">
+    <value>Amounts are stated in the money of</value>
+  </data>
+  <data name="Settings_InflationBaseDateHint" xml:space="preserve">
+    <value>The date the amounts in your plan are expressed in - today's francs, for most people. Required as soon as the rate is not zero: without it there is nothing to compound from.</value>
+  </data>
+  <data name="Settings_InflationOff" xml:space="preserve">
+    <value>Inflation is off. Every amount stays nominal and nothing in the plan changes.</value>
+  </data>
+  <data name="Settings_SaveInflation" xml:space="preserve">
+    <value>Save inflation</value>
+  </data>
+  <data name="Settings_InflationSaved" xml:space="preserve">
+    <value>The inflation assumption was saved.</value>
+  </data>
+  <data name="Settings_ErrorInflationBaseDateRequired" xml:space="preserve">
+    <value>State the date the plan's amounts are expressed in. An inflation rate needs a date to compound from.</value>
+  </data>
+  <data name="Transaction_Indexation" xml:space="preserve">
+    <value>Inflation and indexation</value>
+  </data>
+  <data name="Transaction_IndexationGuidance" xml:space="preserve">
+    <value>Rent, groceries and insurance follow the plan's rate. A fixed-rate mortgage instalment or a fixed-term premium does not - set it to "not indexed". A salary rises at its own rate: choose "own rate" and give it one. That is all salary progression is.</value>
+  </data>
+  <data name="Transaction_IndexationMode" xml:space="preserve">
+    <value>Indexation</value>
+  </data>
+  <data name="Transaction_IndexationPlanRate" xml:space="preserve">
+    <value>The plan assumes {0} a year, on amounts stated as of {1}.</value>
+  </data>
+  <data name="Transaction_IndexationPlanRateZero" xml:space="preserve">
+    <value>The plan's inflation rate is zero, so "follow plan" changes nothing. Set a rate under Settings to make it do something.</value>
+  </data>
+  <data name="Transaction_IndexationRate" xml:space="preserve">
+    <value>Own annual rate</value>
+  </data>
+  <data name="Transaction_IndexationRateHint" xml:space="preserve">
+    <value>Compounded once a year from the base date, never per payment: all twelve charges of a year carry the same amount.</value>
+  </data>
+  <data name="Transaction_IndexationBaseDate" xml:space="preserve">
+    <value>Amount stated as of</value>
+  </data>
+  <data name="Transaction_IndexationBaseDateHint" xml:space="preserve">
+    <value>Leave empty to use the plan's date. A salary last negotiated in 2024 is stated in 2024 francs even in a plan based on today.</value>
+  </data>
+  <data name="Transaction_ErrorIndexationRateRequired" xml:space="preserve">
+    <value>This transaction uses its own indexation rate but does not state one.</value>
+  </data>
+  <data name="Enum.IndexationMode.PlanDefault" xml:space="preserve">
+    <value>Follow plan</value>
+  </data>
+  <data name="Enum.IndexationMode.None" xml:space="preserve">
+    <value>Not indexed</value>
+  </data>
+  <data name="Enum.IndexationMode.Custom" xml:space="preserve">
+    <value>Own rate</value>
+  </data>
+  <data name="Enum.AmountBasis.Nominal" xml:space="preserve">
+    <value>Nominal</value>
+  </data>
+  <data name="Enum.AmountBasis.Real" xml:space="preserve">
+    <value>Real (today's money)</value>
+  </data>
 </root>

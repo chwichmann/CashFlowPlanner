@@ -84,6 +84,20 @@ public sealed class DiskAutoSaveService : IDiskAutoSave, IAsyncDisposable
 
     private sealed record JsStatus(string State, string? FileName);
 
+    /// <summary>
+    /// The status the module reported, or "unsupported" when it reported nothing.
+    ///
+    /// <c>InvokeAsync&lt;JsStatus&gt;</c> answers null whenever the module resolves without a
+    /// value - a browser without the File System Access API, an interop layer that stubs the
+    /// call - and every call site here dereferenced it. That is a NullReferenceException out of
+    /// OnInitializedAsync, which takes the whole Settings page down rather than degrading to the
+    /// state the enum already has a name for.
+    /// </summary>
+    private static DiskLinkStatus ToStatus(JsStatus? status) =>
+        status is null
+            ? new DiskLinkStatus(DiskLinkState.Unsupported, null)
+            : new DiskLinkStatus(Parse(status.State), status.FileName);
+
     private static DiskLinkState Parse(string state) => state switch
     {
         "granted" => DiskLinkState.Granted,
@@ -98,9 +112,9 @@ public sealed class DiskAutoSaveService : IDiskAutoSave, IAsyncDisposable
         try
         {
             var module = await ModuleAsync();
-            var status = await module.InvokeAsync<JsStatus>("status");
+            var status = await module.InvokeAsync<JsStatus?>("status");
 
-            Status = new DiskLinkStatus(Parse(status.State), status.FileName);
+            Status = ToStatus(status);
         }
         catch (JSException)
         {
@@ -114,9 +128,9 @@ public sealed class DiskAutoSaveService : IDiskAutoSave, IAsyncDisposable
     public async Task<bool> LinkAsync(string suggestedName)
     {
         var module = await ModuleAsync();
-        var status = await module.InvokeAsync<JsStatus>("link", suggestedName);
+        var status = await module.InvokeAsync<JsStatus?>("link", suggestedName);
 
-        Status = new DiskLinkStatus(Parse(status.State), status.FileName);
+        Status = ToStatus(status);
         LastFailure = null;
 
         StatusChanged?.Invoke();
@@ -128,9 +142,9 @@ public sealed class DiskAutoSaveService : IDiskAutoSave, IAsyncDisposable
     public async Task<bool> ReconnectAsync()
     {
         var module = await ModuleAsync();
-        var status = await module.InvokeAsync<JsStatus>("reconnect");
+        var status = await module.InvokeAsync<JsStatus?>("reconnect");
 
-        Status = new DiskLinkStatus(Parse(status.State), status.FileName);
+        Status = ToStatus(status);
 
         if (Status.CanWrite)
         {
@@ -145,9 +159,9 @@ public sealed class DiskAutoSaveService : IDiskAutoSave, IAsyncDisposable
     public async Task UnlinkAsync()
     {
         var module = await ModuleAsync();
-        var status = await module.InvokeAsync<JsStatus>("unlink");
+        var status = await module.InvokeAsync<JsStatus?>("unlink");
 
-        Status = new DiskLinkStatus(Parse(status.State), status.FileName);
+        Status = ToStatus(status);
         LastFailure = null;
 
         StatusChanged?.Invoke();
