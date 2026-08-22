@@ -162,9 +162,13 @@ public sealed class CsvStatementParser
             return false;
         }
 
-        var head = text.Length <= DelimiterDetectionLength
-            ? text
-            : text[..DelimiterDetectionLength];
+        // The byte-order mark is stripped first: it is not whitespace to .NET, so leaving it in
+        // front of ":20:" would stop the MT940 veto from matching and offer a real MT940
+        // statement to the CSV sniff.
+        var head = (text.Length <= DelimiterDetectionLength
+                ? text
+                : text[..DelimiterDetectionLength])
+            .TrimStart('\uFEFF');
 
         if (Mt940MarkerRegex.IsMatch(head))
         {

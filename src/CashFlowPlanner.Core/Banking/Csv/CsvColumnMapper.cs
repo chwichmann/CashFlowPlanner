@@ -33,6 +33,23 @@ public static class CsvColumnMapper
     private const int WholeWordScore = 10_000;
     private const int SubstringScore = 100;
 
+    /// <summary>An alias with its normalisation and tokenisation done once, at type load.</summary>
+    private sealed record NormalizedAlias(string Text, IReadOnlyList<string> Tokens);
+
+    /// <summary>
+    /// The two hundred-odd built-in aliases, normalised once.
+    ///
+    /// <para>
+    /// Not a micro-optimisation. Finding the header means resolving up to forty candidate rows
+    /// against four candidate delimiters, and the content sniff does it again - so a normalisation
+    /// done per comparison runs hundreds of thousands of times per upload, each one a
+    /// <c>Normalize(FormD)</c> and a <see cref="StringBuilder"/>. That is free on a desktop and
+    /// distinctly not free in a WebAssembly runtime on a phone, which is where this app runs.
+    /// </para>
+    /// </summary>
+    private static readonly IReadOnlyDictionary<CsvColumnRole, IReadOnlyList<NormalizedAlias>>
+        DefaultNormalizedAliases = NormalizeAliases(CsvColumnAliases.Default);
+
     public static CsvColumnMapping Resolve(
         IReadOnlyList<string> headers,
         CsvStatementProfile profile)
@@ -100,59 +117,71 @@ public static class CsvColumnMapper
         };
     }
 
-    private static IReadOnlyDictionary<CsvColumnRole, IReadOnlyList<string>> BuildAliases(
+    private static IReadOnlyDictionary<CsvColumnRole, IReadOnlyList<NormalizedAlias>> BuildAliases(
         CsvStatementProfile profile)
     {
         if (profile.ColumnHeaderOverrides.Count == 0)
         {
-            return CsvColumnAliases.Default;
+            return DefaultNormalizedAliases;
         }
 
-        var merged = new Dictionary<CsvColumnRole, IReadOnlyList<string>>(
-            CsvColumnAliases.Default);
+        var merged = new Dictionary<CsvColumnRole, IReadOnlyList<NormalizedAlias>>(
+            DefaultNormalizedAliases);
 
         foreach (var (role, extraAliases) in profile.ColumnHeaderOverrides)
         {
             // Profile aliases are prepended, not substituted: an author naming their bank's
             // odd header does not want to lose the twenty ordinary spellings alongside it.
+            var normalizedExtras = NormalizeAliasList(extraAliases);
+
             merged[role] = merged.TryGetValue(role, out var existing)
-                ? extraAliases.Concat(existing).ToList()
-                : extraAliases;
+                ? normalizedExtras.Concat(existing).ToList()
+                : normalizedExtras;
         }
 
         return merged;
     }
 
+    private static IReadOnlyDictionary<CsvColumnRole, IReadOnlyList<NormalizedAlias>> NormalizeAliases(
+        IReadOnlyDictionary<CsvColumnRole, IReadOnlyList<string>> aliases)
+    {
+        return aliases.ToDictionary(
+            x => x.Key,
+            x => NormalizeAliasList(x.Value));
+    }
+
+    private static IReadOnlyList<NormalizedAlias> NormalizeAliasList(IReadOnlyList<string> aliases)
+    {
+        return aliases
+            .Select(NormalizeHeader)
+            .Where(x => x.Length > 0)
+            .Select(x => new NormalizedAlias(x, Tokenize(x)))
+            .ToList();
+    }
+
     private static int ScoreRole(
         string normalizedHeader,
         IReadOnlyList<string> headerTokens,
-        IReadOnlyList<string> roleAliases)
+        IReadOnlyList<NormalizedAlias> roleAliases)
     {
         var best = 0;
 
         foreach (var alias in roleAliases)
         {
-            var normalizedAlias = NormalizeHeader(alias);
-
-            if (normalizedAlias.Length == 0)
-            {
-                continue;
-            }
-
             int score;
 
-            if (string.Equals(normalizedHeader, normalizedAlias, StringComparison.Ordinal))
+            if (string.Equals(normalizedHeader, alias.Text, StringComparison.Ordinal))
             {
-                score = ExactScore + normalizedAlias.Length;
+                score = ExactScore + alias.Text.Length;
             }
-            else if (ContainsTokenSequence(headerTokens, Tokenize(normalizedAlias)))
+            else if (ContainsTokenSequence(headerTokens, alias.Tokens))
             {
-                score = WholeWordScore + normalizedAlias.Length;
+                score = WholeWordScore + alias.Text.Length;
             }
-            else if (normalizedAlias.Length >= MinimumSubstringAliasLength
-                && normalizedHeader.Contains(normalizedAlias, StringComparison.Ordinal))
+            else if (alias.Text.Length >= MinimumSubstringAliasLength
+                && normalizedHeader.Contains(alias.Text, StringComparison.Ordinal))
             {
-                score = SubstringScore + normalizedAlias.Length;
+                score = SubstringScore + alias.Text.Length;
             }
             else
             {

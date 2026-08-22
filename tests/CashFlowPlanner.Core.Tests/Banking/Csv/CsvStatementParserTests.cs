@@ -361,4 +361,46 @@ public sealed class CsvStatementParserTests
 
         Assert.False(CsvStatementParser.LooksLikeCsv("just some prose, with a comma"));
     }
+
+    /// <summary>
+    /// A byte-order mark is not whitespace to .NET, so it would otherwise sit between the start
+    /// of the string and the ":20:" the MT940 veto looks for - and an MT940 statement saved by a
+    /// tool that added a BOM would be offered to the CSV sniff.
+    /// </summary>
+    [Fact]
+    public void LooksLikeCsv_StillRejectsMt940BehindAByteOrderMark()
+    {
+        Assert.False(
+            CsvStatementParser.LooksLikeCsv(
+                "\uFEFF:20:REF\n:25:CH2100210210108311400\n:60F:C260101CHF4042,62\n"));
+    }
+
+    /// <summary>
+    /// A year of transactions in one file. Nothing here asserts a duration - a timing assertion
+    /// in a test suite is a flake waiting to happen - but the whole-column decisions (decimal
+    /// separator, date format, debit sign) each walk every row, and running them at a realistic
+    /// size is what would catch one of them being quadratic.
+    /// </summary>
+    [Fact]
+    public void Parse_HandlesAFullYearOfTransactions()
+    {
+        var lines = new List<string> { "Datum;Buchungstext;Betrag" };
+
+        for (var index = 0; index < 2000; index++)
+        {
+            var day = (index % 28) + 1;
+            var month = (index % 12) + 1;
+
+            lines.Add($"{day:00}.{month:00}.2026;Buchung {index};-{index % 90 + 1}.55");
+        }
+
+        var text = string.Join("\r\n", lines) + "\r\n";
+
+        var file = new CsvStatementParser().Parse(
+            System.Text.Encoding.UTF8.GetBytes(text));
+
+        Assert.Equal(2000, file.Rows.Count);
+        Assert.Empty(file.Issues);
+        Assert.Equal("d.M.yyyy", file.DateFormat);
+    }
 }
