@@ -1,0 +1,171 @@
+@namespace CashFlowPlanner.BlazorWasm.Tests.Components
+@using Microsoft.Extensions.DependencyInjection
+@inherits ComponentTestBase
+
+@*
+    PassphraseDialog gates encryption, and a forgotten passphrase makes a plan unreadable by
+    anyone. Rebuilding it on AppModal must not have loosened any of that, so the demands are
+    pinned down here rather than eyeballed.
+*@
+
+@code {
+    public PassphraseDialogTests()
+    {
+        Services.AddSingleton<PassphrasePromptService>();
+    }
+
+    [Fact]
+    public void Shows_nothing_when_nobody_is_asking()
+    {
+        var cut = Render<PassphraseDialog>();
+
+        Assert.Empty(cut.FindAll("div.modal"));
+    }
+
+    [Fact]
+    public async Task Unlocking_asks_once_and_submits_on_a_single_passphrase()
+    {
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        var answer = await RequestAsync(cut, prompt, PassphrasePromptMode.Unlock);
+
+        var fields = cut.FindAll("input[type=password]");
+
+        Assert.Single(fields);
+
+        fields[0].Input("hunter2");
+        cut.Find("div.modal-footer button.btn-primary").Click();
+
+        Assert.Equal("hunter2", await answer);
+    }
+
+    [Fact]
+    public async Task Creating_demands_the_passphrase_twice_and_the_acknowledgement()
+    {
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        await RequestAsync(cut, prompt, PassphrasePromptMode.Create);
+
+        var fields = cut.FindAll("input[type=password]");
+
+        Assert.Equal(2, fields.Count);
+        Assert.True(Commit(cut).HasAttribute("disabled"));
+
+        // First field only: not enough.
+        cut.FindAll("input[type=password]")[0].Input("hunter2");
+        Assert.True(Commit(cut).HasAttribute("disabled"));
+
+        // Both fields, still unacknowledged: not enough.
+        cut.FindAll("input[type=password]")[1].Input("hunter2");
+        Assert.True(Commit(cut).HasAttribute("disabled"));
+
+        // Acknowledged: now it commits.
+        cut.Find("input[type=checkbox]").Change(true);
+        Assert.False(Commit(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Creating_refuses_a_mismatched_confirmation()
+    {
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        await RequestAsync(cut, prompt, PassphrasePromptMode.Create);
+
+        cut.FindAll("input[type=password]")[0].Input("hunter2");
+        cut.FindAll("input[type=password]")[1].Input("hunter3");
+        cut.Find("input[type=checkbox]").Change(true);
+
+        Assert.True(Commit(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Cancelling_answers_null_rather_than_leaving_the_caller_waiting()
+    {
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        var answer = await RequestAsync(cut, prompt, PassphrasePromptMode.Unlock);
+
+        cut.Find("div.modal-footer button.btn-outline-secondary").Click();
+
+        Assert.Null(await answer);
+    }
+
+    [Fact]
+    public async Task Escape_cancels()
+    {
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        var answer = await RequestAsync(cut, prompt, PassphrasePromptMode.Unlock);
+
+        cut.Find("div.modal").KeyDown(Key.Escape);
+
+        Assert.Null(await answer);
+    }
+
+    [Fact]
+    public async Task Offers_no_header_close_button()
+    {
+        // A dialog that gates encryption is answered or cancelled, not dismissed. AppModal's
+        // default close button is deliberately turned off.
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        await RequestAsync(cut, prompt, PassphrasePromptMode.Unlock);
+
+        Assert.Empty(cut.FindAll("button.btn-close"));
+    }
+
+    [Fact]
+    public async Task Never_lets_a_passphrase_survive_into_the_next_prompt()
+    {
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        await RequestAsync(cut, prompt, PassphrasePromptMode.Unlock);
+        cut.Find("input[type=password]").Input("hunter2");
+
+        await RequestAsync(cut, prompt, PassphrasePromptMode.Unlock, "Wrong passphrase.");
+
+        Assert.Equal(string.Empty, cut.Find("input[type=password]").GetAttribute("value") ?? string.Empty);
+        Assert.True(Commit(cut).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Labels_every_field_it_shows()
+    {
+        var prompt = Services.GetRequiredService<PassphrasePromptService>();
+        var cut = Render<PassphraseDialog>();
+
+        await RequestAsync(cut, prompt, PassphrasePromptMode.Create);
+
+        var controls = cut.FindAll("div.modal input").ToList();
+        var labelTargets = cut.FindAll("div.modal label").Select(l => l.GetAttribute("for")).ToList();
+
+        Assert.Equal(3, controls.Count);
+        Assert.All(controls, control => Assert.Contains(control.Id, labelTargets));
+    }
+
+    private static AngleSharp.Dom.IElement Commit(IRenderedComponent<PassphraseDialog> cut) =>
+        cut.Find("div.modal-footer button.btn-primary");
+
+    private static async Task<Task<string?>> RequestAsync(
+        IRenderedComponent<PassphraseDialog> cut,
+        PassphrasePromptService prompt,
+        PassphrasePromptMode mode,
+        string? errorMessage = null)
+    {
+        Task<string?> answer = Task.FromResult<string?>(null);
+
+        await cut.InvokeAsync(() =>
+        {
+            answer = prompt.RequestAsync(mode, fileName: "plan.cfplan", errorMessage: errorMessage);
+        });
+
+        return answer;
+    }
+}

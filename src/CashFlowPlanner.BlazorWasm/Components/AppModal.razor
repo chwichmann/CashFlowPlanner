@@ -223,8 +223,11 @@
     /// <summary>Sends focus to the top of the dialog: the caller's choice, or its first control.</summary>
     private async Task FocusFirstAsync()
     {
-        var target = InitialFocus
-            ?? FirstOf(_closeButton, _cancelButton, _confirmButton)
+        // An InitialFocus captured with @ref is still empty on the render that opens the dialog -
+        // the caller's field is only assigned once the element exists. Falling through to the
+        // chrome then is right: focus lands inside the dialog either way, which is the thing that
+        // matters.
+        var target = FirstOf(InitialFocus ?? default, _closeButton, _cancelButton, _confirmButton)
             ?? _dialog;
 
         await FocusAsync(target);
