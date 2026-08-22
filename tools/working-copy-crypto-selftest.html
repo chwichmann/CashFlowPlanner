@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Working-copy crypto self-test</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
+  li { margin: .2rem 0; }
+  .pass { color: #15803d; }
+  .fail { color: #b91c1c; font-weight: 700; }
+  code { background: #f1f5f9; padding: 0 .25rem; }
+  #summary { font-size: 1.1rem; font-weight: 700; margin-top: 1rem; }
+  table { border-collapse: collapse; margin-top: 1rem; }
+  th, td { border: 1px solid #cbd5e1; padding: .25rem .6rem; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  .note { background: #fef3c7; padding: .6rem .8rem; border-radius: .4rem; }
+</style>
+</head>
+<body>
+<h1>Working-copy crypto self-test</h1>
+<p>
+  Exercises <code>wwwroot/js/working-copy-crypto.js</code> — the device-key encryption for
+  the plan working copy in <code>localStorage</code> — in a real browser, because Web Crypto
+  and IndexedDB cannot be reached from the xUnit suite. Serve the repository root over HTTP
+  and open this file.
+</p>
+<p class="note">
+  <strong>Threat model.</strong> This protects the bytes at rest in the browser profile: a
+  lost laptop, a synced backup, a shared machine. It protects <em>nothing</em> against script
+  running on the origin — this page is itself the proof, since it simply calls the module and
+  gets plaintext back. Do not read any assertion below as an XSS defence.
+</p>
+<p class="note">
+  This page creates and deletes a device key in <em>this origin's</em> IndexedDB. Serve it from
+  the repository root (e.g. <code>python3 -m http.server 8080</code>), not from the app's own
+  origin, so it never touches a real user's key.
+</p>
+<ul id="results"></ul>
+<div id="summary">running…</div>
+<div id="sizes"></div>
+
+<script type="module">
+const MODULE_URL = new URL(
+  "../src/CashFlowPlanner.BlazorWasm/wwwroot/js/working-copy-crypto.js",
+  import.meta.url);
+
+// A fresh module instance stands in for a page reload: module state (the cached key
+// promise) resets, IndexedDB does not.
+let reloads = 0;
+const freshModule = () => import(`${MODULE_URL}?reload=${++reloads}`);
+
+let C = await freshModule();
+
+const results = document.getElementById("results");
+let passed = 0, failed = 0;
+
+async function check(name, fn) {
+  try {
+    await fn();
+    passed++;
+    results.insertAdjacentHTML("beforeend", `<li class="pass">PASS — ${name}</li>`);
+  } catch (e) {
+    failed++;
+    results.insertAdjacentHTML("beforeend", `<li class="fail">FAIL — ${name}: ${e.message}</li>`);
+  }
+}
+
+function assert(cond, msg) { if (!cond) throw new Error(msg || "assertion failed"); }
+
+const PLAN = JSON.stringify({
+  schemaVersion: 1,
+  name: "Test Plan",
+  accounts: [{ name: "Main Account", openingBalance: 87654.32 }],
+  transactions: [{ name: "Salary", amount: 9450.55 }]
+});
+
+await check("this browser can do it at all", async () => {
+  assert(C.isSupported(), "isSupported() said no — IndexedDB or Web Crypto is missing");
+});
+
+await check("round-trips a working copy unchanged", async () => {
+  const stored = await C.protect(PLAN);
+  assert(C.isEncrypted(stored), "protect() did not produce an envelope");
+  assert(await C.unprotect(stored) === PLAN, "the decrypted text differs from the original");
+});
+
+await check("the plan is not present in the stored value", async () => {
+  const stored = await C.protect(PLAN);
+  assert(!stored.includes("Test Plan"), "the plan name leaked into localStorage");
+  assert(!stored.includes("87654.32"), "an account balance leaked into localStorage");
+  assert(!stored.includes("9450.55"), "a salary leaked into localStorage");
+  assert(!stored.includes("Main Account"), "an account name leaked into localStorage");
+  assert(!stored.includes("schemaVersion"), "plan structure leaked into localStorage");
+});
+
+await check("every write uses a fresh IV", async () => {
+  const a = await C.protect(PLAN);
+  const b = await C.protect(PLAN);
+  const iv = s => s.split(":")[1];
+  assert(iv(a) !== iv(b), "the IV was reused — AES-GCM under a long-lived key is broken by this");
+  assert(a !== b, "identical ciphertext for the same input, so the IV cannot be fresh");
+});
+
+await check("a tampered ciphertext is refused, not silently accepted", async () => {
+  const stored = await C.protect(PLAN);
+  const [prefix, iv, ciphertext] = stored.split(":");
+  const bytes = atob(ciphertext);
+  const flipped = String.fromCharCode(bytes.charCodeAt(0) ^ 0x01) + bytes.slice(1);
+  const tampered = `${prefix}:${iv}:${btoa(flipped)}`;
+  assert(await C.unprotect(tampered) === null, "a flipped ciphertext bit went undetected");
+});
+
+await check("a truncated envelope is refused", async () => {
+  const stored = await C.protect(PLAN);
+  assert(await C.unprotect(stored.slice(0, stored.length - 8)) === null, "truncation went undetected");
+  assert(await C.unprotect("cfpwc1:") === null, "an empty envelope was accepted");
+  assert(await C.unprotect("cfpwc1:garbage") === null, "a malformed envelope was accepted");
+});
+
+await check("plaintext from before this feature passes through (migration)", async () => {
+  assert(await C.unprotect(PLAN) === PLAN, "a pre-migration plaintext working copy was lost");
+  assert(!C.isEncrypted(PLAN), "plaintext JSON was mistaken for an envelope");
+  assert(await C.unprotect("") === null, "an empty value should read as 'no working copy'");
+  assert(await C.unprotect(null) === null, "a missing value should read as 'no working copy'");
+});
+
+await check("the key survives a page reload, without any passphrase", async () => {
+  const stored = await C.protect(PLAN);
+  const afterReload = await freshModule();
+  assert(await afterReload.unprotect(stored) === PLAN,
+    "the working copy could not be restored after a reload — this is the whole point of a device key");
+});
+
+await check("the device key is non-extractable and cannot be read out", async () => {
+  await C.protect(PLAN);   // make sure a key exists
+
+  const db = await new Promise((resolve, reject) => {
+    const request = indexedDB.open("cashflowplanner-keys", 1);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  const key = await new Promise((resolve, reject) => {
+    const request = db.transaction("device-keys", "readonly")
+      .objectStore("device-keys").get("working-copy-v1");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+
+  assert(key instanceof CryptoKey, "the stored value is not a CryptoKey — raw bytes on disk?");
+  assert(key.extractable === false, "the device key is extractable, so its bytes can be lifted out");
+  assert(key.algorithm.name === "AES-GCM" && key.algorithm.length === 256,
+    `unexpected algorithm: ${JSON.stringify(key.algorithm)}`);
+
+  let exported = false;
+  try { await crypto.subtle.exportKey("raw", key); exported = true; } catch { /* expected */ }
+  assert(!exported, "the key material could be exported — it must never leave the key store");
+});
+
+await check("losing the device key loses the working copy, quietly", async () => {
+  const stored = await C.protect(PLAN);
+  await C.deleteDeviceKey();
+
+  C = await freshModule();
+  assert(await C.unprotect(stored) === null,
+    "an envelope decrypted after its key was deleted — the key is not doing anything");
+
+  // And the app keeps working: a new key is minted for the next write.
+  const rewritten = await C.protect(PLAN);
+  assert(await C.unprotect(rewritten) === PLAN, "no new key was generated after deletion");
+});
+
+await check("handles a large plan and unicode", async () => {
+  const big = JSON.stringify({ notes: "äöü ÄÖÜ é 🏦 ".repeat(20000), n: 42 });
+  const stored = await C.protect(big);
+  assert(await C.unprotect(stored) === big, "a large/unicode payload did not round-trip");
+});
+
+// ---------------------------------------------------------------------------
+// Size overhead. Base64 costs ~33%, and localStorage is ~5 MB per origin, so the
+// number belongs in front of whoever is reviewing this rather than in a footnote.
+// ---------------------------------------------------------------------------
+await check("measures the size overhead on a realistic plan", async () => {
+  const sample = await (await fetch(new URL("../samples/private-cashflow.sample.json", import.meta.url))).json();
+
+  // Scale the sample up to a realistic household: ~200 transactions, 8 accounts.
+  const scaled = structuredClone(sample);
+  scaled.transactions = [];
+  for (let i = 0; scaled.transactions.length < 200; i++) {
+    for (const t of sample.transactions) {
+      const copy = structuredClone(t);
+      copy.id = crypto.randomUUID();
+      copy.name = `${t.name} ${i}`;
+      scaled.transactions.push(copy);
+      if (scaled.transactions.length >= 200) break;
+    }
+  }
+  scaled.accounts = [];
+  for (let i = 0; scaled.accounts.length < 8; i++) {
+    for (const a of sample.accounts) {
+      const copy = structuredClone(a);
+      copy.id = crypto.randomUUID();
+      copy.name = `${a.name} ${i}`;
+      scaled.accounts.push(copy);
+      if (scaled.accounts.length >= 8) break;
+    }
+  }
+
+  const rows = [];
+  for (const [label, json] of [
+    ["sample plan as shipped", JSON.stringify(sample)],
+    ["~200 transactions, 8 accounts", JSON.stringify(scaled)]
+  ]) {
+    const stored = await C.protect(json);
+    rows.push({
+      label,
+      plain: json.length,
+      encrypted: stored.length,
+      overhead: ((stored.length / json.length - 1) * 100)
+    });
+  }
+
+  const kib = n => (n / 1024).toFixed(1) + " KiB";
+  document.getElementById("sizes").innerHTML = `
+    <h2>Size overhead</h2>
+    <table>
+      <tr><th>plan</th><th>plaintext</th><th>encrypted</th><th>overhead</th>
+          <th>with .prev</th><th>% of a 5 MB quota</th></tr>
+      ${rows.map(r => `<tr>
+        <td>${r.label}</td>
+        <td>${kib(r.plain)}</td>
+        <td>${kib(r.encrypted)}</td>
+        <td>+${r.overhead.toFixed(1)}%</td>
+        <td>${kib(r.encrypted * 2)}</td>
+        <td>${((r.encrypted * 2) / (5 * 1024 * 1024) * 100).toFixed(2)}%</td>
+      </tr>`).join("")}
+    </table>
+    <p>
+      Characters, which is what a <code>localStorage</code> quota counts. The plan and its
+      <code>.prev</code> recovery copy are both stored, hence the doubled column.
+    </p>`;
+
+  window.__sizes = rows;
+
+  // Base64 of (plaintext + 16-byte GCM tag) plus a 24-char header. Anything much above
+  // 34% means something is wrapping the payload that should not be.
+  for (const r of rows) {
+    assert(r.overhead < 36, `${r.label}: overhead of ${r.overhead.toFixed(1)}% is larger than base64 alone`);
+  }
+});
+
+document.getElementById("summary").textContent = `${passed} passed, ${failed} failed`;
+window.__selftest = { passed, failed };
+</script>
+</body>
+</html>
