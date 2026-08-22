@@ -1,0 +1,114 @@
+@using System.Globalization
+@using CashFlowPlanner.BlazorWasm.Components.Charts
+@inherits ComponentTestBase
+
+@code {
+    // SVG geometry must never be culture-formatted. de-DE is one of the four regions
+    // offered in Settings, and its decimal separator is a comma - so "123.45,67.89"
+    // became "123,45,67,89" and the polyline parser read four coordinates instead of
+    // two pairs. The Swiss cultures use a period, which is why this survived so long:
+    // it is invisible to anyone testing in de-CH or en-CH.
+
+    private static IReadOnlyList<TimeSeriesPoint> Points() =>
+    [
+        new TimeSeriesPoint(new DateOnly(2026, 1, 1), 1000.55m),
+        new TimeSeriesPoint(new DateOnly(2026, 2, 1), 2500.25m),
+        new TimeSeriesPoint(new DateOnly(2026, 3, 1), 1750.75m),
+        new TimeSeriesPoint(new DateOnly(2026, 4, 1), 3200.10m)
+    ];
+
+    private IRenderedComponent<SvgLineChart> RenderChart()
+    {
+        return Render<SvgLineChart>(p => p
+            .Add(c => c.Points, Points())
+            .Add(c => c.Currency, "CHF"));
+    }
+
+    [Theory]
+    [InlineData("de-DE")]   // comma decimal separator - the culture that broke
+    [InlineData("fr-FR")]   // also comma
+    [InlineData("de-CH")]
+    [InlineData("en-CH")]
+    [InlineData("en-US")]
+    public void Polyline_HasExactlyOneCoordinatePairPerPoint(string culture)
+    {
+        WithCulture(culture, () =>
+        {
+            var points = RenderChart().Find("polyline").GetAttribute("points")!;
+
+            // "x,y x,y ..." - every whitespace-separated group must split into exactly
+            // two numbers. A comma decimal separator silently produces four.
+            var groups = points.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            Assert.NotEmpty(groups);
+
+            foreach (var group in groups)
+            {
+                var parts = group.Split(',');
+
+                Assert.True(
+                    parts.Length == 2,
+                    $"culture {culture}: coordinate group '{group}' split into {parts.Length} "
+                    + "values instead of 2 - the decimal separator leaked into the SVG.");
+
+                foreach (var part in parts)
+                {
+                    Assert.True(
+                        double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out _),
+                        $"culture {culture}: '{part}' is not an invariant-parsable number.");
+                }
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void MarkerCoordinates_AreInvariant(string culture)
+    {
+        WithCulture(culture, () =>
+        {
+            // An invalid length such as "123,45" is rejected outright by the SVG parser,
+            // which drops the marker to the origin rather than failing loudly.
+            foreach (var circle in RenderChart().FindAll("circle"))
+            {
+                foreach (var name in new[] { "cx", "cy" })
+                {
+                    var raw = circle.GetAttribute(name);
+
+                    if (raw is null)
+                    {
+                        continue;
+                    }
+
+                    Assert.DoesNotContain(",", raw);
+                    Assert.True(
+                        double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out _),
+                        $"culture {culture}: {name}='{raw}' is not an invariant length.");
+                }
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("en-US")]
+    public void AxisAndGridCoordinates_AreInvariant(string culture)
+    {
+        WithCulture(culture, () =>
+        {
+            foreach (var line in RenderChart().FindAll("line"))
+            {
+                foreach (var name in new[] { "x1", "y1", "x2", "y2" })
+                {
+                    var raw = line.GetAttribute(name);
+
+                    if (raw is not null)
+                    {
+                        Assert.DoesNotContain(",", raw);
+                    }
+                }
+            }
+        });
+    }
+}

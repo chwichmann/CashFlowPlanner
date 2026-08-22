@@ -1,4 +1,5 @@
-﻿@if (!HasData)
+﻿@using System.Globalization
+@if (!HasData)
 {
     <div class="alert alert-info">
         No chart data available.
@@ -21,9 +22,9 @@ else
                 @foreach (var tick in YTicks)
                 {
                     <line x1="@LeftPadding"
-                          y1="@tick.Y"
+                          y1="@Svg(tick.Y)"
                           x2="@(Width - RightPadding)"
-                          y2="@tick.Y"
+                          y2="@Svg(tick.Y)"
                           stroke="#e5e5e5"
                           stroke-width="1" />
 
@@ -53,9 +54,9 @@ else
                 @if (ZeroLineY is not null)
                 {
                     <line x1="@LeftPadding"
-                          y1="@ZeroLineY"
+                          y1="@Svg(ZeroLineY.Value)"
                           x2="@(Width - RightPadding)"
-                          y2="@ZeroLineY"
+                          y2="@Svg(ZeroLineY.Value)"
                           stroke="#cc6666"
                           stroke-width="1"
                           stroke-dasharray="4 4" />
@@ -76,8 +77,8 @@ else
 
                 @foreach (var marker in Markers)
                 {
-                    <circle cx="@marker.X"
-                            cy="@marker.Y"
+                    <circle cx="@Svg(marker.X)"
+                            cy="@Svg(marker.Y)"
                             r="2.5"
                             fill="@Stroke" />
                 }
@@ -153,7 +154,7 @@ else
 
     private string PolylinePoints => string.Join(
         " ",
-        ChartPoints.Select(x => $"{x.X:0.##},{x.Y:0.##}"));
+        ChartPoints.Select(x => $"{Svg(x.X)},{Svg(x.Y)}"));
 
     private IReadOnlyList<ChartPoint> ChartPoints => BuildChartPoints();
 
@@ -388,6 +389,16 @@ else
 
         min -= extra;
         max += extra;
+    }
+
+    // SVG coordinates must never be culture-formatted. Under de-DE - one of the four
+    // regions offered in Settings - the ambient decimal separator is a comma, so
+    // "123.45,67.89" became "123,45,67,89": the polyline parser reads four coordinates
+    // instead of two pairs and the chart draws garbage. Attributes like cx/cy are simply
+    // rejected as invalid lengths, dropping markers to the origin.
+    private static string Svg(double value)
+    {
+        return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 
     private sealed record ChartPoint(DateOnly Date, double X, double Y);
