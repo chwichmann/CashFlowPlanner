@@ -298,3 +298,44 @@ domain review. Not stability work; sequenced after.
 - **Commit per finding**, message references the finding ID.
 - **`master` deploys on push** — treat every push as a release.
 - Verification of UI work is by **browser measurement**, not by build success.
+
+---
+
+## 5. Where this stands — 22 August 2026
+
+This section records what the ledger above actually resolved to. It is appended
+rather than edited into the tables, because a plan that quietly rewrites itself to
+match the outcome stops being evidence of anything.
+
+### Closed
+
+| ID | Resolution |
+|---|---|
+| C1–C4 | Fixed in wave 1, each with a test that failed first. Interest is generated once, honours `OpeningDate`, the credit-card payment lands after the statement closes, and business-day collisions are no longer discarded |
+| H1, H2 | `CalculationPrincipalDate` is the date the principal is *known* on; the principal rolls forward and backward along the billing calendar to the simulation start |
+| H6 | Linear. Guarded by `SimulationPerformanceTests`, which builds a thirty-year household and fails if it stops being linear |
+| H7 | Currency enforcement added |
+| H8 | A Pillar 3a contract can name the account it feeds; unlinked contracts raise `PILLAR3A_CONTRACT_NOT_LINKED` rather than destroying the money in silence |
+| P1a–P1c | Delete validates, autosave failures surface, dirty tracking and `beforeunload` exist |
+| P2a | `[JsonExtensionData]` on the document — and the same failure had to be closed twice more since, for `RealEstateAssets` and `Inflation`, which no extension data can rescue because a property absent from the document never reaches the file at all |
+| P2b, P2c | Schema version migrates; `dateMode` no longer overrides stored dates |
+| P3a | Import state is encrypted, and a refused write rolls back and says so. Still not part of the exported plan file |
+| B1–B5 | CI runs the full suite, asserts the base-href rewrite, holds a concurrency group and treats warnings as errors |
+| U1–U8 | Closed in wave 1; the navbar save indicator has a browser test at eight desktop widths because it was found broken at 1280px after being called fixed |
+
+### Open, with reasons
+
+| ID | State |
+|---|---|
+| **B6b** | Full ICU is still shipped (~1.1 MB reclaimable). Removing it once took the live site down: the app chooses its culture in `Program.cs`, after the runtime has started. Reclaiming it means passing `applicationCulture` to `blazor.start()` before boot, and the app has *two* cultures — formatting and UI — which that single option cannot express. The smoke suite would now catch the regression; the design question is still open |
+| **Granularity** | `SimulationSettings.Granularity` is editable in Settings and read by nothing. The engine must keep generating daily — interest and business days depend on it — so this is an output-series question, and the balance lookups assume a dense series. Either implement it against those lookups or remove the control; a control that does nothing is the worse of the two |
+| **Taxes** | Designed in `TAX-MODEL.md`, implemented nowhere, and deliberately so. See that document; the blocker is reference data, not difficulty |
+| **Real estate double-count** | A mortgage modelled *both* as a `MortgageContract` and as an `AccountType.Mortgage` account is counted twice in net worth. A contract carries no account reference, so the two cannot be reconciled. Documented in `NetWorthCalculator` |
+
+### Added since, not in the original ledger
+
+Encrypted plan files and an encrypted browser working copy; disk auto-save through
+the File System Access API; CAMT.053 and CSV statement import; net worth, inflation
+and ownership-dated real estate; mortgage payment intervals beyond quarterly, a
+configurable day-count convention, and payment dates that respect the plan's bank
+holidays.
