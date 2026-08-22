@@ -1,6 +1,7 @@
 ﻿using CashFlowPlanner.Core;
 using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.CreditCards;
+using CashFlowPlanner.Core.Indexation;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
@@ -38,7 +39,15 @@ public sealed class CashFlowPlanDocument
 
     public List<Pillar3aContract> Pillar3aContracts { get; init; } = [];
 
+    public List<RealEstateAsset> RealEstateAssets { get; init; } = [];
+
     public List<HouseBuySimulatorScenario> HouseBuyScenarios { get; init; } = [];
+
+    /// <summary>
+    /// Absent from every file written before inflation existed, which deserialises to a zero rate
+    /// - and a zero rate reproduces the previous behaviour exactly, so no schema bump is needed.
+    /// </summary>
+    public InflationAssumption Inflation { get; init; } = new();
 
     public SimulationSettings SimulationSettings { get; init; } = new();
 

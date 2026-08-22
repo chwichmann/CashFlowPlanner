@@ -1,5 +1,6 @@
 ﻿using CashFlowPlanner.Core;
 using CashFlowPlanner.Core.Accounts;
+using CashFlowPlanner.Core.Indexation;
 
 namespace CashFlowPlanner.Storage.Json.Tests;
 
@@ -630,5 +631,75 @@ public sealed class CashFlowPlanJsonSerializerTests
         Assert.Null(plan.DefaultPaymentAccountId);
         Assert.True(plan.TreatWeekendsAsBankOffDays);
         Assert.Empty(plan.BankOffDays);
+    }
+
+    /// <summary>
+    /// Real estate and inflation are the two plan-level additions that arrived with the net-worth
+    /// work, and a property that exists in the model but not in <c>CashFlowPlanDocument</c> is
+    /// dropped in silence - it is not even caught by <c>[JsonExtensionData]</c>, because it never
+    /// appears in the file. That is finding P2a, and it costs a household its property valuation
+    /// on the next save. These three tests are the guard.
+    /// </summary>
+    [Fact]
+    public void Roundtrip_Should_PreserveRealEstateAssets()
+    {
+        var originalPlan = StorageTestPlanFactory.CreateSimplePlan();
+        var serializer = new CashFlowPlanJsonSerializer();
+
+        var loadedPlan = serializer.DeserializePlan(serializer.SerializePlan(originalPlan));
+
+        var original = Assert.Single(originalPlan.RealEstateAssets);
+        var loaded = Assert.Single(loadedPlan.RealEstateAssets);
+
+        Assert.Equal(original.Id, loaded.Id);
+        Assert.Equal(original.Name, loaded.Name);
+        Assert.Equal(original.Type, loaded.Type);
+        Assert.Equal(original.CurrentEstimatedValue, loaded.CurrentEstimatedValue);
+        Assert.Equal(original.ValuationDate, loaded.ValuationDate);
+        Assert.Equal(original.AnnualValueGrowthPercent, loaded.AnnualValueGrowthPercent);
+        Assert.Equal(original.Pillar2BvgUsedAmount, loaded.Pillar2BvgUsedAmount);
+        Assert.Equal(original.LinkedMortgageIds, loaded.LinkedMortgageIds);
+        Assert.Equal(original.Notes, loaded.Notes);
+    }
+
+    [Fact]
+    public void Roundtrip_Should_PreserveInflationAndIndexation()
+    {
+        var originalPlan = StorageTestPlanFactory.CreateSimplePlan();
+        var serializer = new CashFlowPlanJsonSerializer();
+
+        var loadedPlan = serializer.DeserializePlan(serializer.SerializePlan(originalPlan));
+
+        Assert.Equal(originalPlan.Inflation.AnnualRatePercent, loadedPlan.Inflation.AnnualRatePercent);
+        Assert.Equal(originalPlan.Inflation.BaseDate, loadedPlan.Inflation.BaseDate);
+
+        // The per-transaction override: salary progression above plan inflation.
+        var original = originalPlan.Transactions.Single(t => t.Name == "Salary");
+        var loaded = loadedPlan.Transactions.Single(t => t.Name == "Salary");
+
+        Assert.Equal(IndexationMode.Custom, loaded.IndexationMode);
+        Assert.Equal(original.AnnualIndexationRatePercent, loaded.AnnualIndexationRatePercent);
+        Assert.Equal(original.IndexationBaseDate, loaded.IndexationBaseDate);
+    }
+
+    [Fact]
+    public void APlanFileWrittenBeforeInflationExisted_Loads_WithTheOldBehaviour()
+    {
+        // No realEstateAssets key, no inflation key. Both must default to something that
+        // reproduces the previous numbers exactly, which is why neither needed a schema bump.
+        var originalPlan = StorageTestPlanFactory.CreateSimplePlan();
+        var serializer = new CashFlowPlanJsonSerializer();
+
+        var json = serializer.SerializePlan(originalPlan);
+
+        var document = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        document.Remove("realEstateAssets");
+        document.Remove("inflation");
+
+        var loadedPlan = serializer.DeserializePlan(document.ToJsonString());
+
+        Assert.Empty(loadedPlan.RealEstateAssets);
+        Assert.Equal(0m, loadedPlan.Inflation.AnnualRatePercent);
+        Assert.Null(loadedPlan.Inflation.BaseDate);
     }
 }

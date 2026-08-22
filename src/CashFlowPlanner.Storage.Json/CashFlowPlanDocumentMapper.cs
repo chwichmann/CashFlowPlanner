@@ -24,6 +24,8 @@ public static class CashFlowPlanDocumentMapper
             Mortgages = document.Mortgages ?? [],
             CreditCards = document.CreditCards ?? [],
             Pillar3aContracts = document.Pillar3aContracts ?? [],
+            RealEstateAssets = document.RealEstateAssets ?? [],
+            Inflation = document.Inflation ?? new(),
             HouseBuyScenarios = document.HouseBuyScenarios ?? [],
             SimulationSettings = document.SimulationSettings ?? new()
         };
@@ -57,6 +59,8 @@ public static class CashFlowPlanDocumentMapper
             Mortgages = plan.Mortgages,
             CreditCards = plan.CreditCards,
             Pillar3aContracts = plan.Pillar3aContracts,
+            RealEstateAssets = plan.RealEstateAssets,
+            Inflation = plan.Inflation,
             HouseBuyScenarios = plan.HouseBuyScenarios,
             SimulationSettings = plan.SimulationSettings
         };

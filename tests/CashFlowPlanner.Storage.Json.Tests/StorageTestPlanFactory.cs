@@ -1,6 +1,7 @@
 ﻿using CashFlowPlanner.Core;
 using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.CreditCards;
+using CashFlowPlanner.Core.Indexation;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
@@ -217,6 +218,8 @@ internal static class StorageTestPlanFactory
                         DayOfMonth = 25,
                         BusinessDayAdjustment = BusinessDayAdjustment.PreviousBusinessDay
                     },
+                    IndexationMode = IndexationMode.Custom,
+                    AnnualIndexationRatePercent = 2.5m,
                     Category = "Income",
                     Counterparty = "Employer",
                     PaymentMethod = PaymentMethod.BankTransfer,
@@ -350,6 +353,9 @@ internal static class StorageTestPlanFactory
                     Id = Guid.Parse("60000000-0000-0000-0000-000000000001"),
                     Name = "VIAC Global 100",
                     OwnerPersonId = christianId,
+                    // Linked, so the contract posts an InternalTransfer rather than the
+                    // phantom expense an unlinked one still falls back to (finding H8).
+                    AccountId = legacyPillar3aAccountId,
                     Type = Pillar3aContractType.Investment,
                     OpeningValue = 50_000m,
                     OpeningDate = new DateOnly(2026, 5, 1),
@@ -390,6 +396,28 @@ internal static class StorageTestPlanFactory
                     ]
                 }
             ],
+
+            RealEstateAssets =
+            [
+                new RealEstateAsset
+                {
+                    Id = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                    Name = "家 - Test House",
+                    Type = RealEstateType.House,
+                    CurrentEstimatedValue = 1_150_000m,
+                    ValuationDate = new DateOnly(2026, 5, 1),
+                    AnnualValueGrowthPercent = 1.2m,
+                    Pillar2BvgUsedAmount = 60_000m,
+                    LinkedMortgageIds = [Guid.Parse("30000000-0000-0000-0000-000000000001")],
+                    Notes = "Round-trip fixture"
+                }
+            ],
+
+            Inflation = new InflationAssumption
+            {
+                AnnualRatePercent = 1.4m,
+                BaseDate = new DateOnly(2026, 6, 1)
+            },
 
             HouseBuyScenarios =
             [
