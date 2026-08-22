@@ -1,6 +1,5 @@
 ﻿@page "/house-buy-simulator"
 
-@using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
 @using CashFlowPlanner.Core.RealEstate
 @using CashFlowPlanner.Core
@@ -11,7 +10,10 @@
 @inherits AppStateAwarePage
 
 @inject CashFlowAppState AppState
+@inject AppFormatter Formatter
 @inject IStringLocalizer<SharedResource> L
+
+<ConfirmDialog @ref="_confirmDialog" />
 
 <div class="page-header">
     <h1>@L["HouseBuy_Title"]</h1>
@@ -80,7 +82,7 @@ else
             <button type="button"
                     class="btn btn-danger"
                     disabled="@(!CurrentScenarioExists)"
-                    @onclick="DeleteScenario">
+                    @onclick="DeleteScenarioAsync">
                 @L["Delete"]
             </button>
         </div>
@@ -439,7 +441,7 @@ else
 
                             <div class="summary-table-row">
                                 <span>@L["HouseBuy_LoanToValue"]</span>
-                                <strong>@Percent(Result.LoanToValuePercent)</strong>
+                                <strong>@Formatter.Percent(Result.LoanToValuePercent)</strong>
                             </div>
 
                             <div class="summary-table-row">
@@ -487,8 +489,8 @@ else
                         {
                             <div class="warning-box">
                                 <strong>@L["HouseBuy_RequiredIncomeForAffordabilityTarget"]</strong>
-                                <div>@Text("HouseBuy_PerYearAmount", Money(Result.RequiredGrossAnnualIncomeForAffordability))</div>
-                                <div>@Text("HouseBuy_MissingIncomePerYear", Money(Result.MissingGrossAnnualIncomeForAffordability))</div>
+                                <div>@Text("HouseBuy_PerYearAmount", MoneyOrNotApplicable(Result.RequiredGrossAnnualIncomeForAffordability))</div>
+                                <div>@Text("HouseBuy_MissingIncomePerYear", MoneyOrNotApplicable(Result.MissingGrossAnnualIncomeForAffordability))</div>
                             </div>
                         }
                     </div>
@@ -572,7 +574,14 @@ else
 }
 
 @code {
+    /// <summary>
+    /// The currency shown in front of every amount this page renders.
+    /// </summary>
+    private const string Currency = "CHF";
+
     private readonly HouseBuyScenarioManager _scenarioManager = new();
+
+    private ConfirmDialog? _confirmDialog;
 
     private Guid CurrentScenarioId { get; set; } = Guid.NewGuid();
 
@@ -825,7 +834,11 @@ else
             duplicateResult.Scenario.Id);
     }
 
-    private void DeleteScenario()
+    /// <summary>
+    /// Deleting a saved scenario used to happen on the first click, with nothing to undo it. It
+    /// now goes through <see cref="ConfirmDialog"/> like every other destructive action in the app.
+    /// </summary>
+    private async Task DeleteScenarioAsync()
     {
         var plan = AppState.CurrentPlan;
 
@@ -835,6 +848,20 @@ else
         }
 
         if (!CurrentScenarioExists)
+        {
+            return;
+        }
+
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("Delete"),
+            Text("Dialog_ConfirmMessage"));
+
+        if (!confirmed)
         {
             return;
         }
@@ -1163,14 +1190,29 @@ else
         };
     }
 
-    private static string Money(decimal value)
+    /// <summary>
+    /// A whole-franc amount with its currency, e.g. <c>CHF 12'346</c>.
+    ///
+    /// The number comes from <see cref="AppFormatter"/> so it follows the region the user picked
+    /// in Settings. This page used to format it itself and, alone in the app, ignored that
+    /// preference - setting the region to en-US left this one page speaking Swiss German.
+    /// </summary>
+    private string Money(decimal value)
     {
-        return $"CHF {value.ToString("N0", CultureInfo.CurrentCulture)}";
+        return $"{Currency} {Formatter.MoneyRounded(value)}";
     }
 
-    private static string Percent(decimal value)
+    /// <summary>
+    /// <see cref="SwissMortgageAffordabilityCalculator"/> signals "no income to divide by" with
+    /// <see cref="decimal.MaxValue"/> and passes that sentinel into three result fields:
+    /// <c>AffordabilityRatio</c>, <c>RequiredGrossAnnualIncomeForAffordability</c> and, through it,
+    /// <c>MissingGrossAnnualIncomeForAffordability</c>. Rendered as money that is a 29-digit
+    /// number in the middle of a mortgage summary. The calculator is Core and stays as it is; the
+    /// sentinel is caught here, on every field that can carry it, rather than on one of them.
+    /// </summary>
+    private string MoneyOrNotApplicable(decimal value)
     {
-        return $"{value.ToString("N2", CultureInfo.CurrentCulture)}%";
+        return value == decimal.MaxValue ? Text("NotApplicable") : Money(value);
     }
 
     private string AffordabilityRatioText(decimal ratio)
@@ -1180,7 +1222,7 @@ else
             return Text("NotApplicable");
         }
 
-        return Percent(ratio * 100m);
+        return Formatter.Percent(ratio * 100m);
     }
 
     private string Text(string key)
