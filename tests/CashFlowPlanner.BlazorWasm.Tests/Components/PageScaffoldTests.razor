@@ -1,0 +1,153 @@
+@namespace CashFlowPlanner.BlazorWasm.Tests.Components
+@using Bunit.TestDoubles
+@using CashFlowPlanner.Core
+@using Microsoft.Extensions.DependencyInjection
+@inherits ComponentTestBase
+
+@code {
+    public PageScaffoldTests()
+    {
+        // PlanEmptyState drags in the file, crypto and cache services. What matters here is whether
+        // the scaffold shows it, not what it does once shown.
+        ComponentFactories.AddStub<PlanEmptyState>();
+    }
+
+    [Fact]
+    public void Emits_exactly_one_h1_carrying_the_page_title()
+    {
+        // App.razor renders <FocusOnNavigate Selector="h1" />. Four pages led with an h2 and one
+        // with an h3, so on those routes the selector matched nothing and focus stayed in the nav.
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Accounts">
+                                           <p>Body</p>
+                                       </PageScaffold>);
+
+        var headings = cut.FindAll("h1");
+
+        Assert.Single(headings);
+        Assert.Equal("Accounts", headings[0].TextContent.Trim());
+    }
+
+    [Fact]
+    public void The_h1_is_focusable_so_FocusOnNavigate_can_actually_focus_it()
+    {
+        // The half that is easy to miss: a heading is not focusable by default, so even on the nine
+        // pages that had an h1, FocusOnNavigate's focus() call did nothing at all.
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Accounts" />);
+
+        Assert.Equal("-1", cut.Find("h1").GetAttribute("tabindex"));
+    }
+
+    [Fact]
+    public void Renders_a_subtitle_only_when_there_is_one()
+    {
+        var withSubtitle = Render<PageScaffold>(
+            @<PageScaffold Title="House purchase" Subtitle="What the bank will lend you." />);
+
+        var without = Render<PageScaffold>(@<PageScaffold Title="House purchase" />);
+
+        Assert.Contains("What the bank will lend you.", withSubtitle.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("<p", without.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Puts_the_notification_slot_above_the_body()
+    {
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Accounts">
+                                           <Notifications>
+                                               <div class="alert" id="note">Saved</div>
+                                           </Notifications>
+                                           <ChildContent>
+                                               <p id="body">Body</p>
+                                           </ChildContent>
+                                       </PageScaffold>);
+
+        Assert.True(
+            cut.Markup.IndexOf("id=\"note\"", StringComparison.Ordinal)
+                < cut.Markup.IndexOf("id=\"body\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Renders_page_actions_beside_the_heading()
+    {
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Accounts">
+                                           <Actions>
+                                               <button type="button" id="add">Add</button>
+                                           </Actions>
+                                       </PageScaffold>);
+
+        Assert.NotNull(cut.Find("#add"));
+    }
+
+    [Fact]
+    public void Shows_the_body_when_a_page_does_not_need_a_plan()
+    {
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Settings">
+                                           <p id="body">Body</p>
+                                       </PageScaffold>);
+
+        Assert.NotNull(cut.Find("#body"));
+        Assert.Empty(cut.FindComponents<Stub<PlanEmptyState>>());
+    }
+
+    [Fact]
+    public void Replaces_the_body_with_the_empty_state_when_a_plan_is_required_and_missing()
+    {
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Accounts" RequiresPlan="true">
+                                           <p id="body">Body</p>
+                                       </PageScaffold>);
+
+        Assert.Single(cut.FindComponents<Stub<PlanEmptyState>>());
+        Assert.Empty(cut.FindAll("#body"));
+    }
+
+    [Fact]
+    public async Task Shows_the_body_as_soon_as_a_plan_is_loaded()
+    {
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Accounts" RequiresPlan="true">
+                                           <p id="body">Body</p>
+                                       </PageScaffold>);
+
+        Assert.Empty(cut.FindAll("#body"));
+
+        // The scaffold owns the branch, so the scaffold has to hear the plan arrive - otherwise the
+        // empty state stays on screen after one of its own three buttons has loaded one.
+        await cut.InvokeAsync(() => Services
+            .GetRequiredService<CashFlowAppState>()
+            .SetPlan(CashFlowPlanFactory.CreateEmpty()));
+
+        Assert.NotNull(cut.Find("#body"));
+    }
+
+    [Fact]
+    public void Passes_the_page_specific_lead_sentence_to_the_empty_state()
+    {
+        var cut = Render<PageScaffold>(
+            @<PageScaffold Title="Accounts" RequiresPlan="true" EmptyStateMessage="Accounts need a plan." />);
+
+        Assert.Equal(
+            "Accounts need a plan.",
+            cut.FindComponent<Stub<PlanEmptyState>>().Instance.Parameters.Get(p => p.Message));
+    }
+
+    [Fact]
+    public void Always_sets_a_browser_title_suffixed_with_the_app_name()
+    {
+        // Three pages had no <PageTitle> at all and inherited the previous route's title.
+        var cut = Render<PageScaffold>(@<PageScaffold Title="Accounts" />);
+
+        Assert.Equal("Accounts - CashFlow Planner", BrowserTitle(cut));
+    }
+
+    [Fact]
+    public void Lets_a_page_override_the_browser_title_outright()
+    {
+        // Home wants a bare "CashFlow Planner", not "CashFlow Planner - CashFlow Planner".
+        var cut = Render<PageScaffold>(
+            @<PageScaffold Title="CashFlow Planner" DocumentTitle="CashFlow Planner" />);
+
+        Assert.Equal("CashFlow Planner", BrowserTitle(cut));
+    }
+
+    private string BrowserTitle(IRenderedComponent<PageScaffold> cut) =>
+        Render(cut.FindComponent<PageTitle>().Instance.ChildContent!).Markup.Trim();
+}
