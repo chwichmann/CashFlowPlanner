@@ -2,6 +2,21 @@ using Microsoft.JSInterop;
 
 namespace CashFlowPlanner.BlazorWasm.Services;
 
+/// <summary>
+/// The localStorage-backed working copy.
+/// <para>
+/// The plan JSON and its <c>.prev</c> recovery copy are encrypted at rest with a device key held
+/// in IndexedDB - see <see cref="IWorkingCopyCipher"/> for what that does and does not protect.
+/// Encryption sits here, beneath <see cref="IBrowserPlanCache"/>, rather than in
+/// <see cref="PlanCacheCoordinator"/>: the coordinator's debounce, trailing write and
+/// <see cref="PlanSaveResult"/> reporting are load-bearing and must not learn about ciphertext.
+/// </para>
+/// <para>
+/// The timestamp key stays in the clear on purpose. It is a wall-clock time the navbar reads on
+/// startup, it reveals nothing about the household's finances, and encrypting it would make the
+/// "when was this cached" display depend on the key store being healthy.
+/// </para>
+/// </summary>
 public sealed class BrowserPlanCacheService : IBrowserPlanCache
 {
     private const string PlanJsonKey = "cashflowplanner.currentPlanJson";
@@ -9,10 +24,12 @@ public sealed class BrowserPlanCacheService : IBrowserPlanCache
     private const string CachedAtKey = "cashflowplanner.currentPlanCachedAt";
 
     private readonly IJSRuntime _jsRuntime;
+    private readonly IWorkingCopyCipher _cipher;
 
-    public BrowserPlanCacheService(IJSRuntime jsRuntime)
+    public BrowserPlanCacheService(IJSRuntime jsRuntime, IWorkingCopyCipher cipher)
     {
         _jsRuntime = jsRuntime;
+        _cipher = cipher;
     }
 
     /// <summary>
@@ -31,23 +48,32 @@ public sealed class BrowserPlanCacheService : IBrowserPlanCache
             return PlanCacheWriteResult.Ok();
         }
 
-        var previous = await GetItemAsync(PlanJsonKey, cancellationToken);
+        var previousStored = await GetItemAsync(PlanJsonKey, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(previous) &&
-            !string.Equals(previous, json, StringComparison.Ordinal))
+        // The "has anything actually changed" test has to run on plaintext. Every encrypted write
+        // gets a fresh IV, so two saves of an identical plan produce different ciphertext; a
+        // ciphertext comparison would rotate on every save and destroy the recovery point.
+        var previousPlain = await _cipher.UnprotectAsync(previousStored, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(previousPlain) &&
+            !string.Equals(previousPlain, json, StringComparison.Ordinal))
         {
+            // Moved across as stored: it is already protected, and the envelope is not bound to
+            // the slot it sits in, so no re-encryption is needed.
             // Best effort: a failed rotation must never block the real write.
-            await SetItemAsync(PreviousPlanJsonKey, previous, cancellationToken);
+            await SetItemAsync(PreviousPlanJsonKey, previousStored!, cancellationToken);
         }
 
-        var planWrite = await SetItemAsync(PlanJsonKey, json, cancellationToken);
+        var protectedJson = await _cipher.ProtectAsync(json, cancellationToken);
+
+        var planWrite = await SetItemAsync(PlanJsonKey, protectedJson, cancellationToken);
 
         if (!planWrite.Success && planWrite.Failure == PlanCacheWriteFailure.QuotaExceeded)
         {
             // The recovery copy is the least valuable thing in storage. Trade it for the plan.
             await RemoveItemAsync(PreviousPlanJsonKey, cancellationToken);
 
-            planWrite = await SetItemAsync(PlanJsonKey, json, cancellationToken);
+            planWrite = await SetItemAsync(PlanJsonKey, protectedJson, cancellationToken);
         }
 
         if (!planWrite.Success)
@@ -67,14 +93,78 @@ public sealed class BrowserPlanCacheService : IBrowserPlanCache
                 "updated, so the displayed cache time may be stale.");
     }
 
-    public Task<string?> LoadAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Reads the working copy, decrypting it if it is an envelope.
+    /// <para>
+    /// A returning user has plaintext JSON sitting under this key right now. It is returned as-is
+    /// and then rewritten encrypted straight away, rather than waiting for the next edit: someone
+    /// who opens the app to look at last month's numbers and never types anything would otherwise
+    /// keep a readable plan in their profile forever. The rewrite is best effort and deliberately
+    /// unreported - the plaintext stays put until the encrypted write actually succeeds, so the
+    /// worst case is that nothing changes.
+    /// </para>
+    /// </summary>
+    public async Task<string?> LoadAsync(CancellationToken cancellationToken = default)
     {
-        return GetItemAsync(PlanJsonKey, cancellationToken);
+        var stored = await GetItemAsync(PlanJsonKey, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return null;
+        }
+
+        var plain = await _cipher.UnprotectAsync(stored, cancellationToken);
+
+        if (plain is null || WorkingCopyEnvelope.IsEnvelope(stored))
+        {
+            return plain;
+        }
+
+        await UpgradePlaintextInPlaceAsync(PlanJsonKey, plain, cancellationToken);
+
+        return plain;
     }
 
-    public Task<string?> LoadPreviousAsync(CancellationToken cancellationToken = default)
+    public async Task<string?> LoadPreviousAsync(CancellationToken cancellationToken = default)
     {
-        return GetItemAsync(PreviousPlanJsonKey, cancellationToken);
+        var stored = await GetItemAsync(PreviousPlanJsonKey, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return null;
+        }
+
+        var plain = await _cipher.UnprotectAsync(stored, cancellationToken);
+
+        if (plain is null || WorkingCopyEnvelope.IsEnvelope(stored))
+        {
+            return plain;
+        }
+
+        await UpgradePlaintextInPlaceAsync(PreviousPlanJsonKey, plain, cancellationToken);
+
+        return plain;
+    }
+
+    /// <summary>
+    /// Replaces a plaintext value with its encrypted form under the same key. No rotation: the
+    /// content is identical, only its representation changes.
+    /// </summary>
+    private async Task UpgradePlaintextInPlaceAsync(
+        string key,
+        string plain,
+        CancellationToken cancellationToken)
+    {
+        var protectedValue = await _cipher.ProtectAsync(plain, cancellationToken);
+
+        if (!WorkingCopyEnvelope.IsEnvelope(protectedValue))
+        {
+            // No device key available. Leave the plaintext exactly where it is; rewriting it with
+            // itself would only risk a failed write for no benefit.
+            return;
+        }
+
+        await SetItemAsync(key, protectedValue, cancellationToken);
     }
 
     public Task<string?> GetCachedAtAsync(CancellationToken cancellationToken = default)

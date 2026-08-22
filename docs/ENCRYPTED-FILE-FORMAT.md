@@ -11,6 +11,12 @@ failure:
 - `tools/decrypt-plan.html` — standalone, offline, no dependencies, no network
 - `tools/crypto-selftest.html` — the assertions both must satisfy
 
+This document covers the **file**, the copy that leaves the machine. The browser
+working copy in `localStorage` is a different problem with a different answer — a
+device key, no passphrase, no KDF, and a much smaller envelope. See
+[`WORKING-COPY-ENCRYPTION.md`](WORKING-COPY-ENCRYPTION.md). The two share no key
+material and neither can read the other's output.
+
 ## Why not `age`
 
 The original plan was the [`age`](https://age-encryption.org) format, so files
