@@ -1,4 +1,4 @@
-/*
+﻿/*
     The navbar and the status strip stick together as one block (finding H4), so
     nothing has to know how tall the navbar happens to be. --nav-height below is
     only a floor for the collapsed row; if the menu wraps or expands, the header
@@ -30,6 +30,22 @@
 */
 .navbar-collapse {
     min-width: 0;
+
+    /*
+        When the destinations and the plan status can no longer share one row, wrap
+        rather than squeezing the status out of existence.
+    */
+    flex-wrap: wrap;
+    row-gap: var(--app-space-2);
+}
+
+/*
+    The destination list is what yields first: it can shrink and scroll, because a
+    clipped list is recoverable and an invisible save indicator is not.
+*/
+.navbar-collapse .navbar-nav {
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .navbar-brand {
@@ -135,6 +151,18 @@
         max-width: 360px;
         margin-top: 0;
         margin-inline-end: var(--app-space-3);
+
+        /*
+            min-width: 0 above lets this block give way so the row does not overflow.
+            Unbounded, that is too generous: with twelve navigation destinations the
+            list takes everything and this collapses to width 0 - taking the plan name
+            and, worse, the export-needed / saved badge with it. Measured across
+            viewports, it vanished at and below 1280px, which is an ordinary laptop.
+
+            The badge is the data-loss indicator, so it may shrink but must never
+            disappear. Below this floor the row wraps instead (see .navbar-collapse).
+        */
+        min-width: 12rem;
     }
 
     .navbar-actions {

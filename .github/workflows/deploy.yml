@@ -278,6 +278,27 @@ jobs:
           fi
           echo "Service worker asset hashes verified against the rewritten files."
 
+      # Loads the PUBLISHED app in a real browser and checks it runs. Everything above
+      # this point proves the artifact was produced; nothing proved it works.
+      #
+      # Two production failures got past a green build and the full unit suite: dropping
+      # the globalization data shipped a site that reached 100% and then died before
+      # rendering, and the bundled example shipped a person with a blank name. Both are
+      # caught here in seconds. CFP_SMOKE_REQUIRED makes a missing browser or publish
+      # output a hard failure rather than a quiet pass.
+      - name: Install browser for smoke tests
+        run: pwsh tests/CashFlowPlanner.SmokeTests/bin/Release/net10.0/playwright.ps1 install chromium --with-deps
+
+      - name: Smoke test the published app
+        env:
+          CFP_PUBLISH_WWWROOT: ${{ env.PUBLISH_WWWROOT }}
+          CFP_SMOKE_REQUIRED: "1"
+        run: >-
+          dotnet test tests/CashFlowPlanner.SmokeTests
+          -c Release
+          --no-build
+          --logger "trx;LogFileName=smoke.trx"
+
       - name: Ensure .nojekyll
         run: |
           set -euo pipefail
