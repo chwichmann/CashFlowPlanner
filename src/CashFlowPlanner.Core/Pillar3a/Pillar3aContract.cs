@@ -8,6 +8,24 @@ public sealed class Pillar3aContract
 
     public Guid OwnerPersonId { get; init; }
 
+    /// <summary>
+    /// The <see cref="CashFlowPlanner.Core.Accounts.AccountType.Pillar3a"/>
+    /// account this contract's balance is held in.
+    ///
+    /// Finding H8: without this link a contribution was posted as an
+    /// <see cref="TransactionKind.ExternalExpense"/> -- the payment account was
+    /// debited and the money was credited to nothing, so every franc paid into
+    /// Pillar 3a left the plan and the household appeared poorer for saving.
+    /// With the link the contribution becomes an
+    /// <see cref="TransactionKind.InternalTransfer"/>, exactly as a mortgage's
+    /// indirect amortisation already was.
+    ///
+    /// Optional, because plans written before the link existed have no account
+    /// to point at. An unlinked contract still simulates, still debits the
+    /// payment account, and raises a warning saying the money is not tracked.
+    /// </summary>
+    public Guid? AccountId { get; init; }
+
     public Pillar3aContractType Type { get; init; } = Pillar3aContractType.Investment;
 
     public decimal OpeningValue { get; init; }
@@ -29,6 +47,32 @@ public sealed class Pillar3aContract
     public string? ContractNumberMasked { get; init; }
 
     public string? Notes { get; init; }
+
+    /// <summary>
+    /// The date the earliest closing withdrawal falls on, or <c>null</c> when
+    /// the contract is never closed. Contributions stop on that date: paying
+    /// into a contract that has been paid out and shut is not a thing that can
+    /// happen.
+    /// </summary>
+    public DateOnly? GetClosingDate()
+    {
+        DateOnly? closingDate = null;
+
+        foreach (var withdrawal in Withdrawals)
+        {
+            if (!withdrawal.CloseContract)
+            {
+                continue;
+            }
+
+            if (closingDate is null || withdrawal.Date < closingDate.Value)
+            {
+                closingDate = withdrawal.Date;
+            }
+        }
+
+        return closingDate;
+    }
 
     public void Validate()
     {

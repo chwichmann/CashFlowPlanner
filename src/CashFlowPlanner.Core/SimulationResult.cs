@@ -1,6 +1,7 @@
 ﻿using CashFlowPlanner.Core;
 using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.Mortgages;
+using CashFlowPlanner.Core.NetWorth;
 
 public sealed class SimulationResult
 {
@@ -15,6 +16,37 @@ public sealed class SimulationResult
     public required IReadOnlyList<MortgagePrincipalPoint> MortgagePrincipalPoints { get; init; }
 
     public required IReadOnlyList<SimulationWarning> Warnings { get; init; }
+
+    /// <summary>
+    /// The household balance sheet, one point per simulated day, with its
+    /// components kept separable. Defaults to empty so a hand-built result -- a
+    /// test fixture, say -- does not have to fabricate one.
+    /// </summary>
+    public IReadOnlyList<NetWorthPoint> NetWorthPoints { get; init; } = [];
+
+    /// <summary>
+    /// The balance sheet on <paramref name="date"/>, or <c>null</c> when the
+    /// date is outside the simulated range.
+    /// </summary>
+    public NetWorthPoint? TryGetNetWorth(DateOnly date)
+    {
+        NetWorthPoint? atOrBefore = null;
+
+        foreach (var point in NetWorthPoints)
+        {
+            if (point.Date > date)
+            {
+                continue;
+            }
+
+            if (atOrBefore is null || point.Date > atOrBefore.Date)
+            {
+                atOrBefore = point;
+            }
+        }
+
+        return atOrBefore;
+    }
 
     public decimal GetBalance(Guid accountId, DateOnly date)
     {

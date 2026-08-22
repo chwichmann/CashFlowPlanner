@@ -34,6 +34,15 @@ public sealed class CashFlowPlan
 
     public List<Pillar3aContract> Pillar3aContracts { get; init; } = [];
 
+    /// <summary>
+    /// Properties the household owns. Until this collection existed,
+    /// <see cref="RealEstateAsset"/> was an unreachable type: it modelled the
+    /// asset side of a mortgage, but a plan had nowhere to put one, so every
+    /// mortgage in a plan was pure debt with no property behind it and no
+    /// net-worth figure could be formed.
+    /// </summary>
+    public List<RealEstateAsset> RealEstateAssets { get; init; } = [];
+
     public SimulationSettings SimulationSettings { get; init; } = new();
 
     public List<HouseBuySimulatorScenario> HouseBuyScenarios { get; init; } = [];
@@ -61,9 +70,11 @@ public sealed class CashFlowPlan
         AssertUniqueIds("mortgage", Mortgages.Select(x => x.Id));
         AssertUniqueIds("credit card", CreditCards.Select(x => x.Id));
         AssertUniqueIds("Pillar 3a contract", Pillar3aContracts.Select(x => x.Id));
+        AssertUniqueIds("real estate asset", RealEstateAssets.Select(x => x.Id));
 
         var accountIds = Accounts.Select(x => x.Id).ToHashSet();
         var personIds = Persons.Select(x => x.Id).ToHashSet();
+        var mortgageIds = Mortgages.Select(x => x.Id).ToHashSet();
         var accountsById = Accounts.ToDictionary(x => x.Id);
 
         if (DefaultPaymentAccountId is not null &&
@@ -139,6 +150,8 @@ public sealed class CashFlowPlan
                 "payment account");
         }
 
+        var pillar3aAccountOwners = new Dictionary<Guid, string>();
+
         foreach (var pillar3a in Pillar3aContracts)
         {
             pillar3a.Validate();
@@ -148,6 +161,8 @@ public sealed class CashFlowPlan
                 throw new InvalidOperationException(
                     $"Pillar 3a contract '{pillar3a.Name}' references unknown person '{pillar3a.OwnerPersonId}'.");
             }
+
+            ValidatePillar3aAccount(pillar3a, accountsById, pillar3aAccountOwners);
 
             foreach (var schedule in pillar3a.ContributionSchedules)
             {
@@ -181,7 +196,94 @@ public sealed class CashFlowPlan
             }
         }
 
+        ValidateRealEstateAssets(mortgageIds);
+
         SimulationSettings.Validate();
+    }
+
+    /// <summary>
+    /// A Pillar 3a contract may name the <see cref="AccountType.Pillar3a"/>
+    /// account its balance lives in. That link is what makes a contribution a
+    /// transfer rather than money leaving the plan (finding H8), so the account
+    /// it points at has to be the right kind, in the right currency, and used by
+    /// exactly one contract -- two contracts sharing one account would count the
+    /// same balance twice in the net-worth series.
+    /// </summary>
+    private static void ValidatePillar3aAccount(
+        Pillar3aContract contract,
+        IReadOnlyDictionary<Guid, Account> accountsById,
+        Dictionary<Guid, string> accountOwners)
+    {
+        if (contract.AccountId is null)
+        {
+            return;
+        }
+
+        var accountId = contract.AccountId.Value;
+
+        if (!accountsById.TryGetValue(accountId, out var account))
+        {
+            throw new InvalidOperationException(
+                $"Pillar 3a contract '{contract.Name}' references unknown account '{accountId}'.");
+        }
+
+        if (account.Type != AccountType.Pillar3a)
+        {
+            throw new InvalidOperationException(
+                $"Pillar 3a contract '{contract.Name}' is linked to account '{account.Name}', " +
+                $"which is of type {account.Type}. A Pillar 3a contract must be linked to a " +
+                "Pillar 3a account.");
+        }
+
+        if (!Money.IsSameCurrency(contract.Currency, account.Currency))
+        {
+            throw new InvalidOperationException(
+                $"Pillar 3a contract '{contract.Name}' is in {contract.Currency} but account " +
+                $"'{account.Name}' is in {account.Currency}. Cross-currency postings are not supported.");
+        }
+
+        if (accountOwners.TryGetValue(accountId, out var otherContractName))
+        {
+            throw new InvalidOperationException(
+                $"Pillar 3a account '{account.Name}' is linked to more than one contract " +
+                $"('{otherContractName}' and '{contract.Name}'). Each Pillar 3a account belongs " +
+                "to exactly one contract.");
+        }
+
+        accountOwners[accountId] = contract.Name;
+    }
+
+    /// <summary>
+    /// Referential integrity for <see cref="RealEstateAssets"/>: every linked
+    /// mortgage must exist, and no mortgage may be linked to two properties --
+    /// that would net the same debt off two different assets.
+    /// </summary>
+    private void ValidateRealEstateAssets(HashSet<Guid> mortgageIds)
+    {
+        var mortgageOwners = new Dictionary<Guid, string>();
+
+        foreach (var asset in RealEstateAssets)
+        {
+            asset.Validate();
+
+            foreach (var mortgageId in asset.LinkedMortgageIds)
+            {
+                if (!mortgageIds.Contains(mortgageId))
+                {
+                    throw new InvalidOperationException(
+                        $"Real estate asset '{asset.Name}' references unknown mortgage '{mortgageId}'.");
+                }
+
+                if (mortgageOwners.TryGetValue(mortgageId, out var otherAssetName))
+                {
+                    throw new InvalidOperationException(
+                        $"Mortgage '{mortgageId}' is linked to more than one real estate asset " +
+                        $"('{otherAssetName}' and '{asset.Name}').");
+                }
+
+                mortgageOwners[mortgageId] = asset.Name;
+            }
+        }
     }
 
     /// <summary>
