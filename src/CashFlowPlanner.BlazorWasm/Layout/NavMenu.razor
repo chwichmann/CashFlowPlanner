@@ -37,75 +37,108 @@
         <button class="navbar-toggler"
                 type="button"
                 @onclick="ToggleNavMenu"
-                aria-label="Toggle navigation">
+                aria-label="@L["Nav_ToggleNavigation"]">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="@NavMenuCssClass navbar-collapse">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        @L["Nav_Home"]
+                    <NavLink class="nav-link nav-link-icon" href="" Match="NavLinkMatch.All"
+                             title="@L["Nav_Home"]"
+                             aria-label="@L["Nav_Home"]">
+                        <NavIcon Name="home" />
+                        <span class="nav-link-label">@L["Nav_Home"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="dashboard">
-                        @L["Nav_Dashboard"]
+                    <NavLink class="nav-link nav-link-icon" href="dashboard"
+                             title="@L["Nav_Dashboard"]"
+                             aria-label="@L["Nav_Dashboard"]">
+                        <NavIcon Name="dashboard" />
+                        <span class="nav-link-label">@L["Nav_Dashboard"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="simulation">
-                        @L["Nav_Simulation"]
+                    <NavLink class="nav-link nav-link-icon" href="simulation"
+                             title="@L["Nav_Simulation"]"
+                             aria-label="@L["Nav_Simulation"]">
+                        <NavIcon Name="simulation" />
+                        <span class="nav-link-label">@L["Nav_Simulation"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="accounts">
-                        @L["Nav_Accounts"]
+                    <NavLink class="nav-link nav-link-icon" href="accounts"
+                             title="@L["Nav_Accounts"]"
+                             aria-label="@L["Nav_Accounts"]">
+                        <NavIcon Name="accounts" />
+                        <span class="nav-link-label">@L["Nav_Accounts"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="transactions">
-                        @L["Nav_Transactions"]
+                    <NavLink class="nav-link nav-link-icon" href="transactions"
+                             title="@L["Nav_Transactions"]"
+                             aria-label="@L["Nav_Transactions"]">
+                        <NavIcon Name="transactions" />
+                        <span class="nav-link-label">@L["Nav_Transactions"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="mortgages">
-                        @L["Nav_Mortgages"]
+                    <NavLink class="nav-link nav-link-icon" href="mortgages"
+                             title="@L["Nav_Mortgages"]"
+                             aria-label="@L["Nav_Mortgages"]">
+                        <NavIcon Name="mortgages" />
+                        <span class="nav-link-label">@L["Nav_Mortgages"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="creditcards">
-                        @L["Nav_CreditCards"]
+                    <NavLink class="nav-link nav-link-icon" href="creditcards"
+                             title="@L["Nav_CreditCards"]"
+                             aria-label="@L["Nav_CreditCards"]">
+                        <NavIcon Name="creditcards" />
+                        <span class="nav-link-label">@L["Nav_CreditCards"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="pillar3a">
-                        @L["Nav_Pillar3a"]
+                    <NavLink class="nav-link nav-link-icon" href="pillar3a"
+                             title="@L["Nav_Pillar3a"]"
+                             aria-label="@L["Nav_Pillar3a"]">
+                        <NavIcon Name="pillar3a" />
+                        <span class="nav-link-label">@L["Nav_Pillar3a"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="persons">
-                        @L["Nav_Persons"]
+                    <NavLink class="nav-link nav-link-icon" href="persons"
+                             title="@L["Nav_Persons"]"
+                             aria-label="@L["Nav_Persons"]">
+                        <NavIcon Name="persons" />
+                        <span class="nav-link-label">@L["Nav_Persons"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="house-buy-simulator">
-                        @L["Nav_HouseBuySimulator"]
+                    <NavLink class="nav-link nav-link-icon" href="house-buy-simulator"
+                             title="@L["Nav_HouseBuySimulator"]"
+                             aria-label="@L["Nav_HouseBuySimulator"]">
+                        <NavIcon Name="housebuy" />
+                        <span class="nav-link-label">@L["Nav_HouseBuySimulator"]</span>
                     </NavLink>
                 </li>
 
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="settings">
-                        @L["Nav_Settings"]
+                    <NavLink class="nav-link nav-link-icon" href="settings"
+                             title="@L["Nav_Settings"]"
+                             aria-label="@L["Nav_Settings"]">
+                        <NavIcon Name="settings" />
+                        <span class="nav-link-label">@L["Nav_Settings"]</span>
                     </NavLink>
                 </li>
             </ul>
@@ -142,7 +175,7 @@
                 else
                 {
                     <div class="navbar-cache-status">
-                        No plan loaded
+                        @L["Nav_NoPlanLoaded"]
                     </div>
                 }
             </div>
@@ -162,7 +195,8 @@
 
                 <button type="button"
                         class="btn btn-sm btn-outline-light"
-                        title="Run simulation"
+                        title="@L["Nav_RunSimulation"]"
+                        aria-label="@L["Nav_RunSimulation"]"
                         disabled="@(!AppState.HasPlan || Feedback.IsBusy)"
                         @onclick="RunSimulationAsync">
                     @if (Feedback.IsBusy)
@@ -298,7 +332,7 @@
 
             if (cacheWrite.Success)
             {
-                _statusMessage = $"Loaded '{file.Name}' successfully.";
+                _statusMessage = string.Format(L["Nav_FileLoaded"].Value, file.Name);
                 _isError = false;
             }
             else
@@ -306,8 +340,8 @@
                 // The plan is loaded and usable; only the working copy is missing, so a
                 // reload would lose it. Say so rather than reporting a clean load.
                 _statusMessage =
-                    $"Loaded '{file.Name}', but the browser working copy could not be "
-                    + $"written: {cacheWrite.Message}";
+                    string.Format(
+                        L["Nav_FileLoadedCacheFailed"].Value, file.Name, cacheWrite.Message);
                 _isError = true;
             }
         }
@@ -323,13 +357,13 @@
         try
         {
             Feedback.ClearNotification();
-            Feedback.StartBusy("Simulation is running...");
+            Feedback.StartBusy(L["Nav_SimulationRunning"].Value);
 
             await Task.Yield();
 
             AppState.RunSimulation();
 
-            Feedback.Success("Simulation completed.");
+            Feedback.Success(L["Nav_SimulationCompleted"].Value);
         }
         catch (Exception ex)
         {
@@ -372,15 +406,15 @@
 
             if (cacheWrite.Success)
             {
-                _statusMessage = $"Exported '{fileName}' and updated browser working copy.";
+                _statusMessage = string.Format(L["Nav_FileExported"].Value, fileName);
                 _isError = false;
             }
             else
             {
                 // The export itself succeeded - only the working copy failed to update.
                 _statusMessage =
-                    $"Exported '{fileName}', but the browser working copy could not be "
-                    + $"updated: {cacheWrite.Message}";
+                    string.Format(
+                        L["Nav_FileExportedCacheFailed"].Value, fileName, cacheWrite.Message);
                 _isError = true;
             }
         }
@@ -399,9 +433,9 @@
     {
         var sourceText = _loadedSource switch
         {
-            "file" => "Loaded from file",
-            "cache" => "Loaded from browser cache",
-            _ => "Loaded"
+            "file" => L["Nav_LoadedFromFile"].Value,
+            "cache" => L["Nav_LoadedFromCache"].Value,
+            _ => L["Nav_Loaded"].Value
         };
 
         if (string.IsNullOrWhiteSpace(_cachedAtText))
@@ -409,7 +443,7 @@
             return sourceText;
         }
 
-        return $"{sourceText} · cached {_cachedAtText}";
+        return $"{sourceText} · {string.Format(L["Nav_CachedAt"].Value, _cachedAtText)}";
     }
 
     private async Task RefreshCachedAtTextAsync()

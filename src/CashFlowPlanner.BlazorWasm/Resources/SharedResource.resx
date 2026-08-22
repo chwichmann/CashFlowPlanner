@@ -2532,4 +2532,61 @@
   <data name="Account_HideImport" xml:space="preserve">
     <value>Hide bank import</value>
   </data>
+  <data name="Nav_NoPlanLoaded" xml:space="preserve">
+    <value>No plan loaded</value>
+  </data>
+  <data name="Nav_LoadedFromFile" xml:space="preserve">
+    <value>Loaded from file</value>
+  </data>
+  <data name="Nav_LoadedFromCache" xml:space="preserve">
+    <value>Loaded from browser cache</value>
+  </data>
+  <data name="Nav_Loaded" xml:space="preserve">
+    <value>Loaded</value>
+  </data>
+  <data name="Nav_CachedAt" xml:space="preserve">
+    <value>cached {0}</value>
+  </data>
+  <data name="Nav_SimulationRunning" xml:space="preserve">
+    <value>Simulation is running...</value>
+  </data>
+  <data name="Nav_SimulationCompleted" xml:space="preserve">
+    <value>Simulation completed.</value>
+  </data>
+  <data name="Nav_FileLoaded" xml:space="preserve">
+    <value>Loaded '{0}'.</value>
+  </data>
+  <data name="Nav_FileLoadedCacheFailed" xml:space="preserve">
+    <value>Loaded '{0}', but the browser working copy could not be written: {1}</value>
+  </data>
+  <data name="Nav_FileExported" xml:space="preserve">
+    <value>Exported '{0}' and updated the browser working copy.</value>
+  </data>
+  <data name="Nav_FileExportedCacheFailed" xml:space="preserve">
+    <value>Exported '{0}', but the browser working copy could not be updated: {1}</value>
+  </data>
+  <data name="Layout_RestoringCache" xml:space="preserve">
+    <value>Loading browser working copy...</value>
+  </data>
+  <data name="Layout_RestoreFailed" xml:space="preserve">
+    <value>Could not restore the browser working copy: {0}</value>
+  </data>
+  <data name="Chart_LiquidBalanceTitle" xml:space="preserve">
+    <value>Liquid balance over time</value>
+  </data>
+  <data name="Chart_LiquidBalanceFooter" xml:space="preserve">
+    <value>Lowest liquid balance</value>
+  </data>
+  <data name="Chart_NetWorthTitle" xml:space="preserve">
+    <value>Net worth over time</value>
+  </data>
+  <data name="Chart_NetWorthFooter" xml:space="preserve">
+    <value>Lowest net worth</value>
+  </data>
+  <data name="Nav_ToggleNavigation" xml:space="preserve">
+    <value>Toggle navigation</value>
+  </data>
+  <data name="BankImport_AddedFromImport" xml:space="preserve">
+    <value>Added from {0} import.</value>
+  </data>
 </root>

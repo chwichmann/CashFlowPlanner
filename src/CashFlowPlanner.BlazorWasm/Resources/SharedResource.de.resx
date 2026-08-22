@@ -2532,4 +2532,61 @@
   <data name="Account_HideImport" xml:space="preserve">
     <value>Bankimport ausblenden</value>
   </data>
+  <data name="Nav_NoPlanLoaded" xml:space="preserve">
+    <value>Kein Plan geladen</value>
+  </data>
+  <data name="Nav_LoadedFromFile" xml:space="preserve">
+    <value>Aus Datei geladen</value>
+  </data>
+  <data name="Nav_LoadedFromCache" xml:space="preserve">
+    <value>Aus dem Browser-Cache geladen</value>
+  </data>
+  <data name="Nav_Loaded" xml:space="preserve">
+    <value>Geladen</value>
+  </data>
+  <data name="Nav_CachedAt" xml:space="preserve">
+    <value>zwischengespeichert {0}</value>
+  </data>
+  <data name="Nav_SimulationRunning" xml:space="preserve">
+    <value>Simulation läuft...</value>
+  </data>
+  <data name="Nav_SimulationCompleted" xml:space="preserve">
+    <value>Simulation abgeschlossen.</value>
+  </data>
+  <data name="Nav_FileLoaded" xml:space="preserve">
+    <value>'{0}' geladen.</value>
+  </data>
+  <data name="Nav_FileLoadedCacheFailed" xml:space="preserve">
+    <value>'{0}' geladen, aber die Arbeitskopie im Browser konnte nicht geschrieben werden: {1}</value>
+  </data>
+  <data name="Nav_FileExported" xml:space="preserve">
+    <value>'{0}' exportiert und die Arbeitskopie im Browser aktualisiert.</value>
+  </data>
+  <data name="Nav_FileExportedCacheFailed" xml:space="preserve">
+    <value>'{0}' exportiert, aber die Arbeitskopie im Browser konnte nicht aktualisiert werden: {1}</value>
+  </data>
+  <data name="Layout_RestoringCache" xml:space="preserve">
+    <value>Arbeitskopie im Browser wird geladen...</value>
+  </data>
+  <data name="Layout_RestoreFailed" xml:space="preserve">
+    <value>Die Arbeitskopie im Browser konnte nicht wiederhergestellt werden: {0}</value>
+  </data>
+  <data name="Chart_LiquidBalanceTitle" xml:space="preserve">
+    <value>Liquider Kontostand über die Zeit</value>
+  </data>
+  <data name="Chart_LiquidBalanceFooter" xml:space="preserve">
+    <value>Tiefster liquider Kontostand</value>
+  </data>
+  <data name="Chart_NetWorthTitle" xml:space="preserve">
+    <value>Nettovermögen über die Zeit</value>
+  </data>
+  <data name="Chart_NetWorthFooter" xml:space="preserve">
+    <value>Tiefstes Nettovermögen</value>
+  </data>
+  <data name="Nav_ToggleNavigation" xml:space="preserve">
+    <value>Navigation ein-/ausblenden</value>
+  </data>
+  <data name="BankImport_AddedFromImport" xml:space="preserve">
+    <value>Aus {0}-Import übernommen.</value>
+  </data>
 </root>

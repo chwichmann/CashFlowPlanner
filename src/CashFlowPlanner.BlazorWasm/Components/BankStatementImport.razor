@@ -615,7 +615,7 @@
                     Type = identifierType,
                     Value = accountIdentifier,
                     BankName = account.BankName,
-                    Notes = $"Added from {sourceFormat} import."
+                    Notes = string.Format(L["BankImport_AddedFromImport"].Value, sourceFormat)
                 }
             ])
             .ToList();

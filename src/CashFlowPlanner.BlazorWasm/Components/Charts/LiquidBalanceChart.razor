@@ -1,11 +1,15 @@
-﻿@using CashFlowPlanner.Core
+﻿@using CashFlowPlanner.BlazorWasm.Resources
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
+
+@using CashFlowPlanner.Core
 @using CashFlowPlanner.Core.Accounts
 
-<SvgLineChart Title="Liquid balance over time"
+<SvgLineChart Title="@L["Chart_LiquidBalanceTitle"]"
               Points="Series"
               Currency="@Plan.BaseCurrency"
               Stroke="#0d6efd"
-              FooterLabel="Lowest liquid balance" />
+              FooterLabel="@L["Chart_LiquidBalanceFooter"]" />
 
 @code {
     [Parameter]

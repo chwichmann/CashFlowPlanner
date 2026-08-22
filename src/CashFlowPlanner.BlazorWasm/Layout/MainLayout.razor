@@ -5,6 +5,7 @@
 
 @inject CashFlowPlanner.BlazorWasm.Services.PlanCacheCoordinator PlanCacheCoordinator
 @inject CashFlowPlanner.BlazorWasm.Services.CashFlowAppState AppState
+@inject Microsoft.Extensions.Localization.IStringLocalizer<CashFlowPlanner.BlazorWasm.Resources.SharedResource> L
 @inject CashFlowPlanner.BlazorWasm.Services.DiskAutoSaveCoordinator DiskCoordinator
 @inject CashFlowPlanner.BlazorWasm.Services.DiskAutoSaveService DiskAutoSave
 
@@ -23,13 +24,13 @@
             @if (!_cacheInitialized)
             {
                 <div class="alert alert-info">
-                    Loading browser working copy...
+                    @L["Layout_RestoringCache"]
                 </div>
             }
             else if (!string.IsNullOrWhiteSpace(_cacheError))
             {
                 <div class="alert alert-warning">
-                    Could not restore browser working copy: @_cacheError
+                    @string.Format(L["Layout_RestoreFailed"].Value, _cacheError)
                 </div>
 
                 @Body

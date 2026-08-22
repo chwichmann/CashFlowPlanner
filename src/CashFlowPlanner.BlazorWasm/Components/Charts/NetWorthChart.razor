@@ -1,10 +1,14 @@
-﻿@using CashFlowPlanner.Core
+﻿@using CashFlowPlanner.BlazorWasm.Resources
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
 
-<SvgLineChart Title="Net worth over time"
+@using CashFlowPlanner.Core
+
+<SvgLineChart Title="@L["Chart_NetWorthTitle"]"
               Points="Series"
               Currency="@Plan.BaseCurrency"
               Stroke="#198754"
-              FooterLabel="Lowest net worth" />
+              FooterLabel="@L["Chart_NetWorthFooter"]" />
 
 @code {
     [Parameter]
