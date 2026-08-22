@@ -1,4 +1,4 @@
-﻿@page "/pillar3a"
+@page "/pillar3a"
 
 @using System.Globalization
 @using CashFlowPlanner.BlazorWasm.Resources
@@ -17,718 +17,756 @@
 @inject Pillar3aTaxYearSimulator TaxYearSimulator
 @inject EnumLocalizer EnumL
 @inject IStringLocalizer<SharedResource> L
-
-<PageTitle>@L["Pillar3a_Title"] - CashFlow Planner</PageTitle>
-
-<h1>@L["Pillar3a_Title"]</h1>
-
-@if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <div class="alert alert-danger">@_errorMessage</div>
-}
-
-@if (!string.IsNullOrWhiteSpace(_infoMessage))
-{
-    <div class="alert alert-info">@_infoMessage</div>
-}
-
-@if (AppState.CurrentPlan is null)
-{
-    <PlanEmptyState Message='@L["Pillar3a_NoPlanLoaded"]' />
-}
-else
-{
-    var plan = AppState.CurrentPlan;
-
-    var contracts = plan.Pillar3aContracts
-        .OrderBy(x => GetPersonName(x.OwnerPersonId))
-        .ThenBy(x => x.Name)
-        .ToList();
-
-    var projectionResults = ProjectionEngine.Project(
-        plan,
-        DateOnly.FromDateTime(DateTime.Today));
-
-    var taxYearResult = TaxYearSimulator.Simulate(
-        plan,
-        _taxYear,
-        _annualPillar3aLimit);
-
-    var taxYearRows = BuildTaxYearRows(taxYearResult);
-    var personProjectionRows = BuildPersonProjectionRows(contracts, projectionResults);
-    var yearlyProjectionMatrix = BuildYearlyPersonProjectionMatrixRows(contracts, projectionResults);
-
-    var yearlyProjectionPersons = yearlyProjectionMatrix
-        .SelectMany(x => x.PersonCells.Keys)
-        .Distinct()
-        .OrderBy(GetPersonName)
-        .ToList();
-
-    <div class="mb-3">
-        <button class="btn btn-primary" @onclick="NewContract">
-            @L["Pillar3a_AddContract"]
-        </button>
-    </div>
-
-    @if (_editModel is not null)
-    {
-        <div class="card mb-3">
-            <div class="card-header">
-                <strong>@(_isNewContract ? L["Pillar3a_AddContract"] : L["Pillar3a_EditContract"])</strong>
-            </div>
-
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Name"]</label>
-                        <input class="form-control" @bind="_editModel.Name" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Owner"]</label>
-                        <select class="form-select" @bind="_editModel.OwnerPersonId">
-                            <option value="">@L["Pillar3a_SelectOwner"]</option>
-                            @foreach (var person in ContractOwnerPersonList.OrderBy(x => x.DisplayName))
-                            {
-                                <option value="@person.Id">@person.DisplayName</option>
-                            }
-                        </select>
-                        <div class="form-text">
-                            @L["Pillar3a_OwnerHint"]
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Type"]</label>
-                        <select class="form-select" @bind="_editModel.Type">
-                            @foreach (var type in Enum.GetValues<Pillar3aContractType>())
-                            {
-                                <option value="@type">@EnumL.Translate(type)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">@L["Currency"]</label>
-                        <input class="form-control" @bind="_editModel.Currency" />
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">@L["Pillar3a_Provider"]</label>
-                        <input class="form-control" @bind="_editModel.ProviderName" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Pillar3a_ContractNumberMasked"]</label>
-                        <input class="form-control" @bind="_editModel.ContractNumberMasked" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Pillar3a_OpeningValue"]</label>
-                        <input type="number" step="0.01" class="form-control" @bind="_editModel.OpeningValue" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Pillar3a_OpeningDate"]</label>
-                        <input type="date" class="form-control" @bind="_editModel.OpeningDate" />
-                    </div>
-
-                    <div class="col-md-3 d-flex align-items-end">
-                        <div class="form-check">
-                            <input id="pillar3a-active"
-                                   type="checkbox"
-                                   class="form-check-input"
-                                   @bind="_editModel.IsActive" />
-                            <label class="form-check-label" for="pillar3a-active">
-                                @L["Active"]
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">@L["Notes"]</label>
-                        <input class="form-control" @bind="_editModel.Notes" />
-                    </div>
-                </div>
-
-                <hr />
-
-                <h6>@L["Pillar3a_ProjectionAssumptions"]</h6>
-
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Pillar3a_ProjectionMethod"]</label>
-                        <select class="form-select" @bind="_editModel.ProjectionMethod">
-                            @foreach (var method in Enum.GetValues<Pillar3aProjectionMethod>())
-                            {
-                                <option value="@method">@EnumL.Translate(method)</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Pillar3a_ExpectedAnnualReturnPercent"]</label>
-                        <input type="number"
-                               step="0.01"
-                               class="form-control"
-                               @bind="_editModel.ExpectedAnnualReturnPercent" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Pillar3a_AnnualFeePercent"]</label>
-                        <input type="number"
-                               step="0.01"
-                               class="form-control"
-                               @bind="_editModel.AnnualFeePercent" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">@L["Pillar3a_ExpectedSurplusPercent"]</label>
-                        <input type="number"
-                               step="0.01"
-                               class="form-control"
-                               @bind="_editModel.ExpectedSurplusPercent" />
-                    </div>
-                </div>
-
-                <hr />
-
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">@L["Pillar3a_ContributionSchedules"]</h6>
-
-                    <button class="btn btn-sm btn-outline-primary" @onclick="AddContributionSchedule">
-                        @L["Pillar3a_AddSchedule"]
-                    </button>
-                </div>
-
-                @if (_editModel.ContributionSchedules.Count == 0)
-                {
-                    <div class="alert alert-info">
-                        @L["Pillar3a_NoContributionSchedulesConfigured"]
-                    </div>
-                }
-                else
-                {
-                    @foreach (var schedule in _editModel.ContributionSchedules)
-                    {
-                        <div class="border rounded p-3 mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <strong>@L["Pillar3a_ContributionSchedule"]</strong>
-
-                                <button class="btn btn-sm btn-outline-danger"
-                                        @onclick="() => RemoveContributionSchedule(schedule)">
-                                    @L["Remove"]
-                                </button>
-                            </div>
-
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">@L["Pillar3a_PaymentAccount"]</label>
-                                    <select class="form-select" @bind="schedule.PaymentAccountId">
-                                        <option value="">@L["Pillar3a_SelectAccount"]</option>
-                                        @foreach (var account in PaymentAccounts.OrderBy(x => x.Name))
-                                        {
-                                            <option value="@account.Id">@account.Name</option>
-                                        }
-                                    </select>
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label">@L["Amount"]</label>
-                                    <input type="number" step="0.01" class="form-control" @bind="schedule.Amount" />
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label">@L["Currency"]</label>
-                                    <input class="form-control" @bind="schedule.Currency" />
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label">@L["Pillar3a_StartDate"]</label>
-                                    <input type="date" class="form-control" @bind="schedule.StartDate" />
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label">@L["Pillar3a_EndDate"]</label>
-                                    <input type="date" class="form-control" @bind="schedule.EndDate" />
-                                </div>
-
-                                <div class="col-md-3">
-                                    <label class="form-label">@L["Pillar3a_Frequency"]</label>
-                                    <select class="form-select" @bind="schedule.Frequency">
-                                        @foreach (var frequency in Enum.GetValues<ScheduleFrequency>())
-                                        {
-                                            <option value="@frequency">@EnumL.Translate(frequency)</option>
-                                        }
-                                    </select>
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label">@L["Pillar3a_Interval"]</label>
-                                    <input type="number" class="form-control" @bind="schedule.Interval" />
-                                </div>
-
-                                <div class="col-md-2">
-                                    <label class="form-label">@L["Pillar3a_DayOfMonth"]</label>
-                                    <input type="number" class="form-control" @bind="schedule.DayOfMonth" />
-                                </div>
-
-                                <div class="col-md-3">
-                                    <label class="form-label">@L["Pillar3a_BusinessDayAdjustment"]</label>
-                                    <select class="form-select" @bind="schedule.BusinessDayAdjustment">
-                                        @foreach (var adjustment in Enum.GetValues<BusinessDayAdjustment>())
-                                        {
-                                            <option value="@adjustment">@EnumL.Translate(adjustment)</option>
-                                        }
-                                    </select>
-                                </div>
-
-                                <div class="col-md-2 d-flex align-items-end">
-                                    <div class="form-check">
-                                        <input type="checkbox"
-                                               class="form-check-input"
-                                               @bind="schedule.IsActive" />
-                                        <label class="form-check-label">
-                                            @L["Active"]
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-12">
-                                    <label class="form-label">@L["Notes"]</label>
-                                    <input class="form-control" @bind="schedule.Notes" />
-                                </div>
-                            </div>
-                        </div>
-                    }
-                }
-
-                <div class="mt-3">
-                    <button class="btn btn-primary" @onclick="SaveContract">
-                        @L["Save"]
-                    </button>
-
-                    <button class="btn btn-outline-secondary ms-2" @onclick="CancelEdit">
-                        @L["Cancel"]
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-
-    <div class="card mb-3">
-        <div class="card-header">
-            <strong>@L["Pillar3a_TaxYearSimulator"]</strong>
-        </div>
-
-        <div class="card-body">
-            <p class="text-muted">
-                @L["Pillar3a_TaxYearSimulatorText"]
-            </p>
-
-            <div class="row g-3 align-items-end mb-3">
-                <div class="col-md-3">
-                    <label class="form-label">@L["Pillar3a_TaxYear"]</label>
-                    <input type="number" class="form-control" @bind="_taxYear" />
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label">@L["Pillar3a_AnnualLimitPerPerson"]</label>
-                    <input type="number" step="0.01" class="form-control" @bind="_annualPillar3aLimit" />
-                </div>
-            </div>
-
-            @if (taxYearRows.Count == 0)
-            {
-                <div class="alert alert-info">
-                    @L["Pillar3a_NoEligiblePersonsWithSchedules"]
-                </div>
-            }
-            else
-            {
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>@L["Person"]</th>
-                            <th class="text-center">@L["Pillar3a_Contracts"]</th>
-                            <th class="text-center">@L["Pillar3a_ActiveSchedules"]</th>
-                            <th class="text-end">@L["Pillar3a_AnnualLimit"]</th>
-                            <th class="text-end">@L["Pillar3a_ScheduledContributions"]</th>
-                            <th class="text-end">@L["Pillar3a_Remaining"]</th>
-                            <th class="text-end">@L["Pillar3a_Excess"]</th>
-                            <th class="text-end">@L["Status"]</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach (var row in taxYearRows.OrderBy(x => x.PersonName))
-                        {
-                            <tr>
-                                <td>@row.PersonName</td>
-                                <td class="text-center">@row.ContractCount</td>
-                                <td class="text-center">@row.ActiveScheduleCount</td>
-                                <td class="text-end">@FormatMoney(row.AnnualLimit, plan.BaseCurrency)</td>
-                                <td class="text-end">@FormatMoney(row.ScheduledContributions, plan.BaseCurrency)</td>
-                                <td class="text-end">@FormatMoney(row.Remaining, plan.BaseCurrency)</td>
-                                <td class="text-end">@FormatMoney(row.Excess, plan.BaseCurrency)</td>
-                                <td class="text-end">
-                                    @if (row.IsExceeded)
-                                    {
-                                        <span class="badge bg-danger">@L["Pillar3a_Exceeded"]</span>
-                                    }
-                                    else if (row.IsLimitReached)
-                                    {
-                                        <span class="badge bg-success ">@L["Pillar3a_LimitReached"]</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-warning text-dark">@L["Pillar3a_BelowLimit"]</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-        </div>
-    </div>
-
-    <h5>@L["Pillar3a_ProjectionSummaryPerPerson"]</h5>
-
-    @if (personProjectionRows.Count == 0)
-    {
-        <div class="alert alert-info">
-            @L["Pillar3a_NoPerPersonProjectionAvailable"]
-        </div>
-    }
-    else
-    {
-        <table class="table table-striped table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>@L["Person"]</th>
-                    <th class="text-center">@L["Pillar3a_Contracts"]</th>
-                    <th class="text-end">@L["Pillar3a_OpeningValue"]</th>
-                    <th class="text-end">@L["Pillar3a_TotalContributions"]</th>
-                    <th class="text-end">@L["Pillar3a_TotalGrowth"]</th>
-                    <th class="text-end">@L["Pillar3a_TotalWithdrawals"]</th>
-                    <th class="text-end">@L["Pillar3a_ProjectedValue"]</th>
-                    <th class="text-end">@L["Pillar3a_LatestProjectionDate"]</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var row in personProjectionRows.OrderBy(x => x.PersonName))
-                {
-                    <tr>
-                        <td>@row.PersonName</td>
-                        <td class="text-center">@row.ContractCount</td>
-                        <td class="text-end">@FormatMoney(row.OpeningValue, row.Currency)</td>
-                        <td class="text-end">@FormatMoney(row.Contributions, row.Currency)</td>
-                        <td class="text-end">@FormatMoney(row.Growth, row.Currency)</td>
-                        <td class="text-end">@FormatMoney(row.Withdrawals, row.Currency)</td>
-                        <td class="text-end">@FormatMoney(row.ProjectedValue, row.Currency)</td>
-                        <td class="text-end">@FormatNullableDate(row.LatestProjectionDate)</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-
-    <h5>@L["Pillar3a_Contracts"]</h5>
-
-    @if (contracts.Count == 0)
-    {
-        <div class="alert alert-info">
-            @L["Pillar3a_NoContractsConfigured"]
-        </div>
-    }
-    else
-    {
-        <table class="table table-striped table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>@L["Name"]</th>
-                    <th>@L["Status"]</th>
-                    <th>@L["Owner"]</th>
-                    <th>@L["Type"]</th>
-                    <th>@L["Pillar3a_Provider"]</th>
-                    <th class="text-end">@L["Pillar3a_OpeningValue"]</th>
-                    <th class="text-center">@L["Pillar3a_OpeningDate"]</th>
-                    <th class="text-center">@L["Pillar3a_RetirementDate"]</th>
-                    <th class="text-center">@L["Pillar3a_RemainingYears"]</th>
-                    <th class="text-end">@L["Pillar3a_ProjectedValue"]</th>
-                    <th class="text-end">@L["Actions"]</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var contract in contracts)
-                {
-                    var projection = projectionResults.SingleOrDefault(x => x.ContractId == contract.Id);
-                    var finalPoint = projection?.Points.LastOrDefault();
-                    var owner = GetPerson(contract.OwnerPersonId);
-
-                    <tr>
-                        <td>
-                            <div>@contract.Name</div>
-                            @if (!string.IsNullOrWhiteSpace(contract.ContractNumberMasked))
-                            {
-                                <small class="text-muted">@contract.ContractNumberMasked</small>
-                            }
-                        </td>
-                        <td>
-                            @if (contract.IsActive)
-                            {
-                                <span class="badge bg-success">@L["Active"]</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">@L["Inactive"]</span>
-                            }
-                        </td>
-                        <td>@GetPersonName(contract.OwnerPersonId)</td>
-                        <td>@EnumL.Translate(contract.Type)</td>
-                        <td>@contract.ProviderName</td>
-                        <td class="text-end">@FormatMoney(contract.OpeningValue, contract.Currency)</td>
-                        <td class="text-center">@FormatDate(contract.OpeningDate)</td>
-                        <td class="text-center">
-                            @if (owner?.RetirementDate is null)
-                            {
-                                <span class="text-muted">@L["Pillar3a_Fallback30Years"]</span>
-                            }
-                            else
-                            {
-                                @FormatDate(owner.RetirementDate.Value)
-                            }
-                        </td>
-                        <td class="text-center">
-                            @FormatRemainingYears(owner?.RetirementDate)
-                        </td>
-                        <td class="text-end">
-                            @if (finalPoint is null)
-                            {
-                                <span class="text-muted">@L["NotApplicable"]</span>
-                            }
-                            else
-                            {
-                                @FormatMoney(finalPoint.Value, finalPoint.Currency)
-                            }
-                        </td>
-                        <td class="text-end" style="white-space: nowrap;">
-                            <button class="btn btn-sm btn-primary me-1"
-                                    @onclick="() => EditContract(contract)">
-                                @L["Edit"]
-                            </button>
-
-                            <button class="btn btn-sm btn-danger"
-                                    @onclick="() => DeleteContract(contract)">
-                                @L["Delete"]
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-
-        <h5>@L["Pillar3a_ProjectionSummaryByContract"]</h5>
-
-        <table class="table table-striped table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>@L["Pillar3a_Contract"]</th>
-                    <th>@L["Owner"]</th>
-                    <th class="text-end">@L["Pillar3a_OpeningValue"]</th>
-                    <th class="text-end">@L["Pillar3a_TotalContributions"]</th>
-                    <th class="text-end">@L["Pillar3a_TotalGrowth"]</th>
-                    <th class="text-end">@L["Pillar3a_Performance"]</th>
-                    <th class="text-end">@L["Pillar3a_TotalWithdrawals"]</th>
-                    <th class="text-end">@L["Pillar3a_ProjectedValue"]</th>
-                    <th>@L["Pillar3a_ProjectionEnd"]</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @foreach (var projection in projectionResults.OrderBy(x => GetPersonName(x.OwnerPersonId)).ThenBy(x => x.ContractName))
-                {
-                    var contract = contracts.Single(x => x.Id == projection.ContractId);
-                    var finalPoint = projection.Points.LastOrDefault();
-                    var contractContributions = projection.Points.Sum(x => x.Contributions);
-                    var contractGrowth = projection.Points.Sum(x => x.Growth);
-                    var contractWithdrawals = projection.Points.Sum(x => x.Withdrawals);
-
-                    var contractPerformance = CalculatePerformancePercent(
-                        contract.OpeningValue,
-                        contractContributions,
-                        contractWithdrawals,
-                        contractGrowth);
-
-                    <tr>
-                        <td>@projection.ContractName</td>
-                        <td>@GetPersonName(projection.OwnerPersonId)</td>
-                        <td class="text-end">@FormatMoney(contract.OpeningValue, contract.Currency)</td>
-                        <td class="text-end">@FormatMoney(contractContributions, contract.Currency)</td>
-                        <td class="text-end">@FormatMoney(contractGrowth, contract.Currency)</td>
-                        <td class="text-end">@FormatPercent(contractPerformance)</td>
-                        <td class="text-end">@FormatMoney(contractWithdrawals, contract.Currency)</td>
-                        <td class="text-end">
-                            @if (finalPoint is null)
-                            {
-                                <span class="text-muted">@L["NotApplicable"]</span>
-                            }
-                            else
-                            {
-                                @FormatMoney(finalPoint.Value, finalPoint.Currency)
-                            }
-                        </td>
-                        <td>
-                            @if (finalPoint is null)
-                            {
-                                <span class="text-muted">@L["NotApplicable"]</span>
-                            }
-                            else
-                            {
-                                @FormatDate(finalPoint.Date)
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-
-        <h5>@L["Pillar3a_YearlyProjectionByPerson"]</h5>
-
-        @if (yearlyProjectionMatrix.Count == 0)
+@inject AppFormatter Formatter
+
+@* Outside the scaffold: the dialog has to survive the body being replaced by the empty state. *@
+<ConfirmDialog @ref="_confirmDialog" />
+
+<PageScaffold Title='@L["Pillar3a_Title"]'
+              RequiresPlan="true"
+              EmptyStateMessage='@L["Pillar3a_NoPlanLoaded"]'>
+    <Actions>
+        @if (AppState.CurrentPlan is not null)
         {
-            <div class="alert alert-info">
-                @L["Pillar3a_NoYearlyProjectionAvailable"]
-            </div>
+            <button class="btn btn-primary" @onclick="NewContract">
+                @L["Pillar3a_AddContract"]
+            </button>
         }
-        else
+    </Actions>
+
+    <Notifications>
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th rowspan="2">@L["Pillar3a_Year"]</th>
-
-                            @foreach (var personId in yearlyProjectionPersons)
-                            {
-                                <th colspan="5" class="text-center">@GetPersonName(personId)</th>
-                            }
-
-                            <th colspan="3" class="text-center">@L["Pillar3a_Total"]</th>
-                        </tr>
-
-                        <tr>
-                            @foreach (var personId in yearlyProjectionPersons)
-                            {
-                                <th class="text-end">@L["Pillar3a_Contributions"]</th>
-                                <th class="text-end">@L["Pillar3a_Growth"]</th>
-                                <th class="text-end">@L["Pillar3a_Performance"]</th>
-                                <th class="text-end">@L["Pillar3a_Withdrawals"]</th>
-                                <th class="text-end">@L["Pillar3a_EndValue"]</th>
-                            }
-
-                            <th class="text-end">@L["Pillar3a_EndValue"]</th>
-                            <th class="text-end">@L["Pillar3a_Growth"]</th>
-                            <th class="text-end">@L["Pillar3a_Performance"]</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach (var row in yearlyProjectionMatrix.OrderBy(x => x.Year))
-                        {
-                            <tr>
-                                <td>@row.Year</td>
-
-                                @foreach (var personId in yearlyProjectionPersons)
-                                {
-                                    row.PersonCells.TryGetValue(personId, out var cell);
-
-                                    <td class="text-end">@FormatMoney(cell?.Contributions ?? 0m, row.Currency)</td>
-                                    <td class="text-end">@FormatMoney(cell?.Growth ?? 0m, row.Currency)</td>
-                                    <td class="text-end">@FormatPercent(cell?.PerformancePercent)</td>
-                                    <td class="text-end">@FormatMoney(cell?.Withdrawals ?? 0m, row.Currency)</td>
-                                    <td class="text-end">@FormatMoney(cell?.EndValue ?? 0m, row.Currency)</td>
-                                }
-
-                                <td class="text-end">@FormatMoney(row.TotalEndValue, row.Currency)</td>
-                                <td class="text-end">@FormatMoney(row.TotalGrowth, row.Currency)</td>
-                                <td class="text-end">@FormatPercent(row.TotalPerformancePercent)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
         }
 
-        <h5>@L["Pillar3a_SimulatedContributionEvents"]</h5>
-
-        @if (AppState.CurrentSimulationResult is null)
+        @if (!string.IsNullOrWhiteSpace(_infoMessage))
         {
-            <div class="alert alert-info">
-                @L["Pillar3a_NoSimulationResultForContributionEvents"]
-            </div>
+            <div class="alert alert-info" role="alert">@_infoMessage</div>
         }
-        else
-        {
-            var simulatedContributionEvents = AppState.CurrentSimulationResult.Events
-                .Where(x => x.Category == "Pillar 3a Contribution")
-                .OrderBy(x => x.Date)
+    </Notifications>
+
+    <ChildContent>
+        @{
+            // The scaffold only invokes this fragment once a plan is loaded, which is what
+            // RequiresPlan is for.
+            var plan = AppState.CurrentPlan!;
+
+            var contracts = plan.Pillar3aContracts
+                .OrderBy(x => GetPersonName(x.OwnerPersonId))
                 .ThenBy(x => x.Name)
                 .ToList();
 
-            if (simulatedContributionEvents.Count == 0)
+            var projectionResults = ProjectionEngine.Project(
+                plan,
+                DateOnly.FromDateTime(DateTime.Today));
+
+            var taxYearResult = TaxYearSimulator.Simulate(
+                plan,
+                _taxYear,
+                _annualPillar3aLimit);
+
+            var taxYearRows = BuildTaxYearRows(taxYearResult)
+                .OrderBy(x => x.PersonName)
+                .ToList();
+
+            var personProjectionRows = BuildPersonProjectionRows(contracts, projectionResults)
+                .OrderBy(x => x.PersonName)
+                .ToList();
+
+            var yearlyProjectionMatrix = BuildYearlyPersonProjectionMatrixRows(contracts, projectionResults)
+                .OrderBy(x => x.Year)
+                .ToList();
+
+            var yearlyProjectionPersons = yearlyProjectionMatrix
+                .SelectMany(x => x.PersonCells.Keys)
+                .Distinct()
+                .OrderBy(GetPersonName)
+                .ToList();
+
+            var contractRows = BuildContractRows(contracts, projectionResults);
+            var contractProjectionRows = BuildContractProjectionRows(contracts, projectionResults);
+        }
+
+        @if (_editModel is not null)
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>@(_isNewContract ? L["Pillar3a_AddContract"] : L["Pillar3a_EditContract"])</strong>
+                </div>
+
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <FormField Label='@L["Name"]' CssClass="">
+                                <input id="@context.Id" class="form-control" @bind="_editModel.Name" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-4">
+                            <FormField Label='@L["Owner"]' Hint='@L["Pillar3a_OwnerHint"]' CssClass="">
+                                <select id="@context.Id"
+                                        aria-describedby="@context.DescribedBy"
+                                        class="form-select"
+                                        @bind="_editModel.OwnerPersonId">
+                                    <option value="">@L["Pillar3a_SelectOwner"]</option>
+                                    @foreach (var person in ContractOwnerPersonList.OrderBy(x => x.DisplayName))
+                                    {
+                                        <option value="@person.Id">@person.DisplayName</option>
+                                    }
+                                </select>
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-4">
+                            <FormField Label='@L["Type"]' CssClass="">
+                                <select id="@context.Id" class="form-select" @bind="_editModel.Type">
+                                    @foreach (var type in Enum.GetValues<Pillar3aContractType>())
+                                    {
+                                        <option value="@type">@EnumL.Translate(type)</option>
+                                    }
+                                </select>
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-2">
+                            <FormField Label='@L["Currency"]' CssClass="">
+                                <input id="@context.Id" class="form-control" @bind="_editModel.Currency" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-4">
+                            <FormField Label='@L["Pillar3a_Provider"]' CssClass="">
+                                <input id="@context.Id" class="form-control" @bind="_editModel.ProviderName" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["Pillar3a_ContractNumberMasked"]' CssClass="">
+                                <input id="@context.Id" class="form-control" @bind="_editModel.ContractNumberMasked" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["Pillar3a_OpeningValue"]' CssClass="">
+                                <MoneyInput Id="@context.Id" @bind-Value="_editModel.OpeningValue" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["Pillar3a_OpeningDate"]' CssClass="">
+                                <input id="@context.Id" type="date" class="form-control" @bind="_editModel.OpeningDate" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3 d-flex align-items-end">
+                            <FormField Label='@L["Active"]' Layout="FormFieldLayout.Checkbox" CssClass="">
+                                <input id="@context.Id"
+                                       type="checkbox"
+                                       class="form-check-input"
+                                       @bind="_editModel.IsActive" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-6">
+                            <FormField Label='@L["Notes"]' CssClass="">
+                                <input id="@context.Id" class="form-control" @bind="_editModel.Notes" />
+                            </FormField>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <h6>@L["Pillar3a_ProjectionAssumptions"]</h6>
+
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <FormField Label='@L["Pillar3a_ProjectionMethod"]' CssClass="">
+                                <select id="@context.Id" class="form-select" @bind="_editModel.ProjectionMethod">
+                                    @foreach (var method in Enum.GetValues<Pillar3aProjectionMethod>())
+                                    {
+                                        <option value="@method">@EnumL.Translate(method)</option>
+                                    }
+                                </select>
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["Pillar3a_ExpectedAnnualReturnPercent"]' CssClass="">
+                                <MoneyInput Id="@context.Id"
+                                            Suffix="%"
+                                            @bind-Value="_editModel.ExpectedAnnualReturnPercent" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["Pillar3a_AnnualFeePercent"]' CssClass="">
+                                <MoneyInput Id="@context.Id"
+                                            Suffix="%"
+                                            @bind-Value="_editModel.AnnualFeePercent" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["Pillar3a_ExpectedSurplusPercent"]' CssClass="">
+                                <MoneyInput Id="@context.Id"
+                                            Suffix="%"
+                                            @bind-Value="ExpectedSurplusPercent" />
+                            </FormField>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">@L["Pillar3a_ContributionSchedules"]</h6>
+
+                        <button class="btn btn-sm btn-outline-primary" @onclick="AddContributionSchedule">
+                            @L["Pillar3a_AddSchedule"]
+                        </button>
+                    </div>
+
+                    @if (_editModel.ContributionSchedules.Count == 0)
+                    {
+                        <div class="alert alert-info">
+                            @L["Pillar3a_NoContributionSchedulesConfigured"]
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var schedule in _editModel.ContributionSchedules)
+                        {
+                            <div class="border rounded p-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <strong>@L["Pillar3a_ContributionSchedule"]</strong>
+
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            @onclick="() => RemoveContributionSchedule(schedule)">
+                                        @L["Remove"]
+                                    </button>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <FormField Label='@L["Pillar3a_PaymentAccount"]' CssClass="">
+                                            <select id="@context.Id" class="form-select" @bind="schedule.PaymentAccountId">
+                                                <option value="">@L["Pillar3a_SelectAccount"]</option>
+                                                @foreach (var account in PaymentAccounts.OrderBy(x => x.Name))
+                                                {
+                                                    <option value="@account.Id">@account.Name</option>
+                                                }
+                                            </select>
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <FormField Label='@L["Amount"]' CssClass="">
+                                            <MoneyInput Id="@context.Id" @bind-Value="schedule.Amount" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <FormField Label='@L["Currency"]' CssClass="">
+                                            <input id="@context.Id" class="form-control" @bind="schedule.Currency" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <FormField Label='@L["Pillar3a_StartDate"]' CssClass="">
+                                            <input id="@context.Id" type="date" class="form-control" @bind="schedule.StartDate" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <FormField Label='@L["Pillar3a_EndDate"]' CssClass="">
+                                            <input id="@context.Id" type="date" class="form-control" @bind="schedule.EndDate" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <FormField Label='@L["Pillar3a_Frequency"]' CssClass="">
+                                            <select id="@context.Id" class="form-select" @bind="schedule.Frequency">
+                                                @foreach (var frequency in Enum.GetValues<ScheduleFrequency>())
+                                                {
+                                                    <option value="@frequency">@EnumL.Translate(frequency)</option>
+                                                }
+                                            </select>
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <FormField Label='@L["Pillar3a_Interval"]' CssClass="">
+                                            <input id="@context.Id" type="number" class="form-control num" @bind="schedule.Interval" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <FormField Label='@L["Pillar3a_DayOfMonth"]' CssClass="">
+                                            <input id="@context.Id" type="number" class="form-control num" @bind="schedule.DayOfMonth" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <FormField Label='@L["Pillar3a_BusinessDayAdjustment"]' CssClass="">
+                                            <select id="@context.Id" class="form-select" @bind="schedule.BusinessDayAdjustment">
+                                                @foreach (var adjustment in Enum.GetValues<BusinessDayAdjustment>())
+                                                {
+                                                    <option value="@adjustment">@EnumL.Translate(adjustment)</option>
+                                                }
+                                            </select>
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <FormField Label='@L["Active"]' Layout="FormFieldLayout.Checkbox" CssClass="">
+                                            <input id="@context.Id"
+                                                   type="checkbox"
+                                                   class="form-check-input"
+                                                   @bind="schedule.IsActive" />
+                                        </FormField>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <FormField Label='@L["Notes"]' CssClass="">
+                                            <input id="@context.Id" class="form-control" @bind="schedule.Notes" />
+                                        </FormField>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    <div class="mt-3">
+                        <button class="btn btn-primary" @onclick="SaveContract">
+                            @L["Save"]
+                        </button>
+
+                        <button class="btn btn-outline-secondary ms-2" @onclick="CancelEdit">
+                            @L["Cancel"]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>@L["Pillar3a_TaxYearSimulator"]</strong>
+            </div>
+
+            <div class="card-body">
+                <p class="text-muted">
+                    @L["Pillar3a_TaxYearSimulatorText"]
+                </p>
+
+                <div class="row g-3 align-items-end mb-3">
+                    <div class="col-md-3">
+                        <FormField Label='@L["Pillar3a_TaxYear"]' CssClass="">
+                            <input id="@context.Id" type="number" class="form-control num" @bind="_taxYear" />
+                        </FormField>
+                    </div>
+
+                    <div class="col-md-3">
+                        <FormField Label='@L["Pillar3a_AnnualLimitPerPerson"]' CssClass="">
+                            <MoneyInput Id="@context.Id" @bind-Value="_annualPillar3aLimit" />
+                        </FormField>
+                    </div>
+                </div>
+
+                <DataTable Items="taxYearRows"
+                           RowKey="@(x => x.PersonId)"
+                           Caption='@L["Pillar3a_TaxYearSimulator"]'
+                           TableCssClass="table table-sm table-striped table-hover align-middle"
+                           EmptyText='@L["Pillar3a_NoEligiblePersonsWithSchedules"]'>
+                    <Column Title='@L["Person"]' Text="@(x => x.PersonName)" />
+
+                    <Column Title='@L["Pillar3a_Contracts"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Number(x.ContractCount, 0))" />
+
+                    <Column Title='@L["Pillar3a_ActiveSchedules"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Number(x.ActiveScheduleCount, 0))" />
+
+                    <Column Title='@L["Pillar3a_AnnualLimit"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(x.AnnualLimit, x.Currency))" />
+
+                    <Column Title='@L["Pillar3a_ScheduledContributions"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(x.ScheduledContributions, x.Currency))" />
+
+                    <Column Title='@L["Pillar3a_Remaining"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(x.Remaining, x.Currency))" />
+
+                    <Column Title='@L["Pillar3a_Excess"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(x.Excess, x.Currency))" />
+
+                    <Column Title='@L["Status"]'
+                            HeaderCssClass="text-end"
+                            CellCssClass="text-end">
+                        <ChildContent Context="row">
+                            @if (row.IsExceeded)
+                            {
+                                <span class="badge bg-danger">@L["Pillar3a_Exceeded"]</span>
+                            }
+                            else if (row.IsLimitReached)
+                            {
+                                <span class="badge bg-success">@L["Pillar3a_LimitReached"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">@L["Pillar3a_BelowLimit"]</span>
+                            }
+                        </ChildContent>
+                    </Column>
+                </DataTable>
+            </div>
+        </div>
+
+        <h5>@L["Pillar3a_ProjectionSummaryPerPerson"]</h5>
+
+        <DataTable Items="personProjectionRows"
+                   RowKey="@(x => x.PersonId)"
+                   Caption='@L["Pillar3a_ProjectionSummaryPerPerson"]'
+                   TableCssClass="table table-sm table-striped table-hover align-middle"
+                   EmptyText='@L["Pillar3a_NoPerPersonProjectionAvailable"]'>
+            <Column Title='@L["Person"]' Text="@(x => x.PersonName)" />
+
+            <Column Title='@L["Pillar3a_Contracts"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Number(x.ContractCount, 0))" />
+
+            <Column Title='@L["Pillar3a_OpeningValue"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.OpeningValue, x.Currency))" />
+
+            <Column Title='@L["Pillar3a_TotalContributions"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.Contributions, x.Currency))" />
+
+            <Column Title='@L["Pillar3a_TotalGrowth"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.Growth, x.Currency))" />
+
+            <Column Title='@L["Pillar3a_TotalWithdrawals"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.Withdrawals, x.Currency))" />
+
+            <Column Title='@L["Pillar3a_ProjectedValue"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.ProjectedValue, x.Currency))" />
+
+            <Column Title='@L["Pillar3a_LatestProjectionDate"]'
+                    HeaderCssClass="text-end"
+                    CellCssClass="text-end"
+                    Text="@(x => Formatter.Date(x.LatestProjectionDate))" />
+        </DataTable>
+
+        <h5>@L["Pillar3a_Contracts"]</h5>
+
+        @*
+            Every cell reads its row and nothing else. A cell that closed over one of the locals
+            computed above would render a frame late: Blazor hands a child component its parameters
+            after the parent has already produced its render tree, so the lambda a Column is holding
+            when DataTable draws the body is the one from the *previous* pass. Items is DataTable's
+            own parameter and is always current, so anything a cell needs belongs on the row.
+        *@
+        <DataTable Items="contractRows"
+                   RowKey="@(x => x.Contract.Id)"
+                   Caption='@L["Pillar3a_Contracts"]'
+                   TableCssClass="table table-sm table-striped table-hover align-middle"
+                   EmptyText='@L["Pillar3a_NoContractsConfigured"]'>
+            <Column Title='@L["Name"]'>
+                <ChildContent Context="row">
+                    <div>@row.Contract.Name</div>
+                    @if (!string.IsNullOrWhiteSpace(row.Contract.ContractNumberMasked))
+                    {
+                        <small class="text-muted">@row.Contract.ContractNumberMasked</small>
+                    }
+                </ChildContent>
+            </Column>
+
+            <Column Title='@L["Status"]'>
+                <ChildContent Context="row">
+                    @if (row.Contract.IsActive)
+                    {
+                        <span class="badge bg-success">@L["Active"]</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@L["Inactive"]</span>
+                    }
+                </ChildContent>
+            </Column>
+
+            <Column Title='@L["Owner"]' Text="@(x => x.OwnerName)" />
+
+            <Column Title='@L["Type"]' Text="@(x => EnumL.Translate(x.Contract.Type))" />
+
+            <Column Title='@L["Pillar3a_Provider"]'
+                    Text="@(x => x.Contract.ProviderName ?? string.Empty)" />
+
+            <Column Title='@L["Pillar3a_OpeningValue"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.Contract.OpeningValue, x.Contract.Currency))" />
+
+            <Column Title='@L["Pillar3a_OpeningDate"]'
+                    HeaderCssClass="text-center"
+                    CellCssClass="text-center"
+                    Text="@(x => Formatter.Date(x.Contract.OpeningDate))" />
+
+            <Column Title='@L["Pillar3a_RetirementDate"]'
+                    HeaderCssClass="text-center"
+                    CellCssClass="text-center">
+                <ChildContent Context="row">
+                    @if (row.RetirementDate is null)
+                    {
+                        <span class="text-muted">@L["Pillar3a_Fallback30Years"]</span>
+                    }
+                    else
+                    {
+                        @Formatter.Date(row.RetirementDate.Value)
+                    }
+                </ChildContent>
+            </Column>
+
+            <Column Title='@L["Pillar3a_RemainingYears"]'
+                    HeaderCssClass="text-center"
+                    CellCssClass="text-center"
+                    Text="@(x => x.RemainingYears)" />
+
+            <Column Title='@L["Pillar3a_ProjectedValue"]' Align="ColumnAlign.Number">
+                <ChildContent Context="row">
+                    @if (row.ProjectedValue is null)
+                    {
+                        <span class="text-muted">@L["NotApplicable"]</span>
+                    }
+                    else
+                    {
+                        @Formatter.Money(row.ProjectedValue.Value, row.ProjectedValueCurrency)
+                    }
+                </ChildContent>
+            </Column>
+
+            <Column Title='@L["Actions"]'
+                    HeaderCssClass="text-end"
+                    CellCssClass="text-end text-nowrap">
+                <ChildContent Context="row">
+                    <button class="btn btn-sm btn-primary me-1"
+                            @onclick="() => EditContract(row.Contract)">
+                        @L["Edit"]
+                    </button>
+
+                    <button class="btn btn-sm btn-danger"
+                            @onclick="() => DeleteContractAsync(row.Contract)">
+                        @L["Delete"]
+                    </button>
+                </ChildContent>
+            </Column>
+        </DataTable>
+
+        @if (contracts.Count > 0)
+        {
+            <h5>@L["Pillar3a_ProjectionSummaryByContract"]</h5>
+
+            <DataTable Items="contractProjectionRows"
+                       RowKey="@(x => x.ContractId)"
+                       Caption='@L["Pillar3a_ProjectionSummaryByContract"]'
+                       TableCssClass="table table-sm table-striped table-hover align-middle">
+                <Column Title='@L["Pillar3a_Contract"]' Text="@(x => x.ContractName)" />
+
+                <Column Title='@L["Owner"]' Text="@(x => x.OwnerName)" />
+
+                <Column Title='@L["Pillar3a_OpeningValue"]'
+                        Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.OpeningValue, x.Currency))" />
+
+                <Column Title='@L["Pillar3a_TotalContributions"]'
+                        Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.Contributions, x.Currency))" />
+
+                <Column Title='@L["Pillar3a_TotalGrowth"]'
+                        Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.Growth, x.Currency))" />
+
+                <Column Title='@L["Pillar3a_Performance"]'
+                        Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Percent(x.PerformancePercent))" />
+
+                <Column Title='@L["Pillar3a_TotalWithdrawals"]'
+                        Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.Withdrawals, x.Currency))" />
+
+                <Column Title='@L["Pillar3a_ProjectedValue"]' Align="ColumnAlign.Number">
+                    <ChildContent Context="row">
+                        @if (row.ProjectedValue is null)
+                        {
+                            <span class="text-muted">@L["NotApplicable"]</span>
+                        }
+                        else
+                        {
+                            @Formatter.Money(row.ProjectedValue.Value, row.ProjectedValueCurrency)
+                        }
+                    </ChildContent>
+                </Column>
+
+                <Column Title='@L["Pillar3a_ProjectionEnd"]'>
+                    <ChildContent Context="row">
+                        @if (row.ProjectionEnd is null)
+                        {
+                            <span class="text-muted">@L["NotApplicable"]</span>
+                        }
+                        else
+                        {
+                            @Formatter.Date(row.ProjectionEnd.Value)
+                        }
+                    </ChildContent>
+                </Column>
+            </DataTable>
+
+            <h5>@L["Pillar3a_YearlyProjectionByPerson"]</h5>
+
+            @*
+                One header row rather than two. The grouped header this replaces was a rowspan/
+                colspan lattice, and DataTable generates header, body and footer from a single flat
+                column list on purpose - the colspan arithmetic is exactly what went wrong
+                elsewhere in the app. The person's name rides above the measure inside its own
+                header cell instead.
+
+                Keyed on the set of people: the columns are generated in a loop, and a person
+                appearing mid-session would otherwise register their columns after the totals
+                rather than in the middle. The key rebuilds the table instead.
+            *@
+            <DataTable @key="YearlyColumnKey(yearlyProjectionPersons)"
+                       Items="yearlyProjectionMatrix"
+                       RowKey="@(x => x.Year)"
+                       Caption='@L["Pillar3a_YearlyProjectionByPerson"]'
+                       TableCssClass="table table-sm table-striped table-hover align-middle"
+                       EmptyText='@L["Pillar3a_NoYearlyProjectionAvailable"]'>
+                <Column Title='@L["Pillar3a_Year"]'
+                        Text="@(x => x.Year.ToString(CultureInfo.InvariantCulture))" />
+
+                @foreach (var personId in yearlyProjectionPersons)
+                {
+                    <Column Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(Cell(x, personId)?.Contributions ?? 0m, x.Currency))">
+                        <HeaderContent>
+                            <span class="d-block small text-body-secondary fw-normal">@GetPersonName(personId)</span>
+                            @L["Pillar3a_Contributions"]
+                        </HeaderContent>
+                    </Column>
+
+                    <Column Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(Cell(x, personId)?.Growth ?? 0m, x.Currency))">
+                        <HeaderContent>
+                            <span class="d-block small text-body-secondary fw-normal">@GetPersonName(personId)</span>
+                            @L["Pillar3a_Growth"]
+                        </HeaderContent>
+                    </Column>
+
+                    <Column Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Percent(Cell(x, personId)?.PerformancePercent))">
+                        <HeaderContent>
+                            <span class="d-block small text-body-secondary fw-normal">@GetPersonName(personId)</span>
+                            @L["Pillar3a_Performance"]
+                        </HeaderContent>
+                    </Column>
+
+                    <Column Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(Cell(x, personId)?.Withdrawals ?? 0m, x.Currency))">
+                        <HeaderContent>
+                            <span class="d-block small text-body-secondary fw-normal">@GetPersonName(personId)</span>
+                            @L["Pillar3a_Withdrawals"]
+                        </HeaderContent>
+                    </Column>
+
+                    <Column Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(Cell(x, personId)?.EndValue ?? 0m, x.Currency))">
+                        <HeaderContent>
+                            <span class="d-block small text-body-secondary fw-normal">@GetPersonName(personId)</span>
+                            @L["Pillar3a_EndValue"]
+                        </HeaderContent>
+                    </Column>
+                }
+
+                <Column Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.TotalEndValue, x.Currency))">
+                    <HeaderContent>
+                        <span class="d-block small text-body-secondary fw-normal">@L["Pillar3a_Total"]</span>
+                        @L["Pillar3a_EndValue"]
+                    </HeaderContent>
+                </Column>
+
+                <Column Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Money(x.TotalGrowth, x.Currency))">
+                    <HeaderContent>
+                        <span class="d-block small text-body-secondary fw-normal">@L["Pillar3a_Total"]</span>
+                        @L["Pillar3a_Growth"]
+                    </HeaderContent>
+                </Column>
+
+                <Column Align="ColumnAlign.Number"
+                        Text="@(x => Formatter.Percent(x.TotalPerformancePercent))">
+                    <HeaderContent>
+                        <span class="d-block small text-body-secondary fw-normal">@L["Pillar3a_Total"]</span>
+                        @L["Pillar3a_Performance"]
+                    </HeaderContent>
+                </Column>
+            </DataTable>
+
+            <h5>@L["Pillar3a_SimulatedContributionEvents"]</h5>
+
+            @if (AppState.CurrentSimulationResult is null)
             {
                 <div class="alert alert-info">
-                    @L["Pillar3a_NoContributionEventsInRange"]
+                    @L["Pillar3a_NoSimulationResultForContributionEvents"]
                 </div>
             }
             else
             {
-                <table class="table table-striped table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>@L["Date"]</th>
-                            <th>@L["Name"]</th>
-                            <th>@L["Transaction_FromAccount"]</th>
-                            <th class="text-end">@L["Amount"]</th>
-                            <th>@L["Currency"]</th>
-                            <th>@L["Transaction_PaymentMethod"]</th>
-                        </tr>
-                    </thead>
+                <DataTable Items="SimulatedContributionEvents"
+                           Caption='@L["Pillar3a_SimulatedContributionEvents"]'
+                           TableCssClass="table table-sm table-striped table-hover align-middle"
+                           EmptyText='@L["Pillar3a_NoContributionEventsInRange"]'>
+                    <Column Title='@L["Date"]' Text="@(x => Formatter.Date(x.Date))" />
 
-                    <tbody>
-                        @foreach (var cashFlowEvent in simulatedContributionEvents)
-                        {
-                            <tr>
-                                <td>@FormatDate(cashFlowEvent.Date)</td>
-                                <td>
-                                    <div>@cashFlowEvent.Name</div>
-                                    @if (!string.IsNullOrWhiteSpace(cashFlowEvent.Notes))
-                                    {
-                                        <small class="text-muted">@cashFlowEvent.Notes</small>
-                                    }
-                                </td>
-                                <td>@GetAccountName(cashFlowEvent.FromAccountId)</td>
-                                <td class="text-end">@cashFlowEvent.Amount.ToString("N2", CultureInfo.CurrentCulture)</td>
-                                <td>@cashFlowEvent.Currency</td>
-                                <td>@EnumL.Translate(cashFlowEvent.PaymentMethod)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                    <Column Title='@L["Name"]'>
+                        <ChildContent Context="cashFlowEvent">
+                            <div>@cashFlowEvent.Name</div>
+                            @if (!string.IsNullOrWhiteSpace(cashFlowEvent.Notes))
+                            {
+                                <small class="text-muted">@cashFlowEvent.Notes</small>
+                            }
+                        </ChildContent>
+                    </Column>
+
+                    <Column Title='@L["Transaction_FromAccount"]'
+                            Text="@(x => GetAccountName(x.FromAccountId))" />
+
+                    <Column Title='@L["Amount"]'
+                            Align="ColumnAlign.Number"
+                            Text="@(x => Formatter.Money(x.Amount))" />
+
+                    <Column Title='@L["Currency"]' Text="@(x => x.Currency)" />
+
+                    <Column Title='@L["Transaction_PaymentMethod"]'
+                            Text="@(x => EnumL.Translate(x.PaymentMethod))" />
+                </DataTable>
             }
         }
-    }
-}
+    </ChildContent>
+</PageScaffold>
 
 @code {
     private Pillar3aContractEditModel? _editModel;
     private bool _isNewContract;
     private string? _errorMessage;
     private string? _infoMessage;
+
+    private ConfirmDialog? _confirmDialog;
 
     private int _taxYear = DateTime.Today.Year;
     private decimal _annualPillar3aLimit = 7_258m;
@@ -745,6 +783,41 @@ else
             .Where(x => x.Type is AccountType.BankAccount or AccountType.SavingsAccount or AccountType.Cash)
             .ToList()
         ?? [];
+
+    private IReadOnlyList<CashFlowEvent> SimulatedContributionEvents =>
+        AppState.CurrentSimulationResult?.Events
+            .Where(x => x.Category == "Pillar 3a Contribution")
+            .OrderBy(x => x.Date)
+            .ThenBy(x => x.Name)
+            .ToList()
+        ?? [];
+
+    /// <summary>
+    /// <see cref="MoneyInput"/> binds a <c>decimal</c> and the model holds a <c>decimal?</c>. Zero
+    /// stands in for null, which changes nothing: the projection engine never reads this figure and
+    /// the only rule on it is that it may not be negative.
+    /// </summary>
+    private decimal ExpectedSurplusPercent
+    {
+        get => _editModel?.ExpectedSurplusPercent ?? 0m;
+        set
+        {
+            if (_editModel is not null)
+            {
+                _editModel.ExpectedSurplusPercent = value == 0m ? null : value;
+            }
+        }
+    }
+
+    private static YearlyPersonProjectionCell? Cell(
+        YearlyPersonProjectionMatrixRow row,
+        Guid personId)
+    {
+        return row.PersonCells.TryGetValue(personId, out var cell) ? cell : null;
+    }
+
+    private static string YearlyColumnKey(IReadOnlyList<Guid> personIds) =>
+        string.Join('|', personIds);
 
     private void NewContract()
     {
@@ -801,9 +874,25 @@ else
         }
     }
 
-    private void DeleteContract(Pillar3aContract contract)
+    // The plan autosaves to the browser working copy, so an accidental click here is not
+    // recoverable without re-importing a file.
+    private async Task DeleteContractAsync(Pillar3aContract contract)
     {
         ClearMessages();
+
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("Delete"),
+            Text("Dialog_ConfirmMessage"));
+
+        if (!confirmed)
+        {
+            return;
+        }
 
         try
         {
@@ -867,7 +956,7 @@ else
     {
         if (accountId is null || AppState.CurrentPlan is null)
         {
-            return "-";
+            return AppFormatter.EmptyMarker;
         }
 
         return AppState.CurrentPlan.Accounts
@@ -916,6 +1005,7 @@ else
                     ScheduledContributions = scheduledContributions,
                     Remaining = remaining,
                     Excess = excess,
+                    Currency = AppState.CurrentPlan?.BaseCurrency ?? "CHF",
                     IsLimitReached = scheduledContributions >= _annualPillar3aLimit,
                     IsExceeded = scheduledContributions > _annualPillar3aLimit
                 };
@@ -963,6 +1053,74 @@ else
                     ProjectedValue = projectedValue,
                     LatestProjectionDate = latestProjectionDate == default ? null : latestProjectionDate,
                     Currency = AppState.CurrentPlan?.BaseCurrency ?? "CHF"
+                };
+            })
+            .ToList();
+    }
+
+    private IReadOnlyList<ContractRow> BuildContractRows(
+        IReadOnlyList<Pillar3aContract> contracts,
+        IReadOnlyList<Pillar3aProjectionResult> projectionResults)
+    {
+        return contracts
+            .Select(contract =>
+            {
+                var owner = GetPerson(contract.OwnerPersonId);
+
+                var finalPoint = projectionResults
+                    .SingleOrDefault(x => x.ContractId == contract.Id)
+                    ?.Points.LastOrDefault();
+
+                return new ContractRow
+                {
+                    Contract = contract,
+                    OwnerName = GetPersonName(contract.OwnerPersonId),
+                    RetirementDate = owner?.RetirementDate,
+                    RemainingYears = FormatRemainingYears(owner?.RetirementDate),
+                    ProjectedValue = finalPoint?.Value,
+                    ProjectedValueCurrency = finalPoint?.Currency ?? contract.Currency
+                };
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// The per-contract projection summary as rows. Pulled out of the markup so the table is a
+    /// column declaration rather than a loop with five running totals in it.
+    /// </summary>
+    private IReadOnlyList<ContractProjectionRow> BuildContractProjectionRows(
+        IReadOnlyList<Pillar3aContract> contracts,
+        IReadOnlyList<Pillar3aProjectionResult> projectionResults)
+    {
+        return projectionResults
+            .OrderBy(x => GetPersonName(x.OwnerPersonId))
+            .ThenBy(x => x.ContractName)
+            .Select(projection =>
+            {
+                var contract = contracts.Single(x => x.Id == projection.ContractId);
+                var finalPoint = projection.Points.LastOrDefault();
+                var contributions = projection.Points.Sum(x => x.Contributions);
+                var growth = projection.Points.Sum(x => x.Growth);
+                var withdrawals = projection.Points.Sum(x => x.Withdrawals);
+
+                return new ContractProjectionRow
+                {
+                    ContractId = projection.ContractId,
+                    ContractName = projection.ContractName,
+                    OwnerName = GetPersonName(projection.OwnerPersonId),
+                    Currency = contract.Currency,
+                    OpeningValue = contract.OpeningValue,
+                    Contributions = contributions,
+                    Growth = growth,
+                    Withdrawals = withdrawals,
+                    PerformancePercent = CalculatePerformancePercent(
+                        contract.OpeningValue,
+                        contributions,
+                        withdrawals,
+                        growth),
+                    ProjectedValue = finalPoint?.Value,
+                    ProjectedValueCurrency = finalPoint?.Currency ?? contract.Currency,
+                    ProjectionEnd = finalPoint?.Date
                 };
             })
             .ToList();
@@ -1090,28 +1248,6 @@ else
         return growth / denominator * 100m;
     }
 
-    private static string FormatMoney(decimal amount, string currency)
-    {
-        return $"{amount.ToString("N2", CultureInfo.CurrentCulture)} {currency}";
-    }
-
-    private static string FormatPercent(decimal? value)
-    {
-        return value is null
-            ? "-"
-            : $"{value.Value.ToString("N2", CultureInfo.CurrentCulture)} %";
-    }
-
-    private static string FormatDate(DateOnly date)
-    {
-        return date.ToString("d", CultureInfo.CurrentCulture);
-    }
-
-    private static string FormatNullableDate(DateOnly? date)
-    {
-        return date is null ? "-" : date.Value.ToString("d", CultureInfo.CurrentCulture);
-    }
-
     private string Text(string key)
     {
         return L[key].Value;
@@ -1128,6 +1264,8 @@ else
         _infoMessage = null;
     }
 
+    // Left alone deliberately: this composes a localized sentence rather than formatting a value,
+    // so it is not one of the duplicated format helpers AppFormatter replaces.
     private string FormatRemainingYears(DateOnly? retirementDate)
     {
         var effectiveRetirementDate = retirementDate
@@ -1168,6 +1306,21 @@ else
         public decimal Excess { get; init; }
         public bool IsLimitReached { get; init; }
         public bool IsExceeded { get; init; }
+        public string Currency { get; init; } = "CHF";
+    }
+
+    /// <summary>
+    /// One row of the contracts table, with everything its cells need already resolved. See the
+    /// comment above that table for why a cell may not reach outside its row.
+    /// </summary>
+    private sealed class ContractRow
+    {
+        public required Pillar3aContract Contract { get; init; }
+        public string OwnerName { get; init; } = string.Empty;
+        public DateOnly? RetirementDate { get; init; }
+        public string RemainingYears { get; init; } = string.Empty;
+        public decimal? ProjectedValue { get; init; }
+        public string ProjectedValueCurrency { get; init; } = "CHF";
     }
 
     private sealed class PersonPillar3aProjectionRow
@@ -1182,6 +1335,22 @@ else
         public decimal ProjectedValue { get; init; }
         public DateOnly? LatestProjectionDate { get; init; }
         public string Currency { get; init; } = "CHF";
+    }
+
+    private sealed class ContractProjectionRow
+    {
+        public Guid ContractId { get; init; }
+        public string ContractName { get; init; } = string.Empty;
+        public string OwnerName { get; init; } = string.Empty;
+        public string Currency { get; init; } = "CHF";
+        public decimal OpeningValue { get; init; }
+        public decimal Contributions { get; init; }
+        public decimal Growth { get; init; }
+        public decimal Withdrawals { get; init; }
+        public decimal? PerformancePercent { get; init; }
+        public decimal? ProjectedValue { get; init; }
+        public string ProjectedValueCurrency { get; init; } = "CHF";
+        public DateOnly? ProjectionEnd { get; init; }
     }
 
     private sealed class YearlyPersonProjectionMatrixRow
