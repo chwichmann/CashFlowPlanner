@@ -1,9 +1,11 @@
 using CashFlowPlanner.Core;
 using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.CreditCards;
+using CashFlowPlanner.Core.Indexation;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
+using CashFlowPlanner.Core.RealEstate;
 
 namespace CashFlowPlanner.BlazorWasm.Tests;
 
@@ -17,12 +19,16 @@ internal static class AppStateTestPlanFactory
     public static readonly Guid MainAccountId = new("10000000-0000-0000-0000-000000000001");
     public static readonly Guid SpareAccountId = new("10000000-0000-0000-0000-000000000002");
     public static readonly Guid CardAccountId = new("10000000-0000-0000-0000-000000000003");
+    public static readonly Guid Pillar3aAccountId = new("10000000-0000-0000-0000-000000000004");
 
     public static CashFlowPlan CreatePlan(
         IEnumerable<TransactionDefinition>? transactions = null,
         IEnumerable<MortgageContract>? mortgages = null,
         IEnumerable<CreditCardContract>? creditCards = null,
-        IEnumerable<Pillar3aContract>? pillar3aContracts = null)
+        IEnumerable<Pillar3aContract>? pillar3aContracts = null,
+        IEnumerable<RealEstateAsset>? realEstateAssets = null,
+        InflationAssumption? inflation = null,
+        bool withPillar3aAccount = false)
     {
         return new CashFlowPlan
         {
@@ -40,17 +46,27 @@ internal static class AppStateTestPlanFactory
                 }
             ],
 
-            Accounts =
-            [
-                CreateAccount(MainAccountId, "Main Account", AccountType.BankAccount),
-                CreateAccount(SpareAccountId, "Spare Account", AccountType.SavingsAccount),
-                CreateAccount(CardAccountId, "Visa", AccountType.CreditCard)
-            ],
+            Accounts = withPillar3aAccount
+                ?
+                [
+                    CreateAccount(MainAccountId, "Main Account", AccountType.BankAccount),
+                    CreateAccount(SpareAccountId, "Spare Account", AccountType.SavingsAccount),
+                    CreateAccount(CardAccountId, "Visa", AccountType.CreditCard),
+                    CreatePillar3aAccount(Pillar3aAccountId, "Pillar 3a Account")
+                ]
+                :
+                [
+                    CreateAccount(MainAccountId, "Main Account", AccountType.BankAccount),
+                    CreateAccount(SpareAccountId, "Spare Account", AccountType.SavingsAccount),
+                    CreateAccount(CardAccountId, "Visa", AccountType.CreditCard)
+                ],
 
             Transactions = transactions?.ToList() ?? [],
             Mortgages = mortgages?.ToList() ?? [],
             CreditCards = creditCards?.ToList() ?? [],
             Pillar3aContracts = pillar3aContracts?.ToList() ?? [],
+            RealEstateAssets = realEstateAssets?.ToList() ?? [],
+            Inflation = inflation ?? new InflationAssumption(),
 
             SimulationSettings = new SimulationSettings
             {
@@ -71,6 +87,44 @@ internal static class AppStateTestPlanFactory
             Currency = "CHF",
             OpeningBalance = 1000m,
             OpeningDate = new DateOnly(2026, 1, 1)
+        };
+    }
+
+    /// <summary>
+    /// A Pillar 3a account as AccountValidator insists on one: exactly one owner, and a subtype.
+    /// </summary>
+    public static Account CreatePillar3aAccount(Guid id, string name)
+    {
+        return new Account
+        {
+            Id = id,
+            Name = name,
+            Type = AccountType.Pillar3a,
+            Currency = "CHF",
+            OpeningBalance = 12000m,
+            OpeningDate = new DateOnly(2026, 1, 1),
+            Pillar3aSubtype = Pillar3aAccountSubtype.FundSolution,
+            Owners =
+            [
+                new AccountOwner { PersonId = PersonId, OwnershipShare = 1m }
+            ]
+        };
+    }
+
+    public static RealEstateAsset CreateRealEstateAsset(
+        Guid? id = null,
+        IEnumerable<Guid>? linkedMortgageIds = null)
+    {
+        return new RealEstateAsset
+        {
+            Id = id ?? new Guid("20000000-0000-0000-0000-000000000001"),
+            Name = "Family Home",
+            Type = RealEstateType.House,
+            CurrentEstimatedValue = 950_000m,
+            ValuationDate = new DateOnly(2026, 1, 1),
+            AnnualValueGrowthPercent = 1m,
+            Pillar2BvgUsedAmount = 50_000m,
+            LinkedMortgageIds = linkedMortgageIds?.ToList() ?? []
         };
     }
 
@@ -136,13 +190,16 @@ internal static class AppStateTestPlanFactory
 
     public static Pillar3aContract CreatePillar3aContract(
         Guid? contributionAccountId = null,
-        Guid? withdrawalTargetAccountId = null)
+        Guid? withdrawalTargetAccountId = null,
+        Guid? accountId = null,
+        Guid? id = null)
     {
         return new Pillar3aContract
         {
-            Id = Guid.NewGuid(),
+            Id = id ?? Guid.NewGuid(),
             Name = "Pillar 3a Fund",
             OwnerPersonId = PersonId,
+            AccountId = accountId,
             Type = Pillar3aContractType.Investment,
             OpeningValue = 10000m,
             OpeningDate = new DateOnly(2026, 1, 1),

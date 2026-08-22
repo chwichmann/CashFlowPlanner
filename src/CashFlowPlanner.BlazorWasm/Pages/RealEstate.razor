@@ -1,0 +1,539 @@
+@page "/realestate"
+
+@using CashFlowPlanner.BlazorWasm.Models
+@using CashFlowPlanner.BlazorWasm.Resources
+@using CashFlowPlanner.BlazorWasm.Services
+@using CashFlowPlanner.Core
+@using CashFlowPlanner.Core.Mortgages
+@using CashFlowPlanner.Core.RealEstate
+@using Microsoft.Extensions.Localization
+
+@inherits AppStateAwarePage
+
+@inject CashFlowAppState AppState
+@inject EnumLocalizer EnumL
+@inject IStringLocalizer<SharedResource> L
+@inject AppFormatter Formatter
+
+@* Outside the scaffold: the dialog has to survive the body being replaced by the empty state. *@
+<ConfirmDialog @ref="_confirmDialog" />
+
+<PageScaffold Title='@L["RealEstate_Title"]'
+              Subtitle='@L["RealEstate_Subtitle"]'
+              RequiresPlan="true"
+              EmptyStateMessage='@L["RealEstate_NoPlanLoaded"]'>
+    <Actions>
+        <button class="btn btn-primary" @onclick="NewAsset">
+            @L["RealEstate_AddAsset"]
+        </button>
+    </Actions>
+
+    <Notifications>
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_infoMessage))
+        {
+            <div class="alert alert-info" role="alert">@_infoMessage</div>
+        }
+    </Notifications>
+
+    <ChildContent>
+        @{
+            var plan = AppState.CurrentPlan!;
+            var assetRows = BuildRows(plan);
+        }
+
+        @if (_editModel is { } edit)
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>@(_isNewAsset ? L["RealEstate_AddAsset"] : L["RealEstate_EditAsset"])</strong>
+                </div>
+
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <FormField Label='@L["Name"]' Required="true" CssClass="">
+                                <input id="@context.Id" class="form-control" @bind="edit.Name" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["Type"]' CssClass="">
+                                <select id="@context.Id" class="form-select" @bind="edit.Type">
+                                    @foreach (var type in Enum.GetValues<RealEstateType>())
+                                    {
+                                        <option value="@type">@EnumL.Translate(type)</option>
+                                    }
+                                </select>
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["RealEstate_CurrentValue"]'
+                                       Hint='@L["RealEstate_CurrentValueHint"]'
+                                       CssClass="">
+                                <MoneyInput Id="@context.Id"
+                                            AriaDescribedBy="@context.DescribedBy"
+                                            @bind-Value="edit.CurrentEstimatedValue" />
+                            </FormField>
+                        </div>
+
+                        @*
+                            Growth and the date it compounds from, side by side, because one is
+                            meaningless without the other: with no growth the value is flat and the
+                            date does not matter, and with growth and no date there is nothing to
+                            compound from.
+                        *@
+                        <div class="col-md-3">
+                            <FormField Label='@L["RealEstate_AnnualGrowth"]'
+                                       Hint='@L["RealEstate_AnnualGrowthHint"]'
+                                       CssClass="">
+                                <MoneyInput Id="@context.Id"
+                                            AriaDescribedBy="@context.DescribedBy"
+                                            Suffix="%"
+                                            @bind-Value="edit.AnnualValueGrowthPercent" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["RealEstate_ValuationDate"]'
+                                       Required="@(edit.AnnualValueGrowthPercent != 0m)"
+                                       Hint='@L["RealEstate_ValuationDateHint"]'
+                                       CssClass="">
+                                <input id="@context.Id"
+                                       type="date"
+                                       class="form-control"
+                                       aria-describedby="@context.DescribedBy"
+                                       @bind="edit.ValuationDate" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["RealEstate_AcquisitionDate"]'
+                                       Hint='@L["RealEstate_AcquisitionDateHint"]'
+                                       CssClass="">
+                                <input id="@context.Id"
+                                       type="date"
+                                       class="form-control"
+                                       aria-describedby="@context.DescribedBy"
+                                       @bind="edit.AcquisitionDate" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-3">
+                            <FormField Label='@L["RealEstate_DisposalDate"]'
+                                       Hint='@L["RealEstate_DisposalDateHint"]'
+                                       CssClass="">
+                                <input id="@context.Id"
+                                       type="date"
+                                       class="form-control"
+                                       aria-describedby="@context.DescribedBy"
+                                       @bind="edit.DisposalDate" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-4">
+                            <FormField Label='@L["RealEstate_Pillar2Used"]'
+                                       Hint='@L["RealEstate_Pillar2UsedHint"]'
+                                       CssClass="">
+                                <MoneyInput Id="@context.Id"
+                                            AriaDescribedBy="@context.DescribedBy"
+                                            @bind-Value="edit.Pillar2BvgUsedAmount" />
+                            </FormField>
+                        </div>
+
+                        <div class="col-md-8">
+                            <FormField Label='@L["Notes"]' CssClass="">
+                                <input id="@context.Id" class="form-control" @bind="edit.Notes" />
+                            </FormField>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <h6>@L["RealEstate_LinkedMortgages"]</h6>
+
+                    <p class="text-muted small">@L["RealEstate_LinkedMortgagesHint"]</p>
+
+                    @if (plan.Mortgages.Count == 0)
+                    {
+                        <div class="alert alert-info">@L["RealEstate_NoMortgagesInPlan"]</div>
+                    }
+                    else
+                    {
+                        <div class="realestate-mortgages">
+                            @foreach (var mortgage in plan.Mortgages.OrderBy(x => x.Name))
+                            {
+                                @*
+                                    Checkboxes rather than a <select multiple>. A household has a
+                                    handful of mortgages, all of which fit on screen, and a
+                                    multi-select hides which ones are picked behind a scroll box
+                                    that needs ctrl-click to operate.
+
+                                    Disabled where another property already claims the mortgage:
+                                    linking one to two properties nets the same debt off two
+                                    different assets, which plan validation rejects. Better to
+                                    refuse the click than the save.
+                                *@
+                                <FormField Label="@MortgageLabel(mortgage)"
+                                           Hint="@ClaimedByHint(plan, mortgage)"
+                                           Layout="FormFieldLayout.Checkbox"
+                                           CssClass="mb-1">
+                                    <input id="@context.Id"
+                                           type="checkbox"
+                                           class="form-check-input"
+                                           aria-describedby="@context.DescribedBy"
+                                           disabled="@IsClaimedElsewhere(plan, mortgage)"
+                                           checked="@edit.LinkedMortgageIds.Contains(mortgage.Id)"
+                                           @onchange="args => ToggleMortgage(mortgage.Id, args)" />
+                                </FormField>
+                            }
+                        </div>
+
+                        @if (AcquisitionMismatch(plan, edit) is { } mismatch)
+                        {
+                            @* Both legs of a purchase have to appear on the same day, or the
+                               net-worth series steps by the property on one date and by the
+                               mortgage on another. *@
+                            <div class="alert alert-warning" role="status">
+                                @Text("RealEstate_AcquisitionMortgageMismatch",
+                                      mismatch.Name,
+                                      Formatter.Date(mismatch.InitialDate))
+                            </div>
+                        }
+                    }
+
+                    <div class="mt-3">
+                        <button class="btn btn-primary" @onclick="SaveAsset">
+                            @L["Save"]
+                        </button>
+
+                        <button class="btn btn-outline-secondary ms-2" @onclick="CancelEdit">
+                            @L["Cancel"]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <DataTable Items="assetRows"
+                   RowKey="@(x => x.Asset.Id)"
+                   Caption='@L["RealEstate_Title"]'
+                   TableCssClass="table table-sm table-striped table-hover align-middle"
+                   EmptyText='@L["RealEstate_NoAssets"]'>
+            <Column Title='@L["Name"]'>
+                <ChildContent Context="row">
+                    <div>@row.Asset.Name</div>
+                    @if (!string.IsNullOrWhiteSpace(row.Asset.Notes))
+                    {
+                        <small class="text-muted">@row.Asset.Notes</small>
+                    }
+                </ChildContent>
+            </Column>
+
+            <Column Title='@L["Type"]' Text="@(x => EnumL.Translate(x.Asset.Type))" />
+
+            <Column Title='@L["RealEstate_CurrentValue"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.Asset.CurrentEstimatedValue, x.Currency))"
+                    FooterValue="@(rows => Formatter.Money(rows.Sum(x => x.Asset.CurrentEstimatedValue), CurrencyOf(rows)))" />
+
+            <Column Title='@L["RealEstate_AnnualGrowth"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Percent(x.Asset.AnnualValueGrowthPercent))" />
+
+            <Column Title='@L["RealEstate_ValuationDate"]'
+                    HeaderCssClass="text-center"
+                    CellCssClass="text-center"
+                    Text="@(x => Formatter.Date(x.Asset.ValuationDate))" />
+
+            <Column Title='@L["RealEstate_OwnershipPeriod"]'
+                    HeaderCssClass="text-center"
+                    CellCssClass="text-center"
+                    Text="@(x => x.OwnershipPeriod)" />
+
+            <Column Title='@L["RealEstate_Pillar2Used"]'
+                    Align="ColumnAlign.Number"
+                    Text="@(x => Formatter.Money(x.Asset.Pillar2BvgUsedAmount, x.Currency))" />
+
+            <Column Title='@L["RealEstate_LinkedMortgages"]'
+                    Text="@(x => x.LinkedMortgageNames)" />
+
+            <Column Title='@L["Actions"]'
+                    HeaderCssClass="text-end"
+                    CellCssClass="text-end text-nowrap">
+                <ChildContent Context="row">
+                    <button class="btn btn-sm btn-primary me-1"
+                            @onclick="() => EditAsset(row.Asset)">
+                        @L["Edit"]
+                    </button>
+
+                    <button class="btn btn-sm btn-danger"
+                            @onclick="() => DeleteAssetAsync(row.Asset)">
+                        @L["Delete"]
+                    </button>
+                </ChildContent>
+            </Column>
+        </DataTable>
+
+        <p class="text-muted small mt-3">@L["RealEstate_NoCashflowHint"]</p>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    private RealEstateAssetEditModel? _editModel;
+    private bool _isNewAsset;
+
+    private string? _errorMessage;
+    private string? _infoMessage;
+
+    private ConfirmDialog? _confirmDialog;
+
+    private void NewAsset()
+    {
+        ClearMessages();
+
+        // Nothing pre-filled but the type. A growth rate, a valuation date or an acquisition date
+        // offered as a default would be this app making an assumption on the household's behalf
+        // and then hiding it behind a form that looks filled in.
+        _editModel = new RealEstateAssetEditModel
+        {
+            Id = Guid.NewGuid(),
+            Name = string.Empty,
+            Type = RealEstateType.House
+        };
+
+        _isNewAsset = true;
+    }
+
+    private void EditAsset(RealEstateAsset asset)
+    {
+        ClearMessages();
+
+        _editModel = RealEstateAssetEditModel.FromAsset(asset);
+        _isNewAsset = false;
+    }
+
+    private void CancelEdit()
+    {
+        ClearMessages();
+
+        _editModel = null;
+        _isNewAsset = false;
+    }
+
+    private void ToggleMortgage(Guid mortgageId, ChangeEventArgs args)
+    {
+        _editModel?.ToggleMortgage(mortgageId, args.Value is true);
+    }
+
+    private void SaveAsset()
+    {
+        ClearMessages();
+
+        if (_editModel is null || AppState.CurrentPlan is null)
+        {
+            return;
+        }
+
+        try
+        {
+            Validate(AppState.CurrentPlan, _editModel);
+
+            var asset = _editModel.ToAsset();
+
+            AppState.AddOrUpdateRealEstateAsset(asset);
+
+            _infoMessage = _isNewAsset
+                ? Text("RealEstate_AssetAdded", asset.Name)
+                : Text("RealEstate_AssetUpdated", asset.Name);
+
+            _editModel = null;
+            _isNewAsset = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Every rule <see cref="CashFlowPlan.Validate"/> enforces about a property, said before the
+    /// save rather than thrown out of it.
+    ///
+    /// The domain messages are correct and in English, and they arrive from three levels down at
+    /// the moment the user presses a button that is supposed to work. These are the same rules,
+    /// in the user's language, naming the field to go back to.
+    /// </summary>
+    private void Validate(CashFlowPlan plan, RealEstateAssetEditModel edit)
+    {
+        if (string.IsNullOrWhiteSpace(edit.Name))
+        {
+            throw new InvalidOperationException(Text("RealEstate_ErrorNameRequired"));
+        }
+
+        if (edit.CurrentEstimatedValue < 0m)
+        {
+            throw new InvalidOperationException(Text("RealEstate_ErrorNegativeValue"));
+        }
+
+        if (edit.Pillar2BvgUsedAmount < 0m)
+        {
+            throw new InvalidOperationException(Text("RealEstate_ErrorNegativePillar2"));
+        }
+
+        if (edit.AnnualValueGrowthPercent != 0m && edit.ValuationDate is null)
+        {
+            throw new InvalidOperationException(Text("RealEstate_ErrorValuationDateRequired"));
+        }
+
+        if (edit.AcquisitionDate is not null &&
+            edit.DisposalDate is not null &&
+            edit.DisposalDate.Value <= edit.AcquisitionDate.Value)
+        {
+            throw new InvalidOperationException(Text("RealEstate_ErrorDisposalBeforeAcquisition"));
+        }
+
+        var mortgageIds = plan.Mortgages.Select(x => x.Id).ToHashSet();
+
+        foreach (var mortgageId in edit.LinkedMortgageIds)
+        {
+            if (!mortgageIds.Contains(mortgageId))
+            {
+                throw new InvalidOperationException(Text("RealEstate_ErrorUnknownMortgage"));
+            }
+
+            var otherAsset = plan.RealEstateAssets
+                .FirstOrDefault(x => x.Id != edit.Id && x.LinkedMortgageIds.Contains(mortgageId));
+
+            if (otherAsset is not null)
+            {
+                throw new InvalidOperationException(
+                    Text("RealEstate_ErrorMortgageAlreadyLinked", otherAsset.Name));
+            }
+        }
+    }
+
+    private async Task DeleteAssetAsync(RealEstateAsset asset)
+    {
+        ClearMessages();
+
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("Delete"),
+            Text("RealEstate_DeleteConfirm", asset.Name));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            AppState.DeleteRealEstateAsset(asset.Id);
+            _infoMessage = Text("RealEstate_AssetDeleted", asset.Name);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private string MortgageLabel(MortgageContract mortgage) =>
+        $"{mortgage.Name} ({Formatter.Money(mortgage.CalculationPrincipal ?? mortgage.InitialPrincipal)})";
+
+    private bool IsClaimedElsewhere(CashFlowPlan plan, MortgageContract mortgage) =>
+        ClaimedBy(plan, mortgage) is not null;
+
+    private string? ClaimedByHint(CashFlowPlan plan, MortgageContract mortgage)
+    {
+        var owner = ClaimedBy(plan, mortgage);
+
+        return owner is null ? null : Text("RealEstate_MortgageClaimedBy", owner.Name);
+    }
+
+    private RealEstateAsset? ClaimedBy(CashFlowPlan plan, MortgageContract mortgage)
+    {
+        var editedAssetId = _editModel?.Id;
+
+        return plan.RealEstateAssets
+            .FirstOrDefault(x => x.Id != editedAssetId && x.LinkedMortgageIds.Contains(mortgage.Id));
+    }
+
+    /// <summary>
+    /// A linked mortgage whose start date is not the property's acquisition date, if there is one.
+    /// A mortgage counts as debt from the day it starts, so a purchase whose two legs fall on
+    /// different days makes the net-worth series step twice.
+    /// </summary>
+    private static MortgageContract? AcquisitionMismatch(
+        CashFlowPlan plan,
+        RealEstateAssetEditModel edit)
+    {
+        if (edit.AcquisitionDate is null)
+        {
+            return null;
+        }
+
+        return plan.Mortgages
+            .Where(x => edit.LinkedMortgageIds.Contains(x.Id))
+            .FirstOrDefault(x => x.InitialDate != edit.AcquisitionDate.Value);
+    }
+
+    private IReadOnlyList<AssetRow> BuildRows(CashFlowPlan plan)
+    {
+        return plan.RealEstateAssets
+            .OrderBy(x => x.Name)
+            .Select(asset => new AssetRow
+            {
+                Asset = asset,
+                Currency = plan.BaseCurrency,
+                OwnershipPeriod = FormatOwnershipPeriod(asset),
+                LinkedMortgageNames = string.Join(
+                    ", ",
+                    plan.Mortgages
+                        .Where(x => asset.LinkedMortgageIds.Contains(x.Id))
+                        .OrderBy(x => x.Name)
+                        .Select(x => x.Name))
+            })
+            .ToList();
+    }
+
+    private string FormatOwnershipPeriod(RealEstateAsset asset)
+    {
+        if (asset.AcquisitionDate is null && asset.DisposalDate is null)
+        {
+            return Text("RealEstate_OwnedThroughout");
+        }
+
+        return $"{Formatter.Date(asset.AcquisitionDate)} - {Formatter.Date(asset.DisposalDate)}";
+    }
+
+    private static string CurrencyOf(IReadOnlyList<AssetRow> rows) =>
+        rows.Count == 0 ? string.Empty : rows[0].Currency;
+
+    private string Text(string key) => L[key].Value;
+
+    private string Text(string key, params object[] arguments) => L[key, arguments].Value;
+
+    private void ClearMessages()
+    {
+        _errorMessage = null;
+        _infoMessage = null;
+    }
+
+    private sealed class AssetRow
+    {
+        public required RealEstateAsset Asset { get; init; }
+        public string Currency { get; init; } = "CHF";
+        public string OwnershipPeriod { get; init; } = string.Empty;
+        public string LinkedMortgageNames { get; init; } = string.Empty;
+    }
+}

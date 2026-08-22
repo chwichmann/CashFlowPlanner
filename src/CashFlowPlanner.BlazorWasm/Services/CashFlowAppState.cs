@@ -1,6 +1,7 @@
 ﻿using CashFlowPlanner.Core;
 using CashFlowPlanner.Core.Accounts;
 using CashFlowPlanner.Core.CreditCards;
+using CashFlowPlanner.Core.Indexation;
 using CashFlowPlanner.Core.Mortgages;
 using CashFlowPlanner.Core.People;
 using CashFlowPlanner.Core.Pillar3a;
@@ -254,6 +255,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -320,6 +324,15 @@ public sealed class CashFlowAppState
 
         foreach (var contract in plan.Pillar3aContracts)
         {
+            // The contract's own account. Deleting it would leave the contract pointing at an
+            // account that is not there, which CashFlowPlan.Validate rejects - and it would also
+            // silently reopen finding H8 for that contract.
+            if (contract.AccountId == accountId)
+            {
+                usages.Add(
+                    $"the Pillar 3a contract '{contract.Name}' (contract account)");
+            }
+
             if (contract.ContributionSchedules.Any(x => x.PaymentAccountId == accountId))
             {
                 usages.Add(
@@ -416,6 +429,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = settings
         };
@@ -452,6 +468,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -502,6 +521,9 @@ public sealed class CashFlowAppState
             Mortgages = mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -542,6 +564,9 @@ public sealed class CashFlowAppState
             Mortgages = mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -592,6 +617,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = creditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -632,6 +660,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = creditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -685,6 +716,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -752,6 +786,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -793,6 +830,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -839,6 +879,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -879,6 +922,150 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
+            HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
+            SimulationSettings = CurrentPlan.SimulationSettings
+        };
+
+        candidatePlan.Validate();
+
+        CurrentPlan = candidatePlan;
+        CurrentSimulationResult = null;
+        CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
+
+        NotifyPlanChanged();
+    }
+
+    public void AddOrUpdateRealEstateAsset(RealEstateAsset asset)
+    {
+        if (CurrentPlan is null)
+        {
+            throw new InvalidOperationException("No cashflow plan is loaded.");
+        }
+
+        var assets = CurrentPlan.RealEstateAssets.ToList();
+        var existingIndex = assets.FindIndex(x => x.Id == asset.Id);
+
+        if (existingIndex >= 0)
+        {
+            assets[existingIndex] = asset;
+        }
+        else
+        {
+            assets.Add(asset);
+        }
+
+        var candidatePlan = new CashFlowPlan
+        {
+            Id = CurrentPlan.Id,
+            Name = CurrentPlan.Name,
+            BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
+            Persons = CurrentPlan.Persons,
+            Accounts = CurrentPlan.Accounts,
+            Transactions = CurrentPlan.Transactions,
+            Mortgages = CurrentPlan.Mortgages,
+            CreditCards = CurrentPlan.CreditCards,
+            Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = assets,
+            Inflation = CurrentPlan.Inflation,
+
+            HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
+            SimulationSettings = CurrentPlan.SimulationSettings
+        };
+
+        // A mortgage linked to two properties, or to none that exists, is rejected here rather
+        // than on the next export - which is where CashFlowPlan.Validate would otherwise raise it,
+        // long after the editor that caused it has been closed.
+        candidatePlan.Validate();
+
+        CurrentPlan = candidatePlan;
+        CurrentSimulationResult = null;
+        CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
+
+        NotifyPlanChanged();
+    }
+
+    public void DeleteRealEstateAsset(Guid assetId)
+    {
+        if (CurrentPlan is null)
+        {
+            throw new InvalidOperationException("No cashflow plan is loaded.");
+        }
+
+        var assets = CurrentPlan.RealEstateAssets
+            .Where(x => x.Id != assetId)
+            .ToList();
+
+        var candidatePlan = new CashFlowPlan
+        {
+            Id = CurrentPlan.Id,
+            Name = CurrentPlan.Name,
+            BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
+            Persons = CurrentPlan.Persons,
+            Accounts = CurrentPlan.Accounts,
+            Transactions = CurrentPlan.Transactions,
+            Mortgages = CurrentPlan.Mortgages,
+            CreditCards = CurrentPlan.CreditCards,
+            Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = assets,
+            Inflation = CurrentPlan.Inflation,
+
+            HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
+            SimulationSettings = CurrentPlan.SimulationSettings
+        };
+
+        candidatePlan.Validate();
+
+        CurrentPlan = candidatePlan;
+        CurrentSimulationResult = null;
+        CurrentDocument = CurrentPlan.ToDocument(CurrentDocument);
+
+        NotifyPlanChanged();
+    }
+
+    /// <summary>
+    /// Replaces the plan's inflation assumption. A rate of zero reproduces the behaviour of a
+    /// plan that has never heard of inflation, which is why it is the default and why nothing
+    /// here pre-fills a rate on the user's behalf.
+    /// </summary>
+    public void UpdateInflation(InflationAssumption inflation)
+    {
+        if (CurrentPlan is null)
+        {
+            throw new InvalidOperationException("No cashflow plan is loaded.");
+        }
+
+        var candidatePlan = new CashFlowPlan
+        {
+            Id = CurrentPlan.Id,
+            Name = CurrentPlan.Name,
+            BaseCurrency = CurrentPlan.BaseCurrency,
+
+            DefaultPaymentAccountId = CurrentPlan.DefaultPaymentAccountId,
+            TreatWeekendsAsBankOffDays = CurrentPlan.TreatWeekendsAsBankOffDays,
+            BankOffDays = CurrentPlan.BankOffDays,
+
+            Persons = CurrentPlan.Persons,
+            Accounts = CurrentPlan.Accounts,
+            Transactions = CurrentPlan.Transactions,
+            Mortgages = CurrentPlan.Mortgages,
+            CreditCards = CurrentPlan.CreditCards,
+            Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = inflation,
+
             HouseBuyScenarios = CurrentPlan.HouseBuyScenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -927,6 +1114,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = scenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };
@@ -964,6 +1154,9 @@ public sealed class CashFlowAppState
             Mortgages = CurrentPlan.Mortgages,
             CreditCards = CurrentPlan.CreditCards,
             Pillar3aContracts = CurrentPlan.Pillar3aContracts,
+            RealEstateAssets = CurrentPlan.RealEstateAssets,
+            Inflation = CurrentPlan.Inflation,
+
             HouseBuyScenarios = scenarios,
             SimulationSettings = CurrentPlan.SimulationSettings
         };

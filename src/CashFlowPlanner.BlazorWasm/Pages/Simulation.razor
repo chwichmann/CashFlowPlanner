@@ -35,6 +35,15 @@
             .Where(x => IsFullMonthInsideSimulationRange(x.Label, result.StartDate, result.EndDate))
             .ToList();
 
+        @*
+            The warnings, before the numbers they qualify. They were only in the timeline table at
+            the bottom of the page - as a raw code and an English sentence, sorted in among a few
+            hundred events - which is a log rather than a warning. The table stays; this is the
+            part a user actually reads.
+        *@
+        <SimulationWarningPanel Warnings="result.Warnings"
+                                DescribeSource="DescribeWarningSource" />
+
         <div class="card mb-4">
             <div class="card-header">
                 <strong>@L["Simulation_Result"]</strong>
@@ -217,7 +226,22 @@
             <Column Title='@L["Simulation_KindOrSeverity"]' Text="@(row => row.KindOrSeverity)" />
             <Column Title='@L["Transaction_FromAccount"]' Text="@(row => row.FromAccountName)" />
             <Column Title='@L["Transaction_ToAccount"]' Text="@(row => row.ToAccountName)" />
-            <Column Title='@L["Amount"]' Align="ColumnAlign.Number" Text="@(row => row.AmountText)" />
+            <Column Title='@L["Amount"]' Align="ColumnAlign.Number">
+                <ChildContent Context="row">
+                    <div>@row.AmountText</div>
+
+                    @*
+                        What the user actually typed, beside what the simulation charged. The
+                        engine already carries the factor on the event, so this needs no
+                        re-derivation - and without it an indexed amount looks like a number
+                        nobody entered.
+                    *@
+                    @if (row.AsEnteredText is not null)
+                    {
+                        <small class="text-body-secondary">@row.AsEnteredText</small>
+                    }
+                </ChildContent>
+            </Column>
             <Column Title='@L["Currency"]' Text="@(row => row.Currency)" />
             <Column Title='@L["Simulation_CategoryOrMessage"]' Text="@(row => row.MessageOrCategory)" />
         </DataTable>
@@ -242,6 +266,53 @@
         return AppState.CurrentPlan.Accounts
             .SingleOrDefault(x => x.Id == accountId.Value)
             ?.Name ?? "?";
+    }
+
+    /// <summary>
+    /// The name of whatever a warning points at, so the localized text can say which contract,
+    /// mortgage or account it means. The engine's own message already names it, in English.
+    /// </summary>
+    private string? DescribeWarningSource(SimulationWarning warning)
+    {
+        var plan = AppState.CurrentPlan;
+
+        if (plan is null)
+        {
+            return null;
+        }
+
+        if (warning.SourceId is { } sourceId)
+        {
+            var named =
+                plan.Pillar3aContracts.SingleOrDefault(x => x.Id == sourceId)?.Name
+                ?? plan.Mortgages.SingleOrDefault(x => x.Id == sourceId)?.Name
+                ?? plan.CreditCards.SingleOrDefault(x => x.Id == sourceId)?.Name
+                ?? plan.Transactions.SingleOrDefault(x => x.Id == sourceId)?.Name;
+
+            if (named is not null)
+            {
+                return named;
+            }
+        }
+
+        return warning.AccountId is null ? null : GetAccountName(warning.AccountId);
+    }
+
+    /// <summary>
+    /// "CHF 1'000.00 as entered", or null when the amount is not indexed. A factor of exactly 1 is
+    /// what the engine produces for everything that is not indexed, so this shows nothing at all
+    /// on a plan with no inflation rate.
+    /// </summary>
+    private string? DescribeAsEntered(CashFlowEvent cashFlowEvent)
+    {
+        if (cashFlowEvent.IndexationFactor == 1m || cashFlowEvent.IndexationFactor == 0m)
+        {
+            return null;
+        }
+
+        var asEntered = cashFlowEvent.Amount / cashFlowEvent.IndexationFactor;
+
+        return Text("Simulation_AmountAsEntered", Formatter.Money(asEntered));
     }
 
     private string GetMortgageTypeName(CashFlowPlan plan, Guid mortgageId)
@@ -347,6 +418,7 @@
                 FromAccountName = GetAccountName(cashFlowEvent.FromAccountId),
                 ToAccountName = GetAccountName(cashFlowEvent.ToAccountId),
                 AmountText = Formatter.Money(cashFlowEvent.Amount),
+                AsEnteredText = DescribeAsEntered(cashFlowEvent),
                 Currency = cashFlowEvent.Currency,
                 MessageOrCategory = cashFlowEvent.Category ?? string.Empty,
                 RowCssClass = string.Empty
@@ -403,6 +475,9 @@
         public string ToAccountName { get; init; } = string.Empty;
 
         public string AmountText { get; init; } = string.Empty;
+
+        /// <summary>What the amount was entered as, when indexation has since moved it.</summary>
+        public string? AsEnteredText { get; init; }
 
         public string Currency { get; init; } = string.Empty;
 

@@ -279,6 +279,69 @@
                 </div>
             }
 
+            @if (_inflationEditModel is { } inflation)
+            {
+                <div class="card mb-3">
+                    <div class="card-header">
+                        @L["Settings_Inflation"]
+                    </div>
+
+                    <div class="card-body">
+                        <p class="text-muted">@L["Settings_InflationText"]</p>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <FormField Label='@L["Settings_InflationRate"]'
+                                           Hint='@L["Settings_InflationRateHint"]'>
+                                    <MoneyInput Id="@context.Id"
+                                                AriaDescribedBy="@context.DescribedBy"
+                                                Suffix="%"
+                                                @bind-Value="inflation.AnnualRatePercent" />
+                                </FormField>
+                            </div>
+
+                            @*
+                                Shown at any rate, required only above zero. A date entered while
+                                the rate is still nought is not wasted: it is there when the rate
+                                is set.
+                            *@
+                            <div class="col-md-4">
+                                <FormField Label='@L["Settings_InflationBaseDate"]'
+                                           Required="@(inflation.AnnualRatePercent != 0m)"
+                                           Hint='@L["Settings_InflationBaseDateHint"]'>
+                                    <input id="@context.Id"
+                                           type="date"
+                                           class="form-control"
+                                           aria-describedby="@context.DescribedBy"
+                                           @bind="inflation.BaseDate" />
+                                </FormField>
+                            </div>
+                        </div>
+
+                        @if (inflation.AnnualRatePercent == 0m)
+                        {
+                            <div class="alert alert-light" role="status">
+                                @L["Settings_InflationOff"]
+                            </div>
+                        }
+
+                        <div class="d-flex gap-2">
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    @onclick="SaveInflation">
+                                @L["Settings_SaveInflation"]
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    @onclick="ReloadFromPlan">
+                                @L["Reset"]
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+
             <div class="card mb-3">
                 <div class="card-header">
                     @L["Settings_SimulationSettings"]
@@ -526,6 +589,7 @@
 
     private SimulationSettingsEditModel? _editModel;
     private PlanDefaultsEditModel? _planDefaultsEditModel;
+    private InflationEditModel? _inflationEditModel;
 
     private string? _planName;
     private Guid? _loadedPlanId;
@@ -563,6 +627,7 @@
         {
             _editModel = null;
             _planDefaultsEditModel = null;
+            _inflationEditModel = null;
             _planName = null;
             _loadedPlanId = null;
 
@@ -583,6 +648,7 @@
         {
             _editModel = null;
             _planDefaultsEditModel = null;
+            _inflationEditModel = null;
             _planName = null;
             _loadedPlanId = null;
 
@@ -597,6 +663,38 @@
 
         _planDefaultsEditModel = PlanDefaultsEditModel.FromPlan(
             AppState.CurrentPlan);
+
+        _inflationEditModel = InflationEditModel.FromPlan(
+            AppState.CurrentPlan);
+    }
+
+    private void SaveInflation()
+    {
+        ClearMessages();
+
+        if (_inflationEditModel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            // Core throws for a rate without a base date, in English and from deep inside
+            // validation. The same rule, said here, is the one the user can act on.
+            if (_inflationEditModel.AnnualRatePercent != 0m &&
+                _inflationEditModel.BaseDate is null)
+            {
+                throw new InvalidOperationException(Text("Settings_ErrorInflationBaseDateRequired"));
+            }
+
+            AppState.UpdateInflation(_inflationEditModel.ToAssumption());
+
+            _infoMessage = Text("Settings_InflationSaved");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
     }
 
     private void SavePlanName()

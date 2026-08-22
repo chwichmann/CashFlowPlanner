@@ -2157,12 +2157,6 @@
   <data name="BankImport_ErrorNoFileSelected" xml:space="preserve">
     <value>Bitte wähle zuerst eine MT940-Datei aus.</value>
   </data>
-  <data name="BankImport_ErrorStorageFull" xml:space="preserve">
-    <value>Der Browser-Speicher ist voll. Der Import wurde nicht gespeichert und nichts wurde verändert. Löschen Sie ältere Importe unter «Importierte Buchungen» und versuchen Sie es erneut.</value>
-  </data>
-  <data name="BankImport_ErrorStorageFailed" xml:space="preserve">
-    <value>Der Import konnte nicht gespeichert werden und wurde rückgängig gemacht: {0}</value>
-  </data>
   <data name="BankImport_ErrorNothingToApply" xml:space="preserve">
     <value>Es gibt keinen abgeschlossenen Import zum Übernehmen.</value>
   </data>
@@ -2412,9 +2406,6 @@
   <data name="Mortgages_PaymentInterval" xml:space="preserve">
     <value>Zahlungsintervall</value>
   </data>
-  <data name="Mortgages_DayCountConvention" xml:space="preserve">
-    <value>Zinstageberechnung</value>
-  </data>
   <data name="Mortgages_BillingCalendar" xml:space="preserve">
     <value>Abrechnungskalender</value>
   </data>
@@ -2597,6 +2588,387 @@
   </data>
   <data name="BankImport_AddedFromImport" xml:space="preserve">
     <value>Aus {0}-Import übernommen.</value>
+  </data>
+  <data name="Pillar3a_ContractAccount" xml:space="preserve">
+    <value>Säule-3a-Konto</value>
+  </data>
+  <data name="Pillar3a_ContractAccountHint" xml:space="preserve">
+    <value>Das Konto, auf dem das Geld dieses Vertrags liegt. Beiträge werden darauf überwiesen, und sein Saldo ist es, der im Vermögen gezählt wird.</value>
+  </data>
+  <data name="Pillar3a_ContractAccountNotLinked" xml:space="preserve">
+    <value>Nicht verknüpft</value>
+  </data>
+  <data name="Pillar3a_UnlinkedConsequence" xml:space="preserve">
+    <value>Ohne Konto belastet die Simulation das Zahlungskonto und schreibt nichts gut: Jeder eingezahlte Franken verlässt den Plan, und der Saldo dieses Vertrags zählt nicht zum Vermögen.</value>
+  </data>
+  <data name="Pillar3a_NoPillar3aAccountsYet" xml:space="preserve">
+    <value>Dieser Plan hat noch kein Säule-3a-Konto.</value>
+  </data>
+  <data name="Pillar3a_CreateAccount" xml:space="preserve">
+    <value>Säule-3a-Konto erstellen</value>
+  </data>
+  <data name="Pillar3a_CreateAccountTitle" xml:space="preserve">
+    <value>Neues Säule-3a-Konto</value>
+  </data>
+  <data name="Pillar3a_DefaultAccountName" xml:space="preserve">
+    <value>Säule-3a-Konto</value>
+  </data>
+  <data name="Pillar3a_AccountOwnerHint" xml:space="preserve">
+    <value>Ein Säule-3a-Konto gehört genau einer Person.</value>
+  </data>
+  <data name="Pillar3a_AccountOpeningBalanceHint" xml:space="preserve">
+    <value>Der heutige Saldo des Kontos. Üblicherweise derselbe Betrag wie der Anfangswert des Vertrags - weichen die beiden ab, weichen auch Hochrechnung und Vermögensverlauf voneinander ab.</value>
+  </data>
+  <data name="Pillar3a_AccountCreated" xml:space="preserve">
+    <value>Säule-3a-Konto «{0}» wurde erstellt und mit diesem Vertrag verknüpft.</value>
+  </data>
+  <data name="Pillar3a_FixLinkAction" xml:space="preserve">
+    <value>Vertrag öffnen</value>
+  </data>
+  <data name="Pillar3a_SimulatedAccountBalance" xml:space="preserve">
+    <value>Kontosaldo (Simulation)</value>
+  </data>
+  <data name="Pillar3a_Withdrawal" xml:space="preserve">
+    <value>Bezug</value>
+  </data>
+  <data name="Pillar3a_AddWithdrawal" xml:space="preserve">
+    <value>Bezug hinzufügen</value>
+  </data>
+  <data name="Pillar3a_NoWithdrawalsConfigured" xml:space="preserve">
+    <value>Keine Bezüge geplant.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalsHint" xml:space="preserve">
+    <value>Geplante Auszahlungen aus diesem Vertrag. Sie werden simuliert: Das Geld wird dem verknüpften Säule-3a-Konto entnommen und dem Zielkonto gutgeschrieben.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalReason" xml:space="preserve">
+    <value>Grund</value>
+  </data>
+  <data name="Pillar3a_WithdrawalTargetAccount" xml:space="preserve">
+    <value>Zielkonto</value>
+  </data>
+  <data name="Pillar3a_CloseContract" xml:space="preserve">
+    <value>Schliesst den Vertrag</value>
+  </data>
+  <data name="Pillar3a_CloseContractHint" xml:space="preserve">
+    <value>Beiträge enden an diesem Datum: In einen ausbezahlten und geschlossenen Vertrag kann nichts mehr einbezahlt werden.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalSweepHint" xml:space="preserve">
+    <value>Bleibt das Feld leer, zahlt der Schlussbezug aus, was übrig ist. Zinsen, die das Konto erwirtschaftet hat, sind darin nicht enthalten - geben Sie den Betrag explizit an, um diese Näherung zu vermeiden.</value>
+  </data>
+  <data name="Pillar3a_WithdrawalNotPostedHint" xml:space="preserve">
+    <value>Dieser Bezug nennt weder ein Säule-3a-Konto beim Vertrag noch ein Zielkonto und kann deshalb gar nicht gebucht werden.</value>
+  </data>
+  <data name="Pillar3a_ContributionsNotIndexedHint" xml:space="preserve">
+    <value>Säule-3a-Beiträge werden nicht der Teuerung angepasst: Der Betrag bleibt so, wie er erfasst wurde, obwohl der gesetzliche Höchstbetrag alle paar Jahre steigt. Dieser Höchstbetrag ist eine gesetzgeberische Grösse und kein Preisindex; die App erfindet dafür keinen Wert - erhöhen Sie den Betrag selbst, wenn sich der Höchstbetrag ändert.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Title" xml:space="preserve">
+    <value>Säule-3a-Vertrag «{0}» ist mit keinem Konto verknüpft</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Text" xml:space="preserve">
+    <value>Die Beiträge werden dem Zahlungskonto belastet und nirgends gutgeschrieben - das Geld verlässt also den Plan. Der Saldo des Vertrags zählt zudem nicht zum Vermögen.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CONTRACT_NOT_LINKED_Fix" xml:space="preserve">
+    <value>Verknüpfen Sie den Vertrag mit einem Säule-3a-Konto oder erstellen Sie im Vertragseditor eines.</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Title" xml:space="preserve">
+    <value>Säule-3a-Vertrag «{0}» verweist auf ein Konto, das nicht simuliert wird</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Text" xml:space="preserve">
+    <value>Das verknüpfte Konto ist nicht Teil dieser Simulation; die Beiträge verlassen den Plan also genauso, wie wenn gar keine Verknüpfung bestünde.</value>
+  </data>
+  <data name="Warning_PILLAR3A_ACCOUNT_NOT_SIMULATED_Fix" xml:space="preserve">
+    <value>Prüfen Sie, ob das Konto inaktiv ist und von den Simulationseinstellungen ausgeschlossen wird, und wählen Sie ein simuliertes Konto.</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Title" xml:space="preserve">
+    <value>Ein Bezug aus «{0}» konnte nicht gebucht werden</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Text" xml:space="preserve">
+    <value>Der Bezug nennt weder ein Säule-3a-Konto beim Vertrag noch ein Zielkonto; es wurde kein Ereignis erzeugt und die Auszahlung erscheint nirgends.</value>
+  </data>
+  <data name="Warning_PILLAR3A_WITHDRAWAL_NOT_POSTED_Fix" xml:space="preserve">
+    <value>Geben Sie dem Bezug ein Zielkonto oder verknüpfen Sie den Vertrag mit einem Säule-3a-Konto.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Title" xml:space="preserve">
+    <value>Die Schlussauszahlung von «{0}» enthält die erwirtschafteten Zinsen nicht</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Text" xml:space="preserve">
+    <value>Der Vertrag wird ohne angegebenen Betrag geschlossen; die Auszahlung wurde deshalb nur aus dem Anfangssaldo und den Beiträgen berechnet. Dem verknüpften Konto gutgeschriebene Zinsen bleiben darauf liegen.</value>
+  </data>
+  <data name="Warning_PILLAR3A_CLOSE_IGNORES_GROWTH_Fix" xml:space="preserve">
+    <value>Geben Sie den Bezugsbetrag explizit an, um die Näherung zu entfernen.</value>
+  </data>
+  <data name="Warning_Occurrences" xml:space="preserve">
+    <value>{0} Vorkommen, erstmals am {1}.</value>
+  </data>
+  <data name="Settings_Inflation" xml:space="preserve">
+    <value>Teuerung</value>
+  </data>
+  <data name="Settings_InflationText" xml:space="preserve">
+    <value>Eine angenommene Teuerungsrate für den ganzen Plan. Sie beginnt bei null - so hat jeder Plan gerechnet, der vor dieser Einstellung entstanden ist - und eine Rate von null lässt alle Zahlen genau so, wie sie heute sind. Einzelne Transaktionen können davon abweichen oder eine eigene Rate tragen.</value>
+  </data>
+  <data name="Settings_InflationRate" xml:space="preserve">
+    <value>Jährliche Teuerungsrate</value>
+  </data>
+  <data name="Settings_InflationRateHint" xml:space="preserve">
+    <value>Der langfristige Schweizer Durchschnitt liegt bei rund 1%. Es wird nichts vorausgefüllt: Die Annahme ist Ihre, und eine von der App erfundene Rate würde jede Zahl Ihres Plans stillschweigend neu bewerten.</value>
+  </data>
+  <data name="Settings_InflationBaseDate" xml:space="preserve">
+    <value>Beträge lauten auf Geld vom</value>
+  </data>
+  <data name="Settings_InflationBaseDateHint" xml:space="preserve">
+    <value>Das Datum, in dessen Geld die Beträge Ihres Plans ausgedrückt sind - für die meisten Menschen die heutigen Franken. Erforderlich, sobald die Rate nicht null ist: Ohne dieses Datum gibt es keinen Ausgangspunkt für die Aufzinsung.</value>
+  </data>
+  <data name="Settings_InflationOff" xml:space="preserve">
+    <value>Die Teuerung ist ausgeschaltet. Alle Beträge bleiben nominal und im Plan ändert sich nichts.</value>
+  </data>
+  <data name="Settings_SaveInflation" xml:space="preserve">
+    <value>Teuerung speichern</value>
+  </data>
+  <data name="Settings_InflationSaved" xml:space="preserve">
+    <value>Die Teuerungsannahme wurde gespeichert.</value>
+  </data>
+  <data name="Settings_ErrorInflationBaseDateRequired" xml:space="preserve">
+    <value>Geben Sie an, auf welches Datum sich die Beträge des Plans beziehen. Eine Teuerungsrate braucht ein Datum, ab dem sie aufgezinst wird.</value>
+  </data>
+  <data name="Transaction_Indexation" xml:space="preserve">
+    <value>Teuerung und Indexierung</value>
+  </data>
+  <data name="Transaction_IndexationGuidance" xml:space="preserve">
+    <value>Miete, Lebensmittel und Versicherungen folgen der Rate des Plans. Eine Hypothekarrate mit fester Verzinsung oder eine fixe Prämie nicht - wählen Sie dort «nicht indexiert». Ein Lohn steigt mit seiner eigenen Rate: Wählen Sie «eigene Rate» und geben Sie eine an. Mehr ist Lohnentwicklung nicht.</value>
+  </data>
+  <data name="Transaction_IndexationMode" xml:space="preserve">
+    <value>Indexierung</value>
+  </data>
+  <data name="Transaction_IndexationPlanRate" xml:space="preserve">
+    <value>Der Plan rechnet mit {0} pro Jahr, bezogen auf Beträge per {1}.</value>
+  </data>
+  <data name="Transaction_IndexationPlanRateZero" xml:space="preserve">
+    <value>Die Teuerungsrate des Plans ist null; «Plan folgen» ändert deshalb nichts. Setzen Sie unter Einstellungen eine Rate, damit sie wirkt.</value>
+  </data>
+  <data name="Transaction_IndexationRate" xml:space="preserve">
+    <value>Eigene jährliche Rate</value>
+  </data>
+  <data name="Transaction_IndexationRateHint" xml:space="preserve">
+    <value>Wird einmal jährlich ab dem Basisdatum aufgezinst, nie pro Zahlung: Alle zwölf Belastungen eines Jahres tragen denselben Betrag.</value>
+  </data>
+  <data name="Transaction_IndexationBaseDate" xml:space="preserve">
+    <value>Betrag per</value>
+  </data>
+  <data name="Transaction_IndexationBaseDateHint" xml:space="preserve">
+    <value>Leer lassen, um das Datum des Plans zu verwenden. Ein 2024 zuletzt verhandelter Lohn lautet auf Franken von 2024, auch in einem Plan mit heutigem Basisdatum.</value>
+  </data>
+  <data name="Transaction_ErrorIndexationRateRequired" xml:space="preserve">
+    <value>Diese Transaktion verwendet eine eigene Indexierungsrate, gibt aber keine an.</value>
+  </data>
+  <data name="Enum.IndexationMode.PlanDefault" xml:space="preserve">
+    <value>Plan folgen</value>
+  </data>
+  <data name="Enum.IndexationMode.None" xml:space="preserve">
+    <value>Nicht indexiert</value>
+  </data>
+  <data name="Enum.IndexationMode.Custom" xml:space="preserve">
+    <value>Eigene Rate</value>
+  </data>
+  <data name="Enum.AmountBasis.Nominal" xml:space="preserve">
+    <value>Nominal</value>
+  </data>
+  <data name="Enum.AmountBasis.Real" xml:space="preserve">
+    <value>Real (heutiges Geld)</value>
+  </data>
+  <data name="Nav_RealEstate" xml:space="preserve">
+    <value>Immobilien</value>
+  </data>
+  <data name="RealEstate_Title" xml:space="preserve">
+    <value>Immobilien</value>
+  </data>
+  <data name="RealEstate_Subtitle" xml:space="preserve">
+    <value>Immobilien im Besitz des Haushalts. Ihr Wert ist die Aktivseite zu den Hypotheken auf der Seite Hypotheken.</value>
+  </data>
+  <data name="RealEstate_NoPlanLoaded" xml:space="preserve">
+    <value>Laden Sie einen Plan, um dessen Immobilien zu verwalten.</value>
+  </data>
+  <data name="RealEstate_AddAsset" xml:space="preserve">
+    <value>Immobilie hinzufügen</value>
+  </data>
+  <data name="RealEstate_EditAsset" xml:space="preserve">
+    <value>Immobilie bearbeiten</value>
+  </data>
+  <data name="RealEstate_NoAssets" xml:space="preserve">
+    <value>Keine Immobilien erfasst.</value>
+  </data>
+  <data name="RealEstate_CurrentValue" xml:space="preserve">
+    <value>Geschätzter Wert</value>
+  </data>
+  <data name="RealEstate_CurrentValueHint" xml:space="preserve">
+    <value>Was die Immobilie heute nach Ihrer Einschätzung wert ist.</value>
+  </data>
+  <data name="RealEstate_AnnualGrowth" xml:space="preserve">
+    <value>Angenommenes jährliches Wachstum</value>
+  </data>
+  <data name="RealEstate_AnnualGrowthHint" xml:space="preserve">
+    <value>Bei null bleibt der Wert über den ganzen Zeitraum konstant. Es wird nichts vorausgefüllt: Eine Prognose des Immobilienmarkts ist eine Annahme, und sie sollte Ihre sein.</value>
+  </data>
+  <data name="RealEstate_ValuationDate" xml:space="preserve">
+    <value>Bewertet am</value>
+  </data>
+  <data name="RealEstate_ValuationDateHint" xml:space="preserve">
+    <value>Das Datum, auf das sich die Schätzung bezieht. Erforderlich, sobald eine Wachstumsrate gesetzt ist - davon ausgehend wird aufgezinst.</value>
+  </data>
+  <data name="RealEstate_AcquisitionDate" xml:space="preserve">
+    <value>Im Besitz seit</value>
+  </data>
+  <data name="RealEstate_AcquisitionDateHint" xml:space="preserve">
+    <value>Leer lassen für eine Immobilie, die der Haushalt bereits bewohnt: Sie zählt dann über den ganzen Zeitraum. Ausfüllen, wenn der Kauf in den Plan fällt.</value>
+  </data>
+  <data name="RealEstate_DisposalDate" xml:space="preserve">
+    <value>Verkauft am</value>
+  </data>
+  <data name="RealEstate_DisposalDateHint" xml:space="preserve">
+    <value>Ab diesem Datum zählt die Immobilie nicht mehr. Verkaufserlös und Hypothekarrückzahlung sind Zahlungsereignisse und werden hier nicht erzeugt.</value>
+  </data>
+  <data name="RealEstate_Pillar2Used" xml:space="preserve">
+    <value>Verwendete Säule 2 (BVG)</value>
+  </data>
+  <data name="RealEstate_Pillar2UsedHint" xml:space="preserve">
+    <value>Das für diese Immobilie bezogene Vorsorgekapital. Beim Verkauf wird es wieder zweckgebunden.</value>
+  </data>
+  <data name="RealEstate_LinkedMortgages" xml:space="preserve">
+    <value>Verknüpfte Hypotheken</value>
+  </data>
+  <data name="RealEstate_LinkedMortgagesHint" xml:space="preserve">
+    <value>Welche Hypotheken auf dieser Immobilie lasten. Eine Hypothek gehört zu einer Immobilie: Zwei Verknüpfungen würden dieselbe Schuld von zwei verschiedenen Vermögenswerten abziehen.</value>
+  </data>
+  <data name="RealEstate_NoMortgagesInPlan" xml:space="preserve">
+    <value>Dieser Plan enthält keine Hypotheken zum Verknüpfen.</value>
+  </data>
+  <data name="RealEstate_MortgageClaimedBy" xml:space="preserve">
+    <value>Bereits mit «{0}» verknüpft.</value>
+  </data>
+  <data name="RealEstate_AcquisitionMortgageMismatch" xml:space="preserve">
+    <value>Die Hypothek «{0}» beginnt am {1} und damit nicht am Tag des Erwerbs dieser Immobilie. Beide Seiten eines Kaufs sollten auf dasselbe Datum fallen, sonst springt das Vermögen einmal für die Immobilie und einmal für die Schuld.</value>
+  </data>
+  <data name="RealEstate_OwnershipPeriod" xml:space="preserve">
+    <value>Besitz</value>
+  </data>
+  <data name="RealEstate_OwnedThroughout" xml:space="preserve">
+    <value>Ganzer Zeitraum</value>
+  </data>
+  <data name="RealEstate_NoCashflowHint" xml:space="preserve">
+    <value>Eine erfasste Immobilie erhöht das Vermögen. Sie erzeugt keine Zahlungen: Kauf, Verkauf, Nebenkosten und die Hypothek selbst werden als Transaktionen und Hypotheken erfasst.</value>
+  </data>
+  <data name="RealEstate_AssetAdded" xml:space="preserve">
+    <value>Immobilie «{0}» wurde hinzugefügt.</value>
+  </data>
+  <data name="RealEstate_AssetUpdated" xml:space="preserve">
+    <value>Immobilie «{0}» wurde aktualisiert.</value>
+  </data>
+  <data name="RealEstate_AssetDeleted" xml:space="preserve">
+    <value>Immobilie «{0}» wurde gelöscht.</value>
+  </data>
+  <data name="RealEstate_DeleteConfirm" xml:space="preserve">
+    <value>Immobilie «{0}» löschen?</value>
+  </data>
+  <data name="RealEstate_ErrorNameRequired" xml:space="preserve">
+    <value>Die Immobilie braucht einen Namen.</value>
+  </data>
+  <data name="RealEstate_ErrorNegativeValue" xml:space="preserve">
+    <value>Der geschätzte Wert darf nicht negativ sein.</value>
+  </data>
+  <data name="RealEstate_ErrorNegativePillar2" xml:space="preserve">
+    <value>Der Betrag der Säule 2 (BVG) darf nicht negativ sein.</value>
+  </data>
+  <data name="RealEstate_ErrorValuationDateRequired" xml:space="preserve">
+    <value>Eine Wachstumsrate braucht ein Bewertungsdatum, ab dem sie aufgezinst wird.</value>
+  </data>
+  <data name="RealEstate_ErrorDisposalBeforeAcquisition" xml:space="preserve">
+    <value>Das Verkaufsdatum muss nach dem Erwerbsdatum liegen.</value>
+  </data>
+  <data name="RealEstate_ErrorUnknownMortgage" xml:space="preserve">
+    <value>Eine der verknüpften Hypotheken ist nicht mehr Teil dieses Plans.</value>
+  </data>
+  <data name="RealEstate_ErrorMortgageAlreadyLinked" xml:space="preserve">
+    <value>Diese Hypothek ist bereits mit der Immobilie «{0}» verknüpft. Eine Hypothek gehört zu einer Immobilie.</value>
+  </data>
+  <data name="Enum.RealEstateType.House" xml:space="preserve">
+    <value>Haus</value>
+  </data>
+  <data name="Enum.RealEstateType.Flat" xml:space="preserve">
+    <value>Wohnung</value>
+  </data>
+  <data name="Chart_NoData" xml:space="preserve">
+    <value>Keine Diagrammdaten verfügbar.</value>
+  </data>
+  <data name="Chart_OnDate" xml:space="preserve">
+    <value>am</value>
+  </data>
+  <data name="Chart_AxisNetWorthNominal" xml:space="preserve">
+    <value>Vermögen in {0}, Franken des jeweiligen Tages</value>
+  </data>
+  <data name="Chart_AxisNetWorthReal" xml:space="preserve">
+    <value>Vermögen in {0}, in Geld von {1}</value>
+  </data>
+  <data name="Chart_AxisLiquidNominal" xml:space="preserve">
+    <value>Liquider Saldo in {0}, Franken des jeweiligen Tages</value>
+  </data>
+  <data name="Chart_AxisLiquidReal" xml:space="preserve">
+    <value>Liquider Saldo in {0}, in Geld von {1}</value>
+  </data>
+  <data name="Dashboard_Basis" xml:space="preserve">
+    <value>Beträge dargestellt in</value>
+  </data>
+  <data name="Dashboard_BasisExplained" xml:space="preserve">
+    <value>Der Plan rechnet mit {0} pro Jahr; reale Werte lauten auf Geld von {1}.</value>
+  </data>
+  <data name="Dashboard_BasisNoInflation" xml:space="preserve">
+    <value>Es ist keine Teuerungsrate gesetzt; beide Darstellungen sind daher identisch. Setzen Sie eine unter Einstellungen.</value>
+  </data>
+  <data name="Dashboard_NetWorthAsOf" xml:space="preserve">
+    <value>per {0}</value>
+  </data>
+  <data name="Dashboard_BalanceSheet" xml:space="preserve">
+    <value>Bilanz</value>
+  </data>
+  <data name="Dashboard_BalanceSheetOn" xml:space="preserve">
+    <value>Bilanz per {0}</value>
+  </data>
+  <data name="Dashboard_BalanceSheetComponent" xml:space="preserve">
+    <value>Position</value>
+  </data>
+  <data name="Dashboard_InvestmentAssets" xml:space="preserve">
+    <value>Anlagen</value>
+  </data>
+  <data name="Dashboard_Pillar3aAssets" xml:space="preserve">
+    <value>Säule 3a</value>
+  </data>
+  <data name="Dashboard_RealEstateValue" xml:space="preserve">
+    <value>Immobilien</value>
+  </data>
+  <data name="Dashboard_TotalAssets" xml:space="preserve">
+    <value>Total Aktiven</value>
+  </data>
+  <data name="Dashboard_NoNetWorthSeries" xml:space="preserve">
+    <value>Diese Simulation hat keine Vermögensreihe erzeugt; die Bilanz stammt daher allein aus den Kontosaldi und enthält keine Immobilien. Führen Sie die Simulation erneut aus.</value>
+  </data>
+  <data name="Dashboard_NotModelledTitle" xml:space="preserve">
+    <value>Was in diesen Zahlen nicht enthalten ist</value>
+  </data>
+  <data name="Dashboard_NotModelledTax" xml:space="preserve">
+    <value>Steuern werden nicht modelliert. Zahlungs- und Vermögenszahlen verstehen sich vor Steuern - Einkommenssteuer, Vermögenssteuer und der Eigenmietwert fehlen vollständig.</value>
+  </data>
+  <data name="Dashboard_NotModelledPension" xml:space="preserve">
+    <value>Auch Säule 2 (berufliche Vorsorge) und AHV werden nicht modelliert. Beide sind reales Vermögen und künftiges Einkommen, das in diesen Zahlen nicht enthalten ist.</value>
+  </data>
+  <data name="Simulation_AmountAsEntered" xml:space="preserve">
+    <value>{0} wie erfasst</value>
+  </data>
+  <data name="BankImport_ErrorStorageFull" xml:space="preserve">
+    <value>Der Browser-Speicher ist voll. Der Import wurde nicht gespeichert und nichts wurde verändert. Löschen Sie ältere Importe unter «Importierte Buchungen» und versuchen Sie es erneut.</value>
+  </data>
+  <data name="BankImport_ErrorStorageFailed" xml:space="preserve">
+    <value>Der Import konnte nicht gespeichert werden und wurde rückgängig gemacht: {0}</value>
+  </data>
+  <data name="Mortgages_DayCountConvention" xml:space="preserve">
+    <value>Zinstageberechnung</value>
   </data>
   <data name="BankImport_CsvProfile" xml:space="preserve">
     <value>CSV-Formatprofil</value>
