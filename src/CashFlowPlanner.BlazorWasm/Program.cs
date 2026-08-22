@@ -29,6 +29,7 @@ builder.Services.AddSingleton<PassphrasePromptService>();
 builder.Services.AddSingleton<PlanExportPreferences>();
 builder.Services.AddSingleton<PlanFileService>();
 builder.Services.AddSingleton<DiskAutoSaveService>();
+builder.Services.AddSingleton<IDiskAutoSave>(sp => sp.GetRequiredService<DiskAutoSaveService>());
 builder.Services.AddSingleton<DiskAutoSaveCoordinator>();
 builder.Services.AddSingleton<DashboardSummaryService>();
 builder.Services.AddSingleton<MonthlyCashflowSummaryService>();

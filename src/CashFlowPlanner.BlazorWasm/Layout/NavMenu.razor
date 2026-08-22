@@ -11,6 +11,8 @@
 @inject CashFlowPlanJsonSerializer JsonSerializer
 @inject BrowserPlanCacheService BrowserCache
 @inject PlanFileService PlanFiles
+@inject DiskAutoSaveService Disk
+@inject DiskAutoSaveCoordinator DiskCoordinator
 @inject IJSRuntime JsRuntime
 @inject IStringLocalizer<SharedResource> L
 @inject UiFeedbackService Feedback
@@ -120,14 +122,21 @@
                     <div class="navbar-plan-name" title="@AppState.CurrentPlan.Name">
                         @AppState.CurrentPlan.Name
 
+                        @* The visible half of P1c, now with the positive half too. Warning only
+                           when something is wrong leaves the user with no way to tell "safe" from
+                           "nobody has checked" - so a linked file that is current says so. *@
                         @if (AppState.IsDirty)
                         {
-                            @* The visible half of P1c. The browser working copy is not a backup:
-                               it dies with the site data. Until the user exports, the only copy
-                               of these edits is inside this browser. *@
                             <span class="badge text-bg-warning ms-2 align-middle"
                                   title="@L["Nav_ExportNeededHint"]">
                                 @L["Nav_ExportNeeded"]
+                            </span>
+                        }
+                        else if (Disk.Status.CanWrite && !DiskCoordinator.FileIsBehind)
+                        {
+                            <span class="badge text-bg-success ms-2 align-middle"
+                                  title="@string.Format(L["Nav_SavedHint"].Value, Disk.Status.FileName)">
+                                @L["Nav_Saved"]
                             </span>
                         }
                     </div>
@@ -221,6 +230,8 @@
         AppState.Changed += OnAppStateChanged;
         // The dirty flag can flip without the plan itself changing (e.g. on export).
         AppState.DirtyStateChanged += OnAppStateChanged;
+        Disk.StatusChanged += OnAppStateChanged;
+        DiskCoordinator.Changed += OnAppStateChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -451,5 +462,7 @@
     {
         AppState.Changed -= OnAppStateChanged;
         AppState.DirtyStateChanged -= OnAppStateChanged;
+        Disk.StatusChanged -= OnAppStateChanged;
+        DiskCoordinator.Changed -= OnAppStateChanged;
     }
 }

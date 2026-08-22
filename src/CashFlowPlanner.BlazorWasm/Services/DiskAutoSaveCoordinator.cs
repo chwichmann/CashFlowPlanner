@@ -24,7 +24,7 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
 
     private readonly CashFlowAppState _appState;
     private readonly PlanFileService _planFiles;
-    private readonly DiskAutoSaveService _disk;
+    private readonly IDiskAutoSave _disk;
     private readonly UiFeedbackService _feedback;
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly TimeSpan _debounceDelay;
@@ -36,7 +36,7 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
     public DiskAutoSaveCoordinator(
         CashFlowAppState appState,
         PlanFileService planFiles,
-        DiskAutoSaveService disk,
+        IDiskAutoSave disk,
         UiFeedbackService feedback,
         IStringLocalizer<SharedResource> localizer)
         : this(appState, planFiles, disk, feedback, localizer, DefaultDebounceDelay)
@@ -46,7 +46,7 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
     public DiskAutoSaveCoordinator(
         CashFlowAppState appState,
         PlanFileService planFiles,
-        DiskAutoSaveService disk,
+        IDiskAutoSave disk,
         UiFeedbackService feedback,
         IStringLocalizer<SharedResource> localizer,
         TimeSpan debounceDelay)
@@ -179,6 +179,12 @@ public sealed class DiskAutoSaveCoordinator : IDisposable
         if (result.Ok)
         {
             LastWrittenAt = DateTimeOffset.UtcNow;
+
+            // The plan now exists in a file the user controls, which is exactly what the
+            // "export needed" badge asks for - so stop asking. Without this the badge kept
+            // nagging about a file that had just been written, which teaches people to
+            // ignore it, and it is the one indicator that must stay believable.
+            _appState.MarkExported(content.PlanJson);
 
             SetBehind(false);
 

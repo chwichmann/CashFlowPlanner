@@ -2505,4 +2505,13 @@
   <data name="Disk_WriteFailedNoDetail" xml:space="preserve">
     <value>{0} could not be written.</value>
   </data>
+  <data name="Nav_Saved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="Nav_SavedHint" xml:space="preserve">
+    <value>Written to {0}. This file is kept up to date as you work.</value>
+  </data>
+  <data name="Nav_SavedAt" xml:space="preserve">
+    <value>Saved {0}</value>
+  </data>
 </root>

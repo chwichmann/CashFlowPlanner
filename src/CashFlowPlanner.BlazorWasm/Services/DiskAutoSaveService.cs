@@ -1,4 +1,4 @@
-using Microsoft.JSInterop;
+﻿using Microsoft.JSInterop;
 
 namespace CashFlowPlanner.BlazorWasm.Services;
 
@@ -32,6 +32,19 @@ public sealed record DiskWriteResult(bool Ok, string Reason, string? Message, st
 }
 
 /// <summary>
+/// The part of disk autosave the coordinator depends on, extracted so the coordinator can be
+/// tested without a browser - the same reason <see cref="IBrowserPlanCache"/> exists.
+/// </summary>
+public interface IDiskAutoSave
+{
+    event Action? StatusChanged;
+
+    DiskLinkStatus Status { get; }
+
+    Task<DiskWriteResult> WriteAsync(string text);
+}
+
+/// <summary>
 /// Writes the plan straight to a file the user picked, and remembers which file between
 /// sessions.
 /// <para>
@@ -45,7 +58,7 @@ public sealed record DiskWriteResult(bool Ok, string Reason, string? Message, st
 /// without the provider ever seeing the contents.
 /// </para>
 /// </summary>
-public sealed class DiskAutoSaveService : IAsyncDisposable
+public sealed class DiskAutoSaveService : IDiskAutoSave, IAsyncDisposable
 {
     private readonly IJSRuntime _jsRuntime;
     private IJSObjectReference? _module;

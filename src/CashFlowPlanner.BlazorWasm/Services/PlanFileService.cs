@@ -104,7 +104,7 @@ public sealed class PlanFileService
 
         if (!_preferences.EncryptExports)
         {
-            return new PlanFileContent(planJson, IsEncrypted: false);
+            return new PlanFileContent(planJson, IsEncrypted: false, PlanJson: planJson);
         }
 
         if (!_crypto.IsUnlocked)
@@ -112,7 +112,7 @@ public sealed class PlanFileService
             return null;
         }
 
-        return new PlanFileContent(await _crypto.EncryptAsync(planJson), IsEncrypted: true);
+        return new PlanFileContent(await _crypto.EncryptAsync(planJson), IsEncrypted: true, PlanJson: planJson);
     }
 
     /// <summary>
@@ -126,7 +126,7 @@ public sealed class PlanFileService
 
         if (!_preferences.EncryptExports)
         {
-            return new PlanFileContent(planJson, IsEncrypted: false);
+            return new PlanFileContent(planJson, IsEncrypted: false, PlanJson: planJson);
         }
 
         if (!_crypto.IsUnlocked)
@@ -143,12 +143,20 @@ public sealed class PlanFileService
 
         var envelope = await _crypto.EncryptAsync(planJson);
 
-        return new PlanFileContent(envelope, IsEncrypted: true);
+        return new PlanFileContent(envelope, IsEncrypted: true, PlanJson: planJson);
     }
 }
 
-/// <summary>File text plus whether it ended up encrypted, which decides the extension.</summary>
-public sealed record PlanFileContent(string Text, bool IsEncrypted)
+/// <summary>
+/// File text plus whether it ended up encrypted, which decides the extension.
+/// <para>
+/// <paramref name="PlanJson"/> is the unencrypted plan the file was made from. The dirty flag
+/// is a hash of that, never of the file: encryption uses a fresh key every time, so two saves
+/// of an unchanged plan produce different bytes and hashing those would leave the plan marked
+/// unsaved forever.
+/// </para>
+/// </summary>
+public sealed record PlanFileContent(string Text, bool IsEncrypted, string PlanJson)
 {
     public string Extension => IsEncrypted ? ".cfplan" : ".json";
 
