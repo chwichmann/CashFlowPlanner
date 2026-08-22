@@ -51,11 +51,27 @@
                 .ToList();
         }
 
-        <div class="mb-3">
+        <div class="mb-3 d-flex flex-wrap gap-2">
             <button type="button" class="btn btn-primary" @onclick="NewAccount">
                 @L["Account_AddAccount"]
             </button>
+
+            @* Bank import lives here rather than on its own navigation entry: a statement is
+               imported *into* an account, and the bar was carrying twelve destinations. *@
+            <button type="button" class="btn btn-outline-secondary"
+                    @onclick="() => _showImport = !_showImport">
+                @(_showImport ? L["Account_HideImport"] : L["Account_ShowImport"])
+            </button>
         </div>
+
+        @if (_showImport)
+        {
+            <section class="card mb-4">
+                <div class="card-body">
+                    <BankStatementImport />
+                </div>
+            </section>
+        }
 
         @if (_editModel is not null)
         {
@@ -510,6 +526,8 @@
 </PageScaffold>
 
 @code {
+    private bool _showImport;
+
     private AccountEditModel? _editModel;
     private AccountBalanceEditModel? _balanceEditModel;
     private bool _isNewAccount;

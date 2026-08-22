@@ -2514,4 +2514,10 @@
   <data name="Nav_SavedAt" xml:space="preserve">
     <value>Saved {0}</value>
   </data>
+  <data name="Account_ShowImport" xml:space="preserve">
+    <value>Import bank statement</value>
+  </data>
+  <data name="Account_HideImport" xml:space="preserve">
+    <value>Hide bank import</value>
+  </data>
 </root>
