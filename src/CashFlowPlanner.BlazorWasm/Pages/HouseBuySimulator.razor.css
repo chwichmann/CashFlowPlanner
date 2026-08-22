@@ -261,7 +261,7 @@
     max-width: 100%;
 }
 
-.equity-grid .btn-small {
+.equity-grid .btn-sm {
     width: 86px;
     height: 34px;
     min-height: 34px;
@@ -269,7 +269,7 @@
     padding-right: 0.45rem;
 }
 
-.data-table-row .btn-small {
+.data-table-row .btn-sm {
     height: 34px;
 }
 
@@ -408,7 +408,7 @@
     background: #fee2e2;
 }
 
-.btn-small {
+.btn-sm {
     padding: 0.35rem 0.55rem;
     font-size: 0.82rem;
 }
