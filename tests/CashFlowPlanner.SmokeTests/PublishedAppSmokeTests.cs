@@ -72,8 +72,9 @@ public sealed class PublishedAppSmokeTests : IAsyncLifetime
         if (wwwroot is null)
         {
             _skipReason =
-                "No published wwwroot found. Run `dotnet publish src/CashFlowPlanner.BlazorWasm -c Release` "
-                + "or set CFP_PUBLISH_WWWROOT.";
+                "CFP_PUBLISH_WWWROOT is not set. Publish first, then point it at the published "
+                + "wwwroot: dotnet publish src/CashFlowPlanner.BlazorWasm -c Release -o /tmp/pub "
+                + "&& CFP_PUBLISH_WWWROOT=/tmp/pub/wwwroot dotnet test tests/CashFlowPlanner.SmokeTests";
             return;
         }
 

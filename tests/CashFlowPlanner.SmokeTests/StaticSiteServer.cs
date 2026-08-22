@@ -156,34 +156,27 @@ public sealed class StaticSiteServer : IDisposable
     }
 
     /// <summary>
-    /// Finds the published wwwroot, or null when there is none - the tests skip rather than fail
-    /// in that case, because "nobody published" is not a defect in the app.
+    /// The published wwwroot to test, or null when none was named.
+    /// <para>
+    /// Deliberately requires <c>CFP_PUBLISH_WWWROOT</c> rather than hunting for a publish
+    /// directory. An earlier version searched upward for
+    /// <c>bin/Release/net10.0/publish/wwwroot</c> and duly found a stale one left by some
+    /// previous build, so a plain <c>dotnet test</c> spent six minutes driving a browser
+    /// against an artifact nobody had just produced - and failed, describing bugs that were
+    /// already fixed. Guessing which bytes to test is worse than being told.
+    /// </para>
     /// </summary>
     public static string? FindPublishedWwwroot()
     {
-        var fromEnvironment = Environment.GetEnvironmentVariable("CFP_PUBLISH_WWWROOT");
+        var configured = Environment.GetEnvironmentVariable("CFP_PUBLISH_WWWROOT");
 
-        if (!string.IsNullOrWhiteSpace(fromEnvironment) && Directory.Exists(fromEnvironment))
+        if (string.IsNullOrWhiteSpace(configured))
         {
-            return Path.GetFullPath(fromEnvironment);
+            return null;
         }
 
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        var path = Path.GetFullPath(configured);
 
-        while (directory is not null)
-        {
-            var candidate = Path.Combine(
-                directory.FullName,
-                "src", "CashFlowPlanner.BlazorWasm", "bin", "Release", "net10.0", "publish", "wwwroot");
-
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "index.html")))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
-        }
-
-        return null;
+        return File.Exists(Path.Combine(path, "index.html")) ? path : null;
     }
 }
