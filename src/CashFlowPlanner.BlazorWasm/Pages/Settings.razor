@@ -1,6 +1,5 @@
 ﻿@page "/settings"
 
-@using System.Globalization
 @using CashFlowPlanner.BlazorWasm
 @using CashFlowPlanner.BlazorWasm.Models
 @using CashFlowPlanner.BlazorWasm.Resources
@@ -13,6 +12,7 @@
 
 @inject BrowserPlanCacheService BrowserCache
 @inject CashFlowAppState AppState
+@inject AppFormatter Formatter
 @inject IStringLocalizer<SharedResource> L
 @inject BrowserCultureService CultureService
 @inject IJSRuntime JsRuntime
@@ -20,211 +20,303 @@
 @inject PlanExportPreferences ExportPreferences
 @inject PlanCryptoService Crypto
 
+<PageScaffold Title='@L["Settings"]'
+              RequiresPlan="true"
+              EmptyStateMessage='@L["Settings_NoPlanLoaded"]'>
 
-<PageTitle>@L["Settings"] - CashFlow Planner</PageTitle>
+    <Notifications>
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
+        }
 
-<h1 class="mb-3">@L["Settings"]</h1>
+        @if (!string.IsNullOrWhiteSpace(_infoMessage))
+        {
+            <div class="alert alert-success" role="alert">@_infoMessage</div>
+        }
+    </Notifications>
 
-    @if (!string.IsNullOrWhiteSpace(_errorMessage))
-    {
-        <div class="alert alert-danger">
-            @_errorMessage
-        </div>
-    }
-
-    @if (!string.IsNullOrWhiteSpace(_infoMessage))
-    {
-        <div class="alert alert-success">
-            @_infoMessage
-        </div>
-    }
-
-    @if (AppState.CurrentPlan is null)
-    {
-        <PlanEmptyState Message='@L["Settings_NoPlanLoaded"]' />
-    }
-    else if (_editModel is not null)
-    {
-        <div class="card mb-3">
-            <div class="card-header">
-                @L["Settings_EncryptionTitle"]
-            </div>
-
-            <div class="card-body">
-                <div class="form-check mb-2">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           id="settings-encrypt-exports"
-                           checked="@ExportPreferences.EncryptExports"
-                           @onchange="OnEncryptExportsChangedAsync" />
-                    <label class="form-check-label" for="settings-encrypt-exports">
-                        @L["Settings_EncryptExports"]
-                    </label>
-                </div>
-
-                <p class="form-text">@L["Settings_EncryptExportsHint"]</p>
-
-                @if (ExportPreferences.EncryptExports)
-                {
-                    <p class="mb-2">
-                        <span class="badge @(Crypto.IsUnlocked ? "text-bg-success" : "text-bg-secondary")">
-                            @(Crypto.IsUnlocked
-                                ? L["Settings_EncryptionUnlocked"]
-                                : L["Settings_EncryptionLocked"])
-                        </span>
-
-                        @if (Crypto.IsUnlocked)
-                        {
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-secondary ms-2"
-                                    @onclick="LockNowAsync">
-                                @L["Settings_LockNow"]
-                            </button>
-                        }
-                    </p>
-
-                    <div class="alert alert-warning mb-0" role="alert">
-                        <div><strong>@L["Passphrase_NoRecoveryTitle"]</strong></div>
-                        <div>@L["Settings_RecoveryHint"]</div>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="card mb-3">
-            <div class="card-header">
-                @L["Plan"]
-            </div>
-
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label" for="plan-title">
-                        @L["PlanTitle"]
-                    </label>
-
-                    <input id="plan-title"
-                           class="form-control"
-                           @bind="_planName" />
-                </div>
-
-                <button type="button"
-                        class="btn btn-primary"
-                        @onclick="SavePlanName">
-                    @L["SavePlanTitle"]
-                </button>
-            </div>
-        </div>
-
-        @if (_planDefaultsEditModel is not null && AppState.CurrentPlan is not null)
+    <ChildContent>
+        @if (_editModel is { } editModel)
         {
             <div class="card mb-3">
                 <div class="card-header">
-                    @L["Settings_PlanDefaults"]
+                    @L["Settings_EncryptionTitle"]
                 </div>
 
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label" for="default-payment-account">
-                            @L["Settings_DefaultPaymentAccount"]
-                        </label>
+                    <FormField Label='@L["Settings_EncryptExports"]'
+                               Hint='@L["Settings_EncryptExportsHint"]'
+                               Layout="FormFieldLayout.Checkbox">
+                        <input id="@context.Id"
+                               class="form-check-input"
+                               type="checkbox"
+                               aria-describedby="@context.DescribedBy"
+                               checked="@ExportPreferences.EncryptExports"
+                               @onchange="OnEncryptExportsChangedAsync" />
+                    </FormField>
 
-                        <select id="default-payment-account"
-                                class="form-select"
-                                @bind="_planDefaultsEditModel.DefaultPaymentAccountId">
-                            <option value="">
-                                @L["Settings_NoDefaultPaymentAccount"]
-                            </option>
+                    @if (ExportPreferences.EncryptExports)
+                    {
+                        <p class="mb-2">
+                            <span class="badge @(Crypto.IsUnlocked ? "text-bg-success" : "text-bg-secondary")">
+                                @(Crypto.IsUnlocked
+                                    ? L["Settings_EncryptionUnlocked"]
+                                    : L["Settings_EncryptionLocked"])
+                            </span>
 
-                            @foreach (var account in AppState.CurrentPlan.Accounts.OrderBy(x => x.Name))
+                            @if (Crypto.IsUnlocked)
                             {
-                                <option value="@account.Id">
-                                    @account.Name
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary ms-2"
+                                        @onclick="LockNowAsync">
+                                    @L["Settings_LockNow"]
+                                </button>
+                            }
+                        </p>
+
+                        <div class="alert alert-warning mb-0" role="alert">
+                            <div><strong>@L["Passphrase_NoRecoveryTitle"]</strong></div>
+                            <div>@L["Settings_RecoveryHint"]</div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    @L["Plan"]
+                </div>
+
+                <div class="card-body">
+                    <FormField Label='@L["PlanTitle"]' Required="true">
+                        <input id="@context.Id"
+                               class="form-control"
+                               aria-describedby="@context.DescribedBy"
+                               @bind="_planName" />
+                    </FormField>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SavePlanName">
+                        @L["SavePlanTitle"]
+                    </button>
+                </div>
+            </div>
+
+            @if (_planDefaultsEditModel is { } planDefaults && AppState.CurrentPlan is { } plan)
+            {
+                <div class="card mb-3">
+                    <div class="card-header">
+                        @L["Settings_PlanDefaults"]
+                    </div>
+
+                    <div class="card-body">
+                        <FormField Label='@L["Settings_DefaultPaymentAccount"]'
+                                   Hint='@L["Settings_DefaultPaymentAccountHelp"]'>
+                            <select id="@context.Id"
+                                    class="form-select"
+                                    aria-describedby="@context.DescribedBy"
+                                    @bind="planDefaults.DefaultPaymentAccountId">
+                                <option value="">
+                                    @L["Settings_NoDefaultPaymentAccount"]
+                                </option>
+
+                                @foreach (var account in plan.Accounts.OrderBy(x => x.Name))
+                                {
+                                    <option value="@account.Id">
+                                        @account.Name
+                                    </option>
+                                }
+                            </select>
+                        </FormField>
+
+                        <FormField Label='@L["Settings_TreatWeekendsAsBankOffDays"]'
+                                   Layout="FormFieldLayout.Checkbox">
+                            <input id="@context.Id"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   @bind="planDefaults.TreatWeekendsAsBankOffDays" />
+                        </FormField>
+
+                        <h5>@L["Settings_BankOffDays"]</h5>
+
+                        <p class="text-muted">
+                            @L["Settings_BankOffDaysHelp"]
+                        </p>
+
+                        <DataTable Items="@planDefaults.BankOffDays.OrderBy(x => x.Date).ToList()"
+                                   EmptyText='@L["Settings_NoBankOffDaysDefined"]'
+                                   Caption='@L["Settings_BankOffDays"]'>
+                            <Column Title='@L["Date"]'>
+                                <ChildContent>
+                                    <input type="date"
+                                           class="form-control"
+                                           style="max-width: 12rem;"
+                                           aria-label='@L["Date"]'
+                                           @bind="context.Date" />
+                                </ChildContent>
+                            </Column>
+                            <Column Title='@L["Name"]'>
+                                <ChildContent>
+                                    <input class="form-control"
+                                           aria-label='@L["Name"]'
+                                           @bind="context.Name" />
+                                </ChildContent>
+                            </Column>
+                            <Column Title='@L["Note"]'>
+                                <ChildContent>
+                                    <input class="form-control"
+                                           aria-label='@L["Note"]'
+                                           @bind="context.Note" />
+                                </ChildContent>
+                            </Column>
+                            <Column Title='@L["Actions"]' Align="ColumnAlign.Number">
+                                <ChildContent>
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => RemoveBankOffDay(context)">
+                                        @L["Delete"]
+                                    </button>
+                                </ChildContent>
+                            </Column>
+                        </DataTable>
+
+                        <div class="d-flex gap-2">
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    @onclick="AddBankOffDay">
+                                @L["Settings_AddBankOffDay"]
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    @onclick="SavePlanDefaults">
+                                @L["Settings_SavePlanDefaults"]
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    @onclick="ReloadFromPlan">
+                                @L["Reset"]
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    @L["Settings_SimulationSettings"]
+                </div>
+
+                <div class="card-body">
+                    <p class="text-muted">
+                        @L["Settings_SimulationSettingsText"]
+                    </p>
+
+                    <FormField Label='@L["Settings_DateMode"]'>
+                        <select id="@context.Id"
+                                class="form-select"
+                                aria-describedby="@context.DescribedBy"
+                                @bind="editModel.DateMode">
+                            @foreach (var mode in Enum.GetValues<SimulationDateMode>())
+                            {
+                                <option value="@mode">
+                                    @EnumL.Translate(mode)
                                 </option>
                             }
                         </select>
+                    </FormField>
 
-                        <div class="form-text">
-                            @L["Settings_DefaultPaymentAccountHelp"]
-                        </div>
-                    </div>
-
-                    <div class="form-check mb-3">
-                        <input id="treat-weekends-as-bank-off-days"
-                               class="form-check-input"
-                               type="checkbox"
-                               @bind="_planDefaultsEditModel.TreatWeekendsAsBankOffDays" />
-
-                        <label class="form-check-label" for="treat-weekends-as-bank-off-days">
-                            @L["Settings_TreatWeekendsAsBankOffDays"]
-                        </label>
-                    </div>
-
-                    <h5>@L["Settings_BankOffDays"]</h5>
-
-                    <p class="text-muted">
-                        @L["Settings_BankOffDaysHelp"]
-                    </p>
-
-                    @if (_planDefaultsEditModel.BankOffDays.Count == 0)
+                    @if (editModel.DateMode == SimulationDateMode.RollingHorizon)
                     {
+                        <FormField Label='@L["Settings_StartAnchor"]'>
+                            <select id="@context.Id"
+                                    class="form-select"
+                                    aria-describedby="@context.DescribedBy"
+                                    @bind="editModel.StartAnchor">
+                                @foreach (var anchor in Enum.GetValues<SimulationStartAnchor>())
+                                {
+                                    <option value="@anchor">
+                                        @EnumL.Translate(anchor)
+                                    </option>
+                                }
+                            </select>
+                        </FormField>
+
+                        <FormField Label='@L["Settings_HorizonMonths"]'>
+                            <input id="@context.Id"
+                                   type="number"
+                                   min="1"
+                                   class="form-control"
+                                   aria-describedby="@context.DescribedBy"
+                                   @bind="editModel.HorizonMonths" />
+                        </FormField>
+
+                        var previewRange = GetPreviewRange();
+
                         <div class="alert alert-light">
-                            @L["Settings_NoBankOffDaysDefined"]
+                            <strong>@L["Settings_EffectiveRangePreview"]</strong>
+                            <div>
+                                @Formatter.Date(previewRange.StartDate) - @Formatter.Date(previewRange.EndDate)
+                            </div>
                         </div>
                     }
                     else
                     {
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>@L["Date"]</th>
-                                        <th>@L["Name"]</th>
-                                        <th>@L["Note"]</th>
-                                        <th class="text-end">@L["Actions"]</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var bankOffDay in _planDefaultsEditModel.BankOffDays.OrderBy(x => x.Date))
-                                    {
-                                        <tr>
-                                            <td style="width: 12rem;">
-                                                <input type="date"
-                                                       class="form-control"
-                                                       @bind="bankOffDay.Date" />
-                                            </td>
-                                            <td>
-                                                <input class="form-control"
-                                                       @bind="bankOffDay.Name" />
-                                            </td>
-                                            <td>
-                                                <input class="form-control"
-                                                       @bind="bankOffDay.Note" />
-                                            </td>
-                                            <td class="text-end">
-                                                <button type="button"
-                                                        class="btn btn-outline-danger btn-sm"
-                                                        @onclick="() => RemoveBankOffDay(bankOffDay)">
-                                                    @L["Delete"]
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                        <FormField Label='@L["Settings_StartDate"]'>
+                            <input id="@context.Id"
+                                   type="date"
+                                   class="form-control"
+                                   aria-describedby="@context.DescribedBy"
+                                   @bind="editModel.StartDate" />
+                        </FormField>
+
+                        <FormField Label='@L["Settings_EndDate"]'>
+                            <input id="@context.Id"
+                                   type="date"
+                                   class="form-control"
+                                   aria-describedby="@context.DescribedBy"
+                                   @bind="editModel.EndDate" />
+                        </FormField>
                     }
+
+                    <FormField Label='@L["Settings_Granularity"]'>
+                        <select id="@context.Id"
+                                class="form-select"
+                                aria-describedby="@context.DescribedBy"
+                                @bind="editModel.Granularity">
+                            @foreach (var granularity in Enum.GetValues<SimulationGranularity>())
+                            {
+                                <option value="@granularity">
+                                    @EnumL.Translate(granularity)
+                                </option>
+                            }
+                        </select>
+                    </FormField>
+
+                    <FormField Label='@L["Settings_IncludeInactiveAccounts"]'
+                               Layout="FormFieldLayout.Checkbox">
+                        <input id="@context.Id"
+                               class="form-check-input"
+                               type="checkbox"
+                               @bind="editModel.IncludeInactiveAccounts" />
+                    </FormField>
+
+                    <FormField Label='@L["Settings_WarnOnNegativeBankBalance"]'
+                               Layout="FormFieldLayout.Checkbox">
+                        <input id="@context.Id"
+                               class="form-check-input"
+                               type="checkbox"
+                               @bind="editModel.WarnOnNegativeBankBalance" />
+                    </FormField>
 
                     <div class="d-flex gap-2">
                         <button type="button"
-                                class="btn btn-outline-secondary"
-                                @onclick="AddBankOffDay">
-                            @L["Settings_AddBankOffDay"]
-                        </button>
-
-                        <button type="button"
                                 class="btn btn-primary"
-                                @onclick="SavePlanDefaults">
-                            @L["Settings_SavePlanDefaults"]
+                                @onclick="SaveSettings">
+                            @L["Settings_SaveSettings"]
                         </button>
 
                         <button type="button"
@@ -233,239 +325,84 @@
                             @L["Reset"]
                         </button>
                     </div>
+
+                    @if (AppState.CurrentSimulationResult is { } simulationResult)
+                    {
+                        <div class="alert alert-info mt-3">
+                            @Text(
+                                "Settings_CurrentSimulationResult",
+                                Formatter.Date(simulationResult.StartDate),
+                                Formatter.Date(simulationResult.EndDate),
+                                simulationResult.Events.Count,
+                                simulationResult.BalancePoints.Count,
+                                simulationResult.Warnings.Count)
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    @L["BrowserWorkingCopy"]
+                </div>
+
+                <div class="card-body">
+                    <p class="text-muted">
+                        @L["Settings_BrowserWorkingCopyText"]
+                    </p>
+
+                    <button type="button"
+                            class="btn btn-outline-danger"
+                            @onclick="ClearBrowserCacheAsync">
+                        @L["ClearBrowserCache"]
+                    </button>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    @L["LanguageAndRegion"]
+                </div>
+
+                <div class="card-body">
+                    <FormField Label='@L["Language"]'>
+                        <select id="@context.Id"
+                                class="form-select"
+                                aria-describedby="@context.DescribedBy"
+                                @bind="_cultureEditModel.LanguageCulture">
+                            <option value="en">@L["Language_English"]</option>
+                            <option value="de">@L["Language_German"]</option>
+                        </select>
+                    </FormField>
+
+                    <FormField Label='@L["Region"]'>
+                        <select id="@context.Id"
+                                class="form-select"
+                                aria-describedby="@context.DescribedBy"
+                                @bind="_cultureEditModel.RegionCulture">
+                            <option value="en-CH">@L["Region_SwitzerlandEnglish"]</option>
+                            <option value="de-CH">@L["Region_SwitzerlandGerman"]</option>
+                            <option value="en-US">@L["Region_UnitedStatesEnglish"]</option>
+                            <option value="de-DE">@L["Region_GermanyGerman"]</option>
+                        </select>
+                    </FormField>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SaveCulturePreferencesAsync">
+                        @L["SaveLanguageAndRegion"]
+                    </button>
+
+                    <div class="form-text mt-2">
+                        @L["LanguageChangeReloadHint"]
+                    </div>
                 </div>
             </div>
         }
+    </ChildContent>
+</PageScaffold>
 
-        <div class="card mb-3">
-            <div class="card-header">
-                @L["Settings_SimulationSettings"]
-            </div>
-
-            <div class="card-body">
-                <p class="text-muted">
-                    @L["Settings_SimulationSettingsText"]
-                </p>
-
-                <div class="mb-3">
-                    <label class="form-label" for="date-mode">
-                        @L["Settings_DateMode"]
-                    </label>
-
-                    <select id="date-mode"
-                            class="form-select"
-                            @bind="_editModel.DateMode">
-                        @foreach (var mode in Enum.GetValues<SimulationDateMode>())
-                        {
-                            <option value="@mode">
-                                @EnumL.Translate(mode)
-                            </option>
-                        }
-                    </select>
-                </div>
-
-                @if (_editModel.DateMode == SimulationDateMode.RollingHorizon)
-                {
-                    <div class="mb-3">
-                        <label class="form-label" for="start-anchor">
-                            @L["Settings_StartAnchor"]
-                        </label>
-
-                        <select id="start-anchor"
-                                class="form-select"
-                                @bind="_editModel.StartAnchor">
-                            @foreach (var anchor in Enum.GetValues<SimulationStartAnchor>())
-                            {
-                                <option value="@anchor">
-                                    @EnumL.Translate(anchor)
-                                </option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label" for="horizon-months">
-                            @L["Settings_HorizonMonths"]
-                        </label>
-
-                        <input id="horizon-months"
-                               type="number"
-                               min="1"
-                               class="form-control"
-                               @bind="_editModel.HorizonMonths" />
-                    </div>
-
-                    <div class="alert alert-light">
-                        <strong>@L["Settings_EffectiveRangePreview"]</strong>
-                        <div>
-                            @FormatDate(GetPreviewRange().StartDate) - @FormatDate(GetPreviewRange().EndDate)
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="mb-3">
-                        <label class="form-label" for="simulation-start-date">
-                            @L["Settings_StartDate"]
-                        </label>
-
-                        <input id="simulation-start-date"
-                               type="date"
-                               class="form-control"
-                               @bind="_editModel.StartDate" />
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label" for="simulation-end-date">
-                            @L["Settings_EndDate"]
-                        </label>
-
-                        <input id="simulation-end-date"
-                               type="date"
-                               class="form-control"
-                               @bind="_editModel.EndDate" />
-                    </div>
-                }
-
-                <div class="mb-3">
-                    <label class="form-label" for="granularity">
-                        @L["Settings_Granularity"]
-                    </label>
-
-                    <select id="granularity"
-                            class="form-select"
-                            @bind="_editModel.Granularity">
-                        @foreach (var granularity in Enum.GetValues<SimulationGranularity>())
-                        {
-                            <option value="@granularity">
-                                @EnumL.Translate(granularity)
-                            </option>
-                        }
-                    </select>
-                </div>
-
-                <div class="form-check mb-3">
-                    <input id="include-inactive-accounts"
-                           class="form-check-input"
-                           type="checkbox"
-                           @bind="_editModel.IncludeInactiveAccounts" />
-
-                    <label class="form-check-label" for="include-inactive-accounts">
-                        @L["Settings_IncludeInactiveAccounts"]
-                    </label>
-                </div>
-
-                <div class="form-check mb-3">
-                    <input id="warn-on-negative-bank-balance"
-                           class="form-check-input"
-                           type="checkbox"
-                           @bind="_editModel.WarnOnNegativeBankBalance" />
-
-                    <label class="form-check-label" for="warn-on-negative-bank-balance">
-                        @L["Settings_WarnOnNegativeBankBalance"]
-                    </label>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="button"
-                            class="btn btn-primary"
-                            @onclick="SaveSettings">
-                        @L["Settings_SaveSettings"]
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-outline-secondary"
-                            @onclick="ReloadFromPlan">
-                        @L["Reset"]
-                    </button>
-                </div>
-
-                @if (AppState.CurrentSimulationResult is not null)
-                {
-                    <div class="alert alert-info mt-3">
-                        @Text(
-                            "Settings_CurrentSimulationResult",
-                            FormatDate(AppState.CurrentSimulationResult.StartDate),
-                            FormatDate(AppState.CurrentSimulationResult.EndDate),
-                            AppState.CurrentSimulationResult.Events.Count,
-                            AppState.CurrentSimulationResult.BalancePoints.Count,
-                            AppState.CurrentSimulationResult.Warnings.Count)
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="card mb-3">
-            <div class="card-header">
-                @L["BrowserWorkingCopy"]
-            </div>
-
-            <div class="card-body">
-                <p class="text-muted">
-                    @L["Settings_BrowserWorkingCopyText"]
-                </p>
-
-                <button type="button"
-                        class="btn btn-outline-danger"
-                        @onclick="ClearBrowserCacheAsync">
-                    @L["ClearBrowserCache"]
-                </button>
-
-                @if (!string.IsNullOrWhiteSpace(_browserCacheMessage))
-                {
-                    <div class="alert alert-info mt-3">
-                        @_browserCacheMessage
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="card mb-3">
-            <div class="card-header">
-                @L["LanguageAndRegion"]
-            </div>
-
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label" for="language-culture">
-                        @L["Language"]
-                    </label>
-
-                    <select id="language-culture"
-                            class="form-select"
-                            @bind="_cultureEditModel.LanguageCulture">
-                        <option value="en">@L["Language_English"]</option>
-                        <option value="de">@L["Language_German"]</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label" for="region-culture">
-                        @L["Region"]
-                    </label>
-
-                    <select id="region-culture"
-                            class="form-select"
-                            @bind="_cultureEditModel.RegionCulture">
-                        <option value="en-CH">@L["Region_SwitzerlandEnglish"]</option>
-                        <option value="de-CH">@L["Region_SwitzerlandGerman"]</option>
-                        <option value="en-US">@L["Region_UnitedStatesEnglish"]</option>
-                        <option value="de-DE">@L["Region_GermanyGerman"]</option>
-                    </select>
-                </div>
-
-                <button type="button"
-                        class="btn btn-primary"
-                        @onclick="SaveCulturePreferencesAsync">
-                    @L["SaveLanguageAndRegion"]
-                </button>
-
-                <div class="form-text mt-2">
-                    @L["LanguageChangeReloadHint"]
-                </div>
-            </div>
-        </div>
-    }
+<ConfirmDialog @ref="_confirmDialog" />
 
 @code {
     private async Task OnEncryptExportsChangedAsync(ChangeEventArgs e)
@@ -492,9 +429,10 @@
     private string? _planName;
     private Guid? _loadedPlanId;
 
-    private string? _browserCacheMessage;
     private string? _errorMessage;
     private string? _infoMessage;
+
+    private ConfirmDialog? _confirmDialog;
 
     private CulturePreferenceEditModel _cultureEditModel = new();
 
@@ -674,17 +612,37 @@
     {
         ClearMessages();
 
+        if (_confirmDialog is null)
+        {
+            return;
+        }
+
+        // The single most destructive button in the app: one click used to wipe both the browser
+        // working copy and the in-memory plan, with nothing asked and nothing to undo it.
+        var confirmed = await _confirmDialog.ShowAsync(
+            Text("ClearBrowserCache"),
+            Text("Nav_ExportNeededHint"),
+            confirmText: Text("ClearBrowserCache"),
+            confirmCssClass: "btn btn-danger");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
         try
         {
             await BrowserCache.ClearAsync();
 
             AppState.Clear();
 
-            _browserCacheMessage = Text("Settings_BrowserWorkingCopyCleared");
+            _infoMessage = Text("Settings_BrowserWorkingCopyCleared");
         }
         catch (Exception ex)
         {
-            _browserCacheMessage = ex.Message;
+            // Was reported in a blue "info" box beside the button, which is where a failure is
+            // least likely to be read as one.
+            _errorMessage = ex.Message;
         }
     }
 
@@ -739,16 +697,10 @@
             .GetEffectiveDateRange(DateOnly.FromDateTime(DateTime.Today));
     }
 
-    private static string FormatDate(DateOnly date)
-    {
-        return date.ToString("d", CultureInfo.CurrentCulture);
-    }
-
     private void ClearMessages()
     {
         _errorMessage = null;
         _infoMessage = null;
-        _browserCacheMessage = null;
     }
 
     private async Task SaveCulturePreferencesAsync()
