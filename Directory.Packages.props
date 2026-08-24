@@ -17,9 +17,9 @@
 
   <!-- ASP.NET Core / Blazor WebAssembly -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Localization" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Localization" Version="10.0.11" />
   </ItemGroup>
 
   <!-- Test stack -->
