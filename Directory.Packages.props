@@ -36,7 +36,7 @@
       dependency versions stay exactly where they were. Raise this together with
       the ASP.NET pins above, never on its own.
     -->
-    <PackageVersion Include="bunit" Version="2.6.2" />
+    <PackageVersion Include="bunit" Version="2.15.2" />
     <!--
       bUnit 2.6.2 asks for AngleSharp 1.4.0, which carries GHSA-pgww-w46g-26qg.
       Transitive pinning lets us take 1.7.0 (the version newer bUnits use)
